@@ -440,8 +440,26 @@ def score_solo_partial(reference: Any, attempt: Any) -> dict[str, Any]:
         timing = round(100 * max(0., 1 - lag / MAX_LAG_MS), 1)
     else:
         timing = 0.0
+    weight_by_part = dict(zip(parts, weights))
+    samples = []
+    for k, t in enumerate(grid):
+        sample_parts = {}
+        penalty, weight_sum = 0.0, 0.0
+        for i, name in enumerate(SEGMENT_NAMES):
+            if not ref_ok[k, i]:
+                sample_parts[name] = {'status': 'not_in_reference'}
+                continue
+            weight = weight_by_part[name]
+            weight_sum += weight
+            penalty += (100 - _err_to_score(float(errors[k, i]))) * weight
+            if not player_ok[k, i]:
+                sample_parts[name] = {'status': 'not_tracked'}
+            else:
+                sample_parts[name] = {'status': 'measured', 'error_degrees': round(math.degrees(float(errors[k, i])), 2)}
+        samples.append({'reference_ms': round(float(t), 3), 'attempt_ms': round(float(t), 3),
+                        'parts': sample_parts, 'severity': round(penalty / weight_sum, 2) if weight_sum else 0.0})
     return {'total': round(float(np.average(scores, weights=weights)) * (1 - TIMING_SHARE + TIMING_SHARE * timing / 100), 1), **groups,
-            'timing': timing,
+            'timing': timing, 'replay_analysis': {'version': 1, 'samples': samples},
             'worst_part': min(parts, key=parts.get), 'parts': parts,
             'worst_moment': moment(int(np.nanargmax(frame_err))),
             'best_moment': moment(int(np.nanargmin(frame_err)))}

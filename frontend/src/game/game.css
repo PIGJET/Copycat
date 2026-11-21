@@ -58,3 +58,14 @@
 @media (max-width: 600px) {
   .solo-replay__grid, .solo-game .challenge-recorder__videos { grid-template-columns: 1fr; }
 }
+
+.replay-timeline { margin-block: 1rem; }
+.replay-timeline > label { display: block; font-variant-numeric: tabular-nums; margin-bottom: .5rem; }
+.replay-timeline input[type=range] { width: 100%; padding-inline: 0; accent-color: #b6ff00; cursor: pointer; }
+.replay-markers { position: relative; height: 32px; background: #241a35; }
+.replay-markers button { position: absolute; height: 30px; min-width: 26px; padding: 0 4px; border: 2px solid #ffcb65; background: #63303e; }
+.replay-markers button.is-untracked { border-style: dashed; background: #49395f; }
+.replay-markers button.is-selected { border-color: #b6ff00; color: #b6ff00; }
+.replay-legend { color: #aaa2bd; font-size: 14px; }
+.solo-actions select { font: inherit; padding: .4rem; color: white; background: #241a35; }
+.solo-actions input[type=checkbox] { accent-color: #b6ff00; }
