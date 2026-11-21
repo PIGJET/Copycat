@@ -186,11 +186,14 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
         )}
       </div></>;
   if (arcade) return <>{cameraStage}{createPortal(<>
-    <ArcadeButton onClick={startTurn} disabled={!ready || recording || preparing}>
-      {reference ? "Watch move & start" : ready ? "Start recording" : "Waiting for tracking"}
-    </ArcadeButton>
-    {recording && <ArcadeButton secondary onClick={stopCapture}>Finish turn</ArcadeButton>}
-    {onSkip && <ArcadeButton secondary onClick={onSkip} disabled={recording || preparing}>Skip turn</ArcadeButton>}
+    {recording ? (
+      <ArcadeButton key="finish" onClick={stopCapture}>Finish turn</ArcadeButton>
+    ) : (
+      <ArcadeButton key="start" onClick={startTurn} disabled={!ready || preparing}>
+        {reference ? "Watch move & start" : ready ? "Start recording" : "Waiting for tracking"}
+      </ArcadeButton>
+    )}
+    {onSkip && !recording && <ArcadeButton secondary onClick={onSkip} disabled={preparing}>Skip turn</ArcadeButton>}
     {captureError && <span role="status">{captureError}</span>}
   </>, arcade.controls)}</>;
 

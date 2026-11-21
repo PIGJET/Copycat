@@ -13,5 +13,23 @@ document.querySelector('#sound').addEventListener('click',e=>{soundOn=!soundOn;e
 function selectMode(mode){if(dialog.open||document.querySelector('#avatar-dialog').open)return;blip(mode==='Solo'?330:440);if(mode==='Team'){openLobby();return}startSoloPreview()}
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>selectMode(b.dataset.mode)));
 document.querySelector('#back').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
-document.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||dialog.open||document.querySelector('.title-screen').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='1')selectMode('Solo');if(e.key==='2')selectMode('Team')});
+const howToPlay = document.querySelector('#how-to-play');
+howToPlay.querySelectorAll('[data-guide-dancer]').forEach(slot => {
+  const dancer = document.querySelector(`#dancer-${slot.dataset.guideDancer} svg`);
+  if (dancer) slot.appendChild(dancer.cloneNode(true));
+});
+const howToPlayButton = document.querySelector('#open-how-to-play');
+const titleScreen = document.querySelector('.title-screen');
+
+function showHowToPlay(open) {
+  titleScreen.hidden = open;
+  howToPlay.hidden = !open;
+  window.scrollTo(0, 0);
+  (open ? document.querySelector('#how-to-play-title') : howToPlayButton).focus();
+}
+
+howToPlayButton.addEventListener('click', () => showHowToPlay(true));
+document.querySelector('#close-how-to-play').addEventListener('click', () => showHowToPlay(false));
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!howToPlay.hidden){showHowToPlay(false);return}if(e.altKey||e.ctrlKey||e.metaKey||dialog.open||document.querySelector('.title-screen').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='1')selectMode('Solo');if(e.key==='2')selectMode('Team')});
 
