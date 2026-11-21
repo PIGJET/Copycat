@@ -16,3 +16,12 @@ export interface PoseSequence {
   duration: number;
   frames: PoseFrame[];
 }
+
+export interface RecordingFrame {
+  t: number;
+  landmarks: PoseLandmark[] | null;
+}
+
+export interface PoseRecording {
+  frames: RecordingFrame[];
+}
