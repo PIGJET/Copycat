@@ -1,0 +1,52 @@
+.winner-reveal {
+  margin: 1rem auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  max-width: 48rem;
+  border: 3px solid #ffcb65;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at top, #713858, #251b31 70%);
+  box-shadow: 0 0 2rem rgb(255 203 101 / 25%);
+  color: #ffcb65;
+  font-family: Silkscreen, monospace;
+  text-align: center;
+  animation: winner-reveal 550ms ease-out both;
+}
+
+.winner-players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem 2rem;
+}
+
+.winner-player {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  font-size: clamp(1.25rem, 5vw, 2.75rem);
+  overflow-wrap: anywhere;
+}
+
+.winner-player svg {
+  display: block;
+  width: 5rem;
+}
+
+.winner-reveal p {
+  margin-bottom: 0;
+  color: #f9e9f6;
+}
+
+.winner-standings {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+@keyframes winner-reveal {
+  from { opacity: 0; transform: translateY(1rem) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winner-reveal { animation: none; }
+}

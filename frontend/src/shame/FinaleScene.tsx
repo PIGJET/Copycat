@@ -25,6 +25,10 @@ export type FinishReason = "ended" | "skipped" | "no-scene" | "no-clip" | "too-s
 export interface FinaleSceneProps {
   /** Object URL of the loser's clip (their worst attempt). null → plain finale. */
   loserClipUrl: string | null;
+  /** Where the dance starts in the clip (ms); the camera records a countdown before it. */
+  clipStartMs?: number;
+  /** Loop only [clipStartMs, clipStartMs + clipDurationMs] when given. */
+  clipDurationMs?: number;
   sceneUrl?: string;
   /** Called once: the scene ended, was skipped, or we fell back. Show the headline next. */
   onFinish: (reason: FinishReason, detail?: string) => void;
@@ -57,7 +61,7 @@ function waitForData(video: HTMLVideoElement, timeoutMs = 8000): Promise<void> {
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
-export function FinaleScene({ loserClipUrl, sceneUrl = DEFAULT_SCENE_URL, onFinish }: FinaleSceneProps) {
+export function FinaleScene({ loserClipUrl, clipStartMs = 0, clipDurationMs, sceneUrl = DEFAULT_SCENE_URL, onFinish }: FinaleSceneProps) {
   const [stage, setStage] = useState<"preparing" | "playing">("preparing");
   const clipRef = useRef<HTMLVideoElement>(null);
   const sceneRef = useRef<HTMLVideoElement>(null);
@@ -101,6 +105,17 @@ export function FinaleScene({ loserClipUrl, sceneUrl = DEFAULT_SCENE_URL, onFini
 
       await clip.play().catch(() => {});
       await waitForData(clip);
+      const loopStart = clipStartMs / 1000;
+      const loopEnd = clipDurationMs ? (clipStartMs + clipDurationMs) / 1000 : Infinity;
+      clip.currentTime = loopStart;
+      // Loop just the dance, not the countdown recorded before it (checked every frame in step()).
+      const wrap = () => {
+        if (clip.ended || clip.currentTime >= loopEnd || clip.currentTime < loopStart - 0.5) {
+          clip.currentTime = loopStart;
+          if (clip.paused) void clip.play().catch(() => {});
+        }
+      };
+      clip.addEventListener("ended", wrap);
 
       const vision = await FilesetResolver.forVisionTasks(WASM_URL);
       if (done) return;
@@ -134,6 +149,7 @@ export function FinaleScene({ loserClipUrl, sceneUrl = DEFAULT_SCENE_URL, onFini
       /** Segment the current clip frame and draw the cut-out. Returns processing time in ms. */
       const step = (): number => {
         const t0 = performance.now();
+        wrap();
         fctx.drawImage(clip, 0, 0, w, h);
         const ts = Math.max(lastTs + 1, performance.now()); // timestamps must strictly increase
         lastTs = ts;
@@ -202,7 +218,7 @@ export function FinaleScene({ loserClipUrl, sceneUrl = DEFAULT_SCENE_URL, onFini
       segmenter?.close();
       segmenter = null;
     };
-  }, [loserClipUrl, sceneUrl]);
+  }, [loserClipUrl, clipStartMs, clipDurationMs, sceneUrl]);
 
   const playing = stage === "playing";
   return (
@@ -212,7 +228,7 @@ export function FinaleScene({ loserClipUrl, sceneUrl = DEFAULT_SCENE_URL, onFini
       style={{ position: "fixed", inset: 0, zIndex: 1000, background: "#000", overflow: "hidden" }}
     >
       {/* Hidden source for segmentation: the loser's own clip, looping. */}
-      <video ref={clipRef} src={loserClipUrl ?? undefined} muted loop playsInline style={{ display: "none" }} />
+      <video ref={clipRef} src={loserClipUrl ?? undefined} muted playsInline style={{ display: "none" }} />
       <video
         ref={sceneRef}
         src={sceneUrl}

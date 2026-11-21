@@ -31,7 +31,8 @@ Only one `useGame()` should exist per game. Call it once near the top and pass `
 | `types.ts` | `Player`, `Recording`, `Attempt`, `Round`, `ScoreResult`, `RoastResult`, `GameMode`, `Phase`, … |
 | `rules.ts` | Pure rules: validation, rotation, rankings, tie-break, loser, roast request. |
 | `gameReducer.ts` | The state machine (pure). `useGame` adds the network calls. |
-| `recordingSource.ts` | `getRecording({ role, danceSeed })`: the one place recordings come from. Mock for now; swap in the real recorder here. |
+| `teamTurn.ts` | Team recording helpers: 10 s turns, the camera-check body test (shoulders, hips, knees, ankles), `toGameRecording`, `isMockMode`. |
+| `recordingSource.ts` | `getRecording()`: mock recordings for dev mode (`?mock=1`). Real turns record in `components/Game/TeamTurnDashboard.tsx`. |
 | `mockRecorder.ts` | `mockRecording()` makes a fake contract-format Recording, no camera needed. |
 | `DevHarness.tsx` | Unstyled click-through of a whole game against the real backend (not in `App.tsx`). |
 | `game.test.mjs` | Rule tests. |
@@ -79,6 +80,11 @@ Only one `useGame()` should exist per game. Call it once near the top and pass `
 | `error` | `GameError \| null` | Error for the current screen (see below) |
 
 ## Recordings
+
+Team play records from the camera: `TeamTurnDashboard` (in `components/Game/`) runs a 3-2-1 countdown, then 10 s of
+pose frames and webcam video, and hands the Recording to `submitRecording`. Copiers see the creator's video beside the
+camera, starting in sync with their countdown. The video starts before the countdown, so `videoOffsetMs` says where the
+dance begins in it. Add `?mock=1` to the URL to play without a camera (fake recordings, camera check skipped).
 
 The Recorder produces a `Recording`:
 
