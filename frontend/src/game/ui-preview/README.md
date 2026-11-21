@@ -1,8 +1,8 @@
 # Run the merged game
 
-From `frontend/`, run `npm ci` followed by `npm run dev` and open the localhost address it prints. For the built app, run `npm run build` then `npm run preview`. Both commands serve the song previews on the same port as the game. npm installs the platform-specific FFmpeg binary. The server fetches original-artist previews from Deezer on demand and caches recent selections in memory. These tracks need internet access and availability depends on region. The bundled chiptunes work offline. A static-only web host needs a server for the `/songs/` route.
+From `frontend/`, run `npm ci` followed by `npm run dev` and open the localhost address it prints (the backend must be running on port 8000). For the built app, run `npm run build` then `npm run preview`. This UI is the app: Vite serves `dist/` and loads the engine (`src/main.tsx` → `src/arcade/bridge.tsx`) on top, exposed to these scripts as `globalThis.CopycatTracking`. Music is the bundled CC0 hyperpixel loops only; the home screen is silent.
 
-Choose **Continue** after camera check to use the webcam and MediaPipe tracker on the dance floor. In Team mode the creator records a pose reference and each challenger watches it before recording. Scores use the captured poses. Solo captures a practice turn without a reference score. **Continue demo** uses the existing camera-free preview.
+Choose **Continue** after camera check to record with the webcam (the team recorder: 3-2-1 countdown, pose frames and video, full-body tracking, the creator's video beside each copier). Copies are scored by the backend `POST /score`; a 422 offers a redo for the right player. The finale gets its headline from `POST /roast` and, if `frontend/public/scenes/proposal.mp4` exists, plays the full-screen scene first. **Continue demo** (or `?mock=1`) uses fake recordings instead of the camera, still scored by the backend. **Solo play** opens Justin's solo mode.
 
 The material below describes the original standalone preview.
 
@@ -49,7 +49,7 @@ Leaderboard updates retain the previous order while averages count to their new 
 The visual finish uses bundled Silkscreen and Barlow font files in dist/fonts, with licenses included. art-direction.css refines typography, flat player surfaces, empty slots, button depth, and secondary hierarchy while preserving the existing composition and all JavaScript behavior.
 
 
-Home music plays the bundled dist/audio/night-shade.mp3 track (AdhesiveWombat — Night Shade) without a visible player or YouTube connection. Sound defaults on at 25% volume and loops continuously through home, lobby, and camera setup. Browser-blocked autoplay retries after a click or keypress. Gameplay, muting, or hiding the tab pauses playback. Menus resume from the same position. Run node --test tests/home-music.test.cjs for lifecycle tests.
+The home screen is silent. The CC0 idle loop (dist/audio/idle.mp4) plays in the lobby, camera check, song selection and results; gameplay uses the BPM-matched CC0 loops. Run node --test tests/home-music.test.cjs for lifecycle tests.
 
 BPM setup follows camera check in Solo and Team. Use the slider or type a value from 60 through 180 BPM. The slider moves in steps of 5; typed values round to the nearest 5 when leaving the field or starting the game. The default is 120; Back to Camera preserves your choice. The chosen BPM sets the beat guide throughout turns and rounds. Songs will be added later; this does not alter the menu song speed. Music keeps playing during setup. Direct review: dist/index.html?demo=tempo. Both Solo and Team have a beat guide. Tests: node --test tests/demo-model.test.cjs tests/home-music.test.cjs tests/tempo-setup.test.cjs.
 

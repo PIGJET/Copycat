@@ -1,10 +1,3 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Entry for Liangray's arcade UI (served from src/game/ui-preview/dist by vite.config.ts).
+// His plain-JS screens call the engine through globalThis.CopycatTracking (see arcade/bridge.tsx).
+import "./arcade/bridge";

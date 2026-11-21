@@ -25,7 +25,6 @@ function syncGameplayMusic(){globalThis.CopycatGameplayMusic?.sync({screen:previ
 let chosenSong = null;
 let searchRequest = 0;
 const library = () => [
-  ...(globalThis.CopycatCatalog || []).map(row => ({...row, src:'songs/'+row.id+'.mp4'})),
   ...Object.values(globalThis.CopycatTracks || {}).map(track => ({...track, id:'local-'+track.bpm}))
 ];
 const songs = library();
@@ -41,7 +40,7 @@ function songOptions(query) {
 }
 function songCredit(song) {
   if (!song) return '';
-  return song.provider === 'deezer' ? `Preview by ${escapeUI(song.artist)} · <a href="https://www.deezer.com/track/${encodeURIComponent(song.id)}" target="_blank" rel="noopener">Deezer</a>` : 'Chiptune by hyperpixel · CC0';
+  return 'Chiptune by hyperpixel · CC0';
 }
 function TempoScreen(){
   chosenSong ??= songs[0];
@@ -76,10 +75,13 @@ function creatorScreen(){return DanceDashboard()}
 function challengeScreen(){return DanceDashboard()}
 function ScoreDisplay(score){return `<div class="score-display" aria-label="${score} out of 100"><span>${score}</span><span class="score-denominator">/100</span></div>`}
 function ScoreBreakdown(score,weak){return `<dl class="score-breakdown">${['arms','legs','torso','timing'].map(part=>`<div class="score-part ${part===weak?'weakest':''}"><dt>${part}<span>${part===weak?'LOWEST':''}</span></dt><dd>${score[part]??"—"}<span>/100</span></dd><div class="score-track" aria-hidden="true"><span style="width:${score[part]}%"></span></div></div>`).join('')}</dl>`}
-function scoreScreen(){if(preview.live && !preview.latest)return `${GameHeader(getChallenger().name,'TURN COMPLETE')}<p>Unscored turn</p>${ArcadeButton('CONTINUE','score-next')}`;const result=preview.latest,p=getChallenger(),weak=weakestPart(result.score);return `${GameHeader(p.name,'SCORE REVEAL')}<div class="score-stage"><div class="result-player">${portrait(p)}</div><div id="evaluating" class="evaluating" role="status">Evaluating preview<span class="evaluating-dots" aria-hidden="true">...</span></div><div id="score-result" hidden><div class="fixture-label">${preview.live?"SCORE":"DEMO SCORE"}</div>${ScoreDisplay(result.score.total)}</div></div><div id="score-details" hidden>${ScoreBreakdown(result.score,weak)}<div class="result-footer"><p>${escapeUI(CopycatDemoData.feedback[weak])}</p>${ArcadeButton('CONTINUE','score-next')}</div></div>`}
+function scoringScreen(){const s=preview.scoring,p=s.player,err=s.error,creator=getCreator();const actions=!err?'':err.recording==='reference'?ArcadeButton(`${escapeUI(creator.name)} RE-RECORDS`,'redo-creator'):err.recording==='attempt'?ArcadeButton('RECORD AGAIN','redo-copier'):ArcadeButton('RETRY','retry-score')+ArcadeButton('RECORD AGAIN','redo-copier',true);return `${GameHeader(p.name,'SCORE REVEAL')}<div class="score-stage"><div class="result-player">${portrait(p)}</div><div id="evaluating" class="evaluating" role="status">${err?escapeUI(err.message):'Evaluating preview<span class="evaluating-dots" aria-hidden="true">...</span>'}</div></div>${err?`<div class="result-footer">${actions}</div>`:''}`}
+function scoreScreen(){if(preview.scoring)return scoringScreen();if(preview.live && !preview.latest)return `${GameHeader(getChallenger().name,'TURN COMPLETE')}<p>Unscored turn</p>${ArcadeButton('CONTINUE','score-next')}`;const result=preview.latest,p=getChallenger(),weak=weakestPart(result.score);return `${GameHeader(p.name,'SCORE REVEAL')}<div class="score-stage"><div class="result-player">${portrait(p)}</div><div id="evaluating" class="evaluating" role="status">Evaluating preview<span class="evaluating-dots" aria-hidden="true">...</span></div><div id="score-result" hidden><div class="fixture-label">${preview.live?"SCORE":"DEMO SCORE"}</div>${ScoreDisplay(result.score.total)}</div></div><div id="score-details" hidden>${ScoreBreakdown(result.score,weak)}<div class="result-footer"><p>${escapeUI(CopycatDemoData.feedback[weak])}</p>${ArcadeButton('CONTINUE','score-next')}</div></div>`}
 function Leaderboard(rows,compact=false,animated=false){let rank=0;const shown=animated?demoRankings(preview.crew,preview.roundBaselineResults):rows;const scored=shown.filter(r=>r.average!==null);const loser=scored.at(-1);return `<div class="leaderboard ${compact?'compact-board':''} ${animated?'animated-board':''}"><ol aria-label="Player rankings">${shown.map(row=>`<li data-player-id="${escapeUI(row.player.id)}" style="--player-color:${crewColors[Math.max(0,preview.crew.findIndex(player=>player.id===row.player.id))%crewColors.length]}" class="rank-row ${row===scored[0]?'first-place':''} ${row===loser&&scored.length>1?'last-place':''}"><span class="rank-number">${row.average===null?'—':++rank}</span><span class="rank-avatar">${portrait(row.player)}</span><div class="rank-name"><strong>${escapeUI(row.player.name)}</strong><span class="rank-attempts">${row.average===null?(animated?'No previous score':'Creator (not scored)'):`${row.attempts.length} ${row.attempts.length===1?'performance':'performances'}`}</span></div>${animated?'<span class="rank-change" aria-label="Rank unchanged"></span>':''}<strong class="rank-score"><span class="rank-value">${scoreNumber(row.average)}</span><small ${row.average===null?'hidden':''}>/100</small></strong></li>`).join('')}</ol>${animated?'<p id="rank-announcement" class="sr-only" role="status"></p>':''}</div>`}
 function leaderboardScreen(){const hasNext=preview.mode==='full'&&preview.round+1<preview.crew.length;return `${GameHeader('LEADERBOARD','')}<div class="leaderboard-layout">${Leaderboard(demoRankings(preview.crew,preview.results),false,true)}<aside class="next-round">${hasNext?PlayerIdentity(preview.crew[preview.round+1],'NEXT CREATOR'):'<div class="round-complete">FINAL ROUND<br>COMPLETE</div>'}<p class="data-note">${preview.live?"":"Demo scores. "}Ranked by average.${hasNext?'':' Unscored creators are excluded.'}</p>${ArcadeButton(hasNext?'NEXT ROUND':'VIEW FINALE',hasNext?'round-next':'finale')}</aside></div>`}
-function NewsOverlay(loser,worst){const weak=weakestPart(worst.score);return `<div class="news-top"><span class="channel-brand">CCN</span><span class="news-banner">Breaking news</span></div><div class="news-video"><video id="finale-video" controls playsinline hidden aria-label="${escapeUI(loser.player.name)}’s replay"></video><div id="finale-empty" class="finale-empty"><span class="finale-player-portrait">${portrait(loser.player)}</span><p>Replay not available</p><span>This demo has no recorded video.</span></div><span class="news-player-name">${escapeUI(loser.player.name)}</span></div><div class="news-headline"><h3>${escapeUI(CopycatDemoData.headlines[weak][0]+CopycatDemoData.headlines[weak].slice(1).toLowerCase())}</h3></div>`}
+function NewsOverlay(loser,worst){const weak=weakestPart(worst.score);return `<div class="news-top"><span class="channel-brand">CCN</span><span class="news-banner">Breaking news</span></div><div class="news-video"><video id="finale-video" controls playsinline hidden aria-label="${escapeUI(loser.player.name)}’s replay"></video><div id="finale-empty" class="finale-empty"><span class="finale-player-portrait">${portrait(loser.player)}</span><p>Replay not available</p><span>This demo has no recorded video.</span></div><span class="news-player-name">${escapeUI(loser.player.name)}</span></div><div class="news-headline">${NewsHeadline(weak)}</div>`}
+function NewsHeadline(weak){const r=preview.roast;if(!preview.live||!r)return `<h3>${escapeUI(CopycatDemoData.headlines[weak][0]+CopycatDemoData.headlines[weak].slice(1).toLowerCase())}</h3>`;if(r.status==='done')return `<h3>${escapeUI(r.result.headline)}</h3><p>${escapeUI(r.result.roast_line)}</p>`;if(r.status==='error')return `<h3>Report unavailable</h3><p>${escapeUI(r.error.message)}</p>${ArcadeButton('RETRY','retry-roast')}`;return '<h3>DEVELOPING STORY...</h3>'}
+function updateHeadline(){const node=gameRoot.querySelector('.news-headline');if(!node||preview.screen!=='finale')return;const rows=demoRankings(preview.crew,preview.results),loser=rows.filter(r=>r.average!==null).at(-1);if(loser)node.innerHTML=NewsHeadline(weakestPart(loser.attempts.reduce((a,b)=>a.score.total<=b.score.total?a:b).score))}
 function FinaleStandings(rows){let rank=0;return `<section class="final-standings" aria-labelledby="standings-title"><div class="final-standings-heading"><h3 id="standings-title">Final standings</h3><span>Score /100</span></div><ol class="final-ranks">${rows.map(row=>`<li class="${row.average===null?'unscored':rank===0?'winner':''}"><span class="final-rank">${row.average===null?'—':++rank}</span><span class="rank-avatar">${portrait(row.player)}</span><span class="final-rank-name"><strong>${escapeUI(row.player.name)}</strong>${row.average===null?'<span>Dance creator</span>':''}</span><strong class="final-rank-score">${scoreNumber(row.average)}</strong></li>`).join('')}</ol></section>`}
 function FinaleShareDialog(){return `<dialog id="finale-share-dialog" class="finale-share-dialog" aria-labelledby="share-title" aria-describedby="share-help"><div class="share-dialog-heading"><h2 id="share-title">Send my video</h2><button class="ui-secondary" data-share-action="close" aria-label="Close sharing">✕</button></div><p id="share-help">Use your device’s share menu to send through Messages, Mail, or another app. Or download the video and attach it yourself.</p><p id="share-status" role="status">No video is available yet. This demo has no recorded footage.</p><div class="share-dialog-actions"><button class="ui-primary" id="share-native" data-share-action="share" disabled>Choose an app</button><button class="ui-secondary" id="share-download" data-share-action="download" disabled>Download video</button></div></dialog>`}
 function finaleScreen(){const rows=demoRankings(preview.crew,preview.results),loser=rows.filter(r=>r.average!==null).at(-1);if(!loser)return `${GameHeader('NO RESULTS','FINALE')}${ArcadeButton('MENU','exit')}`;const worst=loser.attempts.reduce((a,b)=>a.score.total<=b.score.total?a:b);return `<nav class="finale-nav" aria-label="Finale navigation">${ArcadeButton('Menu','exit',true)}</nav><header class="finale-heading"><h2 id="screen-title" tabindex="-1">${escapeUI(loser.player.name)} made the news.</h2></header><div class="finale-layout"><div class="finale-replay"><div class="broadcast" id="broadcast">${NewsOverlay(loser,worst)}</div><div class="finale-replay-controls"><button class="ui-secondary" id="finale-replay" data-action="replay" disabled>Watch again</button><span>Demo replay</span></div></div><aside class="finale-sidebar">${FinaleStandings(rows)}<div class="finale-send"><button class="ui-primary" data-share-action="open">Send my video</button><p>Share by email or text, or save it to your device.</p><span>Only shared when you choose.</span></div></aside></div>${FinaleShareDialog()}`}
@@ -115,7 +117,7 @@ function mountLiveDance() {
     renderPreview();
   }
   globalThis.CopycatTracking.mount({
-    stage, controls, player, creator:getCreator(), reference:creatorTurn ? undefined : referenceDance,
+    stage, controls, player, creator:getCreator(), reference:creatorTurn ? undefined : referenceDance, mock:preview.mock,
     onSkip:creatorTurn ? undefined : () => advance(null),
     phaseChanged(phase, count, seconds) {
       if (phase === 'idle' && preview.phase === 'idle') return;
@@ -128,21 +130,60 @@ function mountLiveDance() {
       if (phase === 'recording' || phase === 'countdown') updateCaptureUI();
       else gameRoot.querySelector('#capture-overlay').replaceChildren();
     },
-    onRecord(sequence) {
-      try {
-        if (creatorTurn) {
-          globalThis.CopycatTracking.scoreAttempt(sequence,sequence);
-          referenceDance = sequence;
-          advance(null);
-        } else advance(referenceDance ? globalThis.CopycatTracking.scoreAttempt(referenceDance,sequence) : null);
-      } catch (error) {
-        message.textContent = error.message;
-        preview.phase = 'idle';
-        gameRoot.querySelector('#capture-overlay').replaceChildren();
-        syncGameplayMusic();
-      }
+    onRecord(recording) {
+      liveRecordings.push(recording);
+      if (creatorTurn) {
+        referenceDance = recording;
+        advance(null);
+      } else if (referenceDance) scoreLive(player, recording);
+      else advance(null);
     }
   });
+}
+let liveRecordings = [];
+// POST /score via the engine. His score screen shows "Evaluating" until it answers.
+function scoreLive(player, recording) {
+  preview.run++;
+  preview.phase = 'idle';
+  preview.latest = null;
+  preview.scoring = {player, recording, error:null};
+  preview.screen = 'score';
+  renderPreview();
+  globalThis.CopycatTracking.score(referenceDance, recording).then(score => {
+    if (preview.scoring?.recording !== recording) return;
+    preview.scoring = null;
+    preview.latest = {playerId:player.id, creatorId:getCreator().id, round:preview.round+1, score, recording, source:'tracking'};
+    preview.results.push(preview.latest);
+    renderPreview();
+  }, error => {
+    if (preview.scoring?.recording !== recording) return;
+    preview.scoring.error = error;
+    renderPreview();
+  });
+}
+// Finale: start POST /roast, play the optional full-screen scene, then show his finale screen.
+async function openFinale() {
+  const rows = demoRankings(preview.crew, preview.results), loser = rows.filter(r => r.average !== null).at(-1);
+  const engine = preview.live && loser ? globalThis.CopycatTracking : null;
+  const run = ++preview.run;
+  if (engine) {
+    preview.roast = {status:'loading'};
+    const ask = () => engine.roast(loser).then(result => { preview.roast = {status:'done', result} }, error => { preview.roast = {status:'error', error, retry:ask} }).then(updateHeadline);
+    preview.roast.retry = ask;
+    ask();
+    await engine.finaleScene(loser);
+    if (run !== preview.run) return;
+  }
+  preview.screen = 'finale';
+  renderPreview();
+  const video = engine?.loserVideo(loser);
+  if (video) globalThis.CopycatFinale?.setVideo(video, loser.player.name);
+}
+function releaseLive() {
+  globalThis.CopycatTracking?.release?.([], liveRecordings);
+  liveRecordings = [];
+  preview.scoring = null;
+  preview.roast = null;
 }
 function renderPreview(){
   globalThis.CopycatTracking?.unmount();
@@ -172,14 +213,14 @@ function renderPreview(){
   if(preview.screen==='score' && preview.latest){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;playCue('score')};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
 function enterPreview(crew,mode,solo=false,initialScreen='camera'){
-  preview.live = false; referenceDance = null;
+  releaseLive(); preview.live = false; referenceDance = null;
   announcedTurn = null; chosenSong = null; preview.song = null;
   clearPreviewTimers();globalThis.CopycatFinale?.clear();beatClock=null;Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:initialScreen,afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
   homeScreen.hidden=true;lobby.hidden=true;gameRoot.hidden=false;document.querySelector('.arcade').classList.add('in-game');document.querySelector('.arcade').classList.remove('in-lobby');renderPreview();
 }
 function startTeamPreview(){enterPreview(players,'full')}
 function startSoloPreview(){enterPreview([{id:'solo',name:'You',avatar:'cat'}],'quick',true)}
-function leavePreview(){globalThis.CopycatTracking?.unmount();globalThis.CopycatGameplayMusic?.stop();clearPreviewTimers();globalThis.CopycatFinale?.clear();beatClock=null;preview.run++;gameRoot.hidden=true;gameRoot.replaceChildren();document.querySelector('.arcade').classList.remove('in-game','news-active','team-capture-active','dashboard-active');goHome()}
+function leavePreview(){globalThis.CopycatTracking?.unmount();releaseLive();globalThis.CopycatGameplayMusic?.stop();clearPreviewTimers();globalThis.CopycatFinale?.clear();beatClock=null;preview.run++;gameRoot.hidden=true;gameRoot.replaceChildren();document.querySelector('.arcade').classList.remove('in-game','news-active','team-capture-active','dashboard-active');goHome()}
 function finishCapture(){
   clearPreviewTimers();preview.run++;preview.phase='idle';
   if(preview.screen==='creator'){preview.screen='challenge';preview.challenger=0;renderPreview();return}
@@ -228,11 +269,6 @@ async function enterDanceFloor() {
   try {
     const response = await fetch(song.src, {method:'HEAD'});
     if (!response.ok || !/audio|video/.test(response.headers.get('content-type') || '')) throw Error();
-    if (song.provider === 'deezer') {
-      const bpm = Number(response.headers.get('X-Song-BPM'));
-      if (!(bpm > 0 && Number.isFinite(bpm))) throw Error();
-      song.bpm = bpm;
-    }
   } catch {
     if (token === searchRequest && status.isConnected) {
       status.textContent = 'Song unavailable. Try another song or search hyperpixel for bundled tracks.';
@@ -288,7 +324,11 @@ gameRoot.addEventListener('click',e=>{
     case'beat-toggle':preview.beatPlaying=!preview.beatPlaying;b.textContent=preview.beatPlaying?'PAUSE':'PLAY';b.setAttribute('aria-label',`${preview.beatPlaying?'Pause':'Start'} beat guide`);b.setAttribute('aria-pressed',String(preview.beatPlaying));if(preview.beatPlaying)startBeatGuide();else stopBeatGuide();syncGameplayMusic();break;
     case'score-next':if(preview.challenger+1<getChallengers().length){preview.challenger++;preview.screen='challenge';preview.tracking='ready'}else preview.screen='leaderboard';renderPreview();break;
     case'round-next':preview.roundBaselineResults=preview.results.slice();preview.round++;preview.challenger=0;preview.screen='creator';preview.phase='idle';preview.tracking='ready';renderPreview();break;
-    case'finale':preview.screen='finale';renderPreview();break;
+    case'finale':openFinale();break;
+    case'retry-score':if(preview.scoring)scoreLive(preview.scoring.player,preview.scoring.recording);break;
+    case'redo-copier':preview.scoring=null;preview.screen='challenge';preview.phase='idle';renderPreview();break;
+    case'redo-creator':preview.scoring=null;preview.results=preview.results.filter(r=>r.round!==preview.round+1);referenceDance=null;preview.challenger=0;preview.screen='creator';preview.phase='idle';renderPreview();break;
+    case'retry-roast':if(preview.roast?.status==='error'){const ask=preview.roast.retry;preview.roast={status:'loading',retry:ask};updateHeadline();ask()}break;
     case'replay':globalThis.CopycatFinale?.replay();break;
   }
 });

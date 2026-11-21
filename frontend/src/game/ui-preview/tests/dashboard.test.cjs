@@ -7,7 +7,7 @@ function setup(tracking){
   const root={hidden:false,innerHTML:'',classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name),remove(){}},addEventListener:(type,fn)=>(events[type]??=[]).push(fn),replaceChildren(){this.innerHTML=''},querySelector:selector=>selector==='.beat-guide'?null:element(selector)};
   const context=vm.createContext({CopycatTracking:tracking,document:{createElement:()=>({setAttribute(){}}),hidden:false,querySelector:selector=>selector==='#game-screen'?root:selector==='.animated-board'?null:selector==='#sound'?{addEventListener(){}}:element(selector),addEventListener(){}},window:{scrollTo(){}},location:{search:''},performance:{now:()=>now},URLSearchParams,homeScreen:{hidden:false},lobby:{hidden:true},soundOn:false,crewColors:['lime','pink','cyan','purple'],portrait:()=>'<svg></svg>',goHome(){},blip(){},matchMedia:()=>({matches:true}),cancelAnimationFrame(){},setInterval:fn=>{timer=fn;return 1},clearInterval:()=>{timer=null},setTimeout:()=>1,clearTimeout(){}});
   const read=f=>fs.readFileSync(path.join(__dirname,'../dist',f),'utf8');
-  vm.runInContext(read('demo-data.js')+'\n'+read('round-ui.js')+'\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,renderPreview,leavePreview,getCreator,getChallenger};',context);
+  vm.runInContext(read('demo-data.js')+'\n'+read('round-ui.js')+'\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,renderPreview,leavePreview,getCreator,getChallenger,scoreScreen};',context);
   const click=action=>(events.click||[]).forEach(fn=>fn({target:{closest:()=>({disabled:false,dataset:{action}})}}));
   return {ui:context.ui,root,element,classes,click,tick:(ms=1000)=>{assert(timer,'Capture timer must be running');now+=ms;timer()},changeTracking:value=>(events.change||[]).forEach(fn=>fn({target:{id:'tracking-state',value}}))};
 }
@@ -62,12 +62,12 @@ test('a countdown digit stays mounted until the next second',()=>{
   h.tick(1000); assert.equal(writes,4); assert.equal(h.ui.preview.phase,'recording');
 });
 
-test('camera turns replay the creator recording and score the actual challenger sequence',()=>{
+test('camera turns replay the creator recording and score the actual challenger recording on the backend',async()=>{
   let turn;
   const reference={frames:[1]}, attempt={frames:[2]};
   const score={total:97,arms:98,legs:95,torso:97,timing:98};
   const scored=[];
-  const tracking={mount:props=>{turn=props},unmount(){},scoreAttempt:(ref,seq)=>{scored.push([ref,seq]);return score}};
+  const tracking={mount:props=>{turn=props},unmount(){},release(){},score:async(ref,rec)=>{scored.push([ref,rec]);return score}};
   const h=setup(tracking);
   h.ui.enterPreview(crew,'full',false,'creator');
   h.ui.preview.live=true;h.ui.renderPreview();
@@ -76,8 +76,26 @@ test('camera turns replay the creator recording and score the actual challenger 
   assert.equal(turn.reference,reference);
   assert.equal(turn.player.id,crew[1].id);
   turn.onRecord(attempt);
-  assert.deepEqual(scored.at(-1),[reference,attempt]);
-  assert.equal(h.ui.preview.results[0].score,score);
-  assert.equal(h.ui.preview.results[0].source,'tracking');
   assert.equal(h.ui.preview.screen,'score');
+  assert.equal(h.ui.preview.scoring.recording,attempt); // evaluating while the backend answers
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(scored.at(-1),[reference,attempt]);
+  assert.equal(h.ui.preview.scoring,null);
+  assert.equal(h.ui.preview.results[0].score,score);
+  assert.equal(h.ui.preview.results[0].recording,attempt);
+  assert.equal(h.ui.preview.results[0].source,'tracking');
+});
+test('a /score 422 offers the right redo and never records a result',async()=>{
+  let turn;const reference={frames:[1]}, attempt={frames:[2]};
+  const failure={message:'Step back so your whole body is in frame',recording:'attempt',status:422};
+  const h=setup({mount:props=>{turn=props},unmount(){},release(){},score:async()=>{throw failure}});
+  h.ui.enterPreview(crew,'full',false,'creator');
+  h.ui.preview.live=true;h.ui.renderPreview();
+  turn.onRecord(reference);turn.onRecord(attempt);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(h.ui.preview.scoring.error,failure);
+  assert.equal(h.ui.preview.results.length,0);
+  assert.match(h.ui.scoreScreen(),/RECORD AGAIN/);
+  failure.recording='reference';
+  assert.match(h.ui.scoreScreen(),/Alex RE-RECORDS/);
 });
