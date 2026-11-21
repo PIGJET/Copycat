@@ -47,3 +47,17 @@ test('standings use completed scores, preserve unscored dashes, and escape playe
 });
 
 test('a delayed capture callback follows elapsed game time instead of adding timer drift',()=>{const h=setup();h.ui.enterPreview(crew,'quick',false,'creator');h.click('record');h.tick(7500);assert.equal(h.ui.preview.phase,'recording');assert.equal(h.ui.preview.seconds,6);h.tick(5500);assert.equal(h.ui.preview.screen,'challenge')});
+
+test('a countdown digit stays mounted until the next second',()=>{
+  const h=setup();
+  h.ui.enterPreview(crew,'full',false,'creator');
+  const overlay=h.element('#capture-overlay');
+  let markup='',writes=0;
+  Object.defineProperty(overlay,'innerHTML',{get:()=>markup,set:value=>{markup=value;writes++}});
+  h.click('record');
+  h.tick(400); h.tick(500);
+  assert.equal(writes,1); assert.match(markup,/>3</);
+  h.tick(100); assert.equal(writes,2); assert.match(markup,/>2</);
+  h.tick(1000); assert.equal(writes,3); assert.match(markup,/>1</);
+  h.tick(1000); assert.equal(writes,4); assert.equal(h.ui.preview.phase,'recording');
+});

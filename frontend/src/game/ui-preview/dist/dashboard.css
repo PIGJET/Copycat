@@ -195,3 +195,32 @@
 }
 
 .dashboard-stage:focus { outline:none }
+
+/* The stage opens in short arcade steps as the tempo screen fades away. */
+@keyframes floor-reveal {
+  from { clip-path:inset(40% 0); opacity:.35 }
+  to { clip-path:inset(0); opacity:1 }
+}
+.floor-arrival .dashboard-arena { animation:floor-reveal .45s steps(7,end) both }
+.dashboard-stage .capture-overlay { inset:0 }
+.turn-callout {
+  display:flex; align-items:center; gap:16px; max-width:90%; box-sizing:border-box;
+  padding:14px 24px 14px 16px; background:#17172a; color:#fff8e8;
+  border:3px solid #ffd246; box-shadow:5px 5px 0 #151427;
+  animation:turn-notice 2.8s both; pointer-events:none;
+}
+.turn-avatar { flex:0 0 44px }
+.turn-avatar svg { width:44px; display:block }
+.turn-callout>div { min-width:0 }
+.turn-cue { display:block; color:#ffd246; font:600 16px/1.5 var(--body) }
+.turn-callout strong { display:block; overflow-wrap:anywhere; font:400 clamp(20px,3vw,36px)/1.15 var(--display) }
+@keyframes turn-notice {
+  0% { opacity:0; transform:translateY(8px) }
+  10%,88% { opacity:1; transform:translateY(0) }
+  100% { opacity:0; visibility:hidden; transform:translateY(-4px) }
+}
+@media (prefers-reduced-motion:reduce) {
+  .floor-arrival .dashboard-arena { animation:none }
+  .turn-callout { animation:hide-turn-notice 2.8s step-end both }
+  @keyframes hide-turn-notice { to { visibility:hidden } }
+}

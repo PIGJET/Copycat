@@ -331,5 +331,3 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
   .results-leaderboard .rank-row.first-place { min-height:96px; }
   .results-leaderboard .first-place .rank-score { font-size:38px; }
 }
-
-.tempo-track { margin:0 0 24px; color:var(--cyan); font:600 18px/1.4 var(--body); }

@@ -1,16 +1,31 @@
-// Local MP3 background audio; the existing sound button is the only control.
+// Menu and idle loops share the sound control and hand off to the dance track.
 (() => {
   const game = document.querySelector('#game-screen');
-  const music = document.querySelector('#home-music');
+  const lobby = document.querySelector('.lobby-screen');
+  const idle = document.querySelector('#idle-music');
+  const menu = document.querySelector('#home-music');
+  let music = menu;
   const status = document.querySelector('#home-music-status');
   let blocked = false;
   let request = 0;
-  music.volume = 0.25;
-  const shouldPlay = () => soundOn && !document.hidden
-    && (game.hidden || game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen'));
+  menu.volume = 0.25;
+  if (idle) idle.volume = 0.16;
+  function backgroundTrack() {
+    if (game.hidden) return lobby && !lobby.hidden ? idle : menu;
+    if (game.classList.contains('waiting-music')) return idle;
+    if (game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen')) return menu;
+    return null;
+  }
+  const shouldPlay = () => soundOn && !document.hidden && backgroundTrack() === music;
 
   async function syncMusic() {
     const current = ++request;
+    const next = backgroundTrack();
+    if (next && next !== music) {
+      music.pause();
+      music = next;
+    }
+    const requestedTrack = music;
     if (!shouldPlay()) {
       music.pause();
       return;
@@ -18,7 +33,7 @@
     try {
       await music.play();
       // A play promise may finish after navigation, mute, or a tab change.
-      if (!shouldPlay()) music.pause();
+      if (!shouldPlay() || requestedTrack !== music) requestedTrack.pause();
       if (current === request) {
         blocked = false;
         status.textContent = '';
@@ -38,7 +53,9 @@
   };
   document.addEventListener('click', retryPlayback);
   document.addEventListener('keydown', retryPlayback);
-  new MutationObserver(syncMusic).observe(game, { attributes: true, attributeFilter: ['hidden', 'class'] });
+  const observer = new MutationObserver(syncMusic);
+  observer.observe(game, { attributes: true, attributeFilter: ['hidden', 'class'] });
+  observer.observe(lobby, { attributes: true, attributeFilter: ['hidden'] });
   document.addEventListener('visibilitychange', syncMusic);
   window.addEventListener('pagehide', () => music.pause());
   syncMusic();
