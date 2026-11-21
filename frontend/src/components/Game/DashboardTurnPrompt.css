@@ -1,0 +1,56 @@
+.dashboard-turn-prompt {
+  position: absolute;
+  inset: 1rem 1rem auto;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.65rem, 2vw, 1rem);
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  box-sizing: border-box;
+  margin-inline: auto;
+  padding: 0.75rem 1rem;
+  border: 2px solid #ffd246;
+  border-radius: 6px;
+  background: #17172a;
+  box-shadow: 4px 4px #24265c;
+  text-align: left;
+  pointer-events: none;
+  animation: dashboard-turn-prompt 5s both;
+}
+
+.dashboard-turn-prompt-avatar {
+  flex: 0 0 clamp(1.75rem, 5vw, 2.75rem);
+}
+
+.dashboard-turn-prompt-avatar svg {
+  display: block;
+  width: 100%;
+}
+
+.dashboard-turn-prompt strong {
+  color: #ffd246;
+  font: 400 clamp(0.9rem, 2.6vw, 1.4rem)/1.2 Silkscreen, monospace;
+}
+
+.dashboard-turn-prompt p {
+  margin: 0.35rem 0 0;
+  color: #fff8e8;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@keyframes dashboard-turn-prompt {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  5%, 94% { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-turn-prompt { animation-name: dashboard-turn-prompt-hide; animation-timing-function: step-end; }
+
+  @keyframes dashboard-turn-prompt-hide {
+    to { visibility: hidden; }
+  }
+}
