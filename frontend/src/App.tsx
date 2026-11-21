@@ -1,8 +1,5 @@
-
 import { GameFlow } from "./components/Game/GameFlow";
 
-function App() {
+export default function App() {
   return <GameFlow />;
 }
-
-export default App;

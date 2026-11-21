@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { CameraCheckPage, DashboardPage, FinalePage, HomePage, LeaderboardPage, LobbyPage, ScorePage, TempoPage } from "./index";
-import { SoloFlow } from "./SoloFlow";
+import Game from "../../game/Game";
 import type { Player as UiPlayer, Ranking, Score } from "./uiTypes";
 import { checkHealth } from "../../game/api";
 import { getRecording } from "../../game/recordingSource";
@@ -23,7 +23,7 @@ function toScore(s: ScoreResult | null | undefined): Score {
   return s ? { total: s.total, arms: s.arms, legs: s.legs, torso: s.torso, timing: s.timing } : EMPTY_SCORE;
 }
 
-/** Team play runs on useGame (frontend/src/game). Solo play is SoloFlow, unchanged. */
+/** Team play runs on useGame (frontend/src/game). Solo play is Justin's dance challenge (game/Game.tsx). */
 export function GameFlow() {
   const game = useGame();
   const [screen, setScreen] = useState<Screen>("home");
@@ -106,7 +106,7 @@ export function GameFlow() {
   }
 
   // ---- solo ----
-  if (solo) return <SoloFlow onExit={() => { setSolo(false); setScreen("home"); }} />;
+  if (solo) return <Game onBack={() => { setSolo(false); setScreen("home"); }} />;
 
   // ---- pre-game screens ----
   const lobby = (
