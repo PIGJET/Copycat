@@ -10,11 +10,11 @@ export class PoseRecorder {
     this.startTime = performance.now();
   }
 
-  addFrame(landmarks: PoseFrame["landmarks"]) {
+  addFrame(landmarks: PoseFrame["landmarks"], sampledAt = performance.now()) {
     if (this.startTime === null) return;
 
     this.frames.push({
-      t: performance.now() - this.startTime,
+      t: sampledAt - this.startTime,
       landmarks,
     });
   }
