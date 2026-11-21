@@ -9,14 +9,15 @@
   }
   function mount(){
     const video=element('finale-video');
-    if(video){video.hidden=!file;if(file)video.src=objectUrl;else video.removeAttribute('src')}
+    if(video){video.hidden=!file;if(file){if(video.src!==objectUrl)video.src=objectUrl}else video.removeAttribute('src')}
     const controls=root?.querySelector('.finale-replay-controls');if(controls)controls.hidden=!file;
     const empty=element('finale-empty');if(empty)empty.hidden=!!file;
     const replay=element('finale-replay');if(replay)replay.disabled=!file;
     const native=element('share-native');if(native){native.disabled=!canShareFile()||busy;native.hidden=!!file&&!canShareFile()}
     const save=element('share-download');if(save){save.disabled=!file||busy;save.className=canShareFile()?'ui-secondary':'ui-primary'}
     const note=root?.querySelector('.finale-replay-controls>span');if(note)note.textContent=file?'Saved on this device':'Demo replay';
-    status(!file?'No video is available yet. This demo has no recorded footage.':canShareFile()?'Your video is ready to send.':'Download the video, then attach it to an email or text.');
+    const send=element('replay-send');if(send)send.disabled=!file||busy;
+    status(!file?'No video is available for this player.':'Your video is ready to send.');
   }
   function clear(){
     element('finale-video')?.pause();
@@ -51,6 +52,19 @@
     status('Download started. Attach the saved video to an email or text.');
   }
   function replay(){const video=element('finale-video');if(!file||!video)return;video.currentTime=0;video.play()?.catch(()=>status('Use the video’s play button to watch again.'))}
+  root?.addEventListener('submit',async event=>{
+    if(event.target.id!=='replay-delivery')return;
+    event.preventDefault();
+    if(!file||busy)return;
+    const input=element('replay-recipient'), recipient=input.value.trim();
+    const sending=file;
+    busy=true;mount();status('Sending replay…');
+    try{
+      const response=await fetch('/api/replay-delivery',{method:'POST',headers:{'Content-Type':file.type,'X-Replay-Recipient':encodeURIComponent(recipient)},body:file});
+      const result=await response.json();
+      if(file===sending){busy=false;mount();status(result.message);if(response.ok)input.value=''}
+    }catch{if(file===sending){busy=false;mount();status('Could not reach replay delivery. You can still download your video.')}}
+  });
   root?.addEventListener('click',event=>{
     const button=event.target.closest('[data-share-action]');if(!button||button.disabled)return;
     switch(button.dataset.shareAction){

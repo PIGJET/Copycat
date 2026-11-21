@@ -6,6 +6,7 @@ import type { Ref } from "react";
 import type { PoseLandmark, PoseSequence } from "../../types/pose";
 
 export type CameraHandle = {
+  stream: MediaStream | null;
   startRecording: () => boolean;
   stopRecording: (playerId: string) => PoseSequence;
 };
@@ -107,6 +108,7 @@ function Camera({ ref, onReadyChange, onPose }: CameraProps) {
   }, [onReadyChange, ready]);
 
   useImperativeHandle(ref, () => ({
+    get stream() { return videoRef.current?.srcObject as MediaStream | null },
     startRecording() {
       if (!ready) return false;
       startRecording();

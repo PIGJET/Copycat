@@ -7,7 +7,7 @@ import type { PoseSequence } from "./types/pose";
 type LiveTurn = {
   stage: HTMLElement; controls: HTMLElement; player: Player; creator: Player;
   reference?: PoseSequence; phaseChanged: ArcadeTurn["phaseChanged"];
-  onRecord: (sequence: PoseSequence) => void; onSkip?: () => void;
+  onRecord: (sequence: PoseSequence, clip?: Blob) => void; onSkip?: () => void;
 };
 let root: Root | undefined;
 Object.assign(globalThis, { CopycatTracking: {

@@ -21,9 +21,15 @@ export type ArcadeTurn = {
   controls: HTMLElement;
   phaseChanged: (phase: string, count: number | null, seconds: number | null) => void;
 };
-export type DashboardPageProps = { arcade?: ArcadeTurn; player: Player; creator: Player; players: Ranking[]; round: number; rounds: number; phase?: string; trackingStatus?: string; bpm?: number; onMenu: () => void; onRecord: (recording: PoseSequence) => void; onSkip?: () => void; reference?: PoseSequence; onTrackingChange?: (status: string) => void; onRecordingChange?: (recording: boolean) => void; soundOn?: boolean; onSoundToggle?: () => void };
+export type DashboardPageProps = { arcade?: ArcadeTurn; player: Player; creator: Player; players: Ranking[]; round: number; rounds: number; phase?: string; trackingStatus?: string; bpm?: number; onMenu: () => void; onRecord: (recording: PoseSequence, clip?: Blob) => void; onSkip?: () => void; reference?: PoseSequence; onTrackingChange?: (status: string) => void; onRecordingChange?: (recording: boolean) => void; soundOn?: boolean; onSoundToggle?: () => void };
 export function DashboardPage({ arcade, player, creator, players, round, rounds, phase = "idle", trackingStatus = "ready", bpm = 120, onMenu, onRecord, onSkip, reference, onTrackingChange, onRecordingChange, soundOn, onSoundToggle }: DashboardPageProps) {
   const cameraRef = useRef<CameraHandle>(null);
+  const clipCapture = useRef<{ recorder: MediaRecorder; done: Promise<Blob | undefined> } | null>(null);
+  useEffect(() => () => {
+    const capture = clipCapture.current;
+    clipCapture.current = null;
+    if (capture && capture.recorder.state !== "inactive") capture.recorder.stop();
+  }, []);
   const [cameraReady, setCameraReady] = useState(false);
   const [showTurnPrompt, setShowTurnPrompt] = useState(true);
   const [replaying, setReplaying] = useState(false);
@@ -46,13 +52,28 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
       return;
     }
     setCaptureError("");
+    const stream = cameraRef.current.stream;
+    if (arcade && !isCreator && stream && typeof MediaRecorder !== "undefined") {
+      try {
+        const mimeType = ["video/mp4", "video/webm;codecs=vp8", "video/webm"].find(type => MediaRecorder.isTypeSupported(type));
+        const recorder = new MediaRecorder(stream, { ...(mimeType && { mimeType }), videoBitsPerSecond: 2000000 });
+        const chunks: Blob[] = [];
+        const done = new Promise<Blob | undefined>(resolve => {
+          recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+          recorder.onerror = () => resolve(undefined);
+          recorder.onstop = () => resolve(chunks.length ? new Blob(chunks, { type: recorder.mimeType }) : undefined);
+        });
+        recorder.start();
+        clipCapture.current = { recorder, done };
+      } catch { /* Pose scoring remains available when video encoding fails. */ }
+    }
     recordingDeadline.current = performance.now() + recordingSeconds * 1000;
     previousPose.current = null;
     lastMoveAt.current = null;
     setDanceCue(null);
     setSecondsLeft(recordingSeconds);
     onRecordingChange?.(true);
-  }, [onRecordingChange]);
+  }, [arcade, isCreator, onRecordingChange]);
 
   const handleDancePose = useCallback((landmarks: PoseLandmark[] | null) => {
     if (recordingDeadline.current === null) return;
@@ -110,17 +131,22 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
     return () => window.clearTimeout(timer);
   }, [countdown, startCapture]);
 
-  const stopCapture = useCallback(() => {
+  const stopCapture = useCallback(async () => {
     if (recordingDeadline.current === null || !cameraRef.current) return;
     recordingDeadline.current = null;
     const sequence = cameraRef.current.stopRecording(String(player.id));
+    const capture = clipCapture.current;
+    if (capture && capture.recorder.state !== "inactive") capture.recorder.stop();
+    const clip = capture ? await capture.done : undefined;
+    if (clipCapture.current !== capture) return;
+    clipCapture.current = null;
     setSecondsLeft(null);
     onRecordingChange?.(false);
     if (sequence.frames.length === 0) {
       setCaptureError("No poses captured. Step into frame and try again.");
       return;
     }
-    onRecord(sequence);
+    onRecord(sequence, clip);
   }, [onRecord, onRecordingChange, player.id]);
 
   useEffect(() => {

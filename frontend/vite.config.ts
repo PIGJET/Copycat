@@ -1,3 +1,4 @@
+import { replayDelivery } from './replayDelivery.ts'
 import { songServer } from './songServer.ts'
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
@@ -10,6 +11,7 @@ export default defineConfig({
   publicDir: 'src/game/ui-preview/dist',
   plugins: [
     react(),
+    replayDelivery(),
     songServer(new Set(tracks.map(track => track.id))),
     { name: 'copycat-arcade-entry', transformIndexHtml: { order: 'pre', handler() {
       return readFileSync(arcade, 'utf8').replace('</body>', '<script type="module" src="/src/main.tsx"></script></body>')
