@@ -153,6 +153,6 @@ export async function importReference(url: string, startSeconds: number, duratio
 }
 
 export async function scoreSoloAttempt(reference: PoseRecording, attempt: PoseRecording, signal: AbortSignal): Promise<ScoreResult> {
-  const response = await post('/score', { reference, attempt }, signal, 'Could not score this attempt. Try again.');
+  const response = await post('/score', { reference, attempt, mode: 'solo_partial' }, signal, 'Could not score this attempt. Try again.');
   return response.json();
 }

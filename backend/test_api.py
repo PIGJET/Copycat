@@ -89,3 +89,58 @@ def test_score_contract_format_and_step_back_422():
     r = client.post("/score", json={"reference": ref, "attempt": empty})
     assert r.status_code == 422
     assert "whole body is in frame" in r.json()["detail"]
+
+
+def test_solo_missing_player_scores_zero_and_legacy_unchanged():
+    reference = recording()
+    missing = {"frames": [{"t": f["t"], "landmarks": None} for f in reference["frames"]]}
+    result = client.post('/score', json={'reference': reference, 'attempt': missing, 'mode': 'solo_partial'})
+    assert result.status_code == 200
+    assert result.json()['total'] == 0
+    assert client.post('/score', json={'reference': reference, 'attempt': missing}).status_code == 422
+
+
+def test_solo_upper_body_reference_does_not_score_legs():
+    reference = recording()
+    for f in reference['frames']:
+        for i in range(23, 29):
+            f['landmarks'][i][3] = 0
+    response = client.post('/score', json={'reference': reference, 'attempt': reference, 'mode': 'solo_partial'})
+    assert response.status_code == 200
+    assert response.json()['legs'] is None
+    assert response.json()['arms'] == 100
+
+
+def test_solo_timing_penalizes_late_dance_even_when_fully_visible():
+    result = client.post('/score', json={'reference': recording(), 'attempt': recording(shift_ms=600), 'mode': 'solo_partial'})
+    assert result.status_code == 200
+    assert result.json()['timing'] < 95
+
+
+def test_solo_long_player_occlusion_reduces_score_and_reference_occlusion_is_excluded():
+    reference = recording()
+    attempt = recording()
+    for frame in attempt['frames']:
+        if 2000 <= frame['t'] <= 8000:
+            frame['landmarks'] = None
+    result = client.post('/score', json={'reference': reference, 'attempt': attempt, 'mode': 'solo_partial'})
+    assert result.status_code == 200
+    assert result.json()['total'] < 55
+    hidden = {'frames': [{'t': f['t'], 'landmarks': None} for f in reference['frames']]}
+    result = client.post('/score', json={'reference': hidden, 'attempt': attempt, 'mode': 'solo_partial'})
+    assert result.status_code == 422
+    assert result.json()['recording'] == 'reference'
+
+
+def test_solo_late_first_sample_does_not_shift_away_missing_opening():
+    reference = recording()
+    attempt = recording()
+    for f in reference['frames']:
+        f['landmarks'] = reference['frames'][0]['landmarks']
+    for f in attempt['frames']:
+        f['landmarks'] = reference['frames'][0]['landmarks']
+    attempt['frames'] = [f for f in attempt['frames'] if f['t'] >= 3000]
+    result = client.post('/score', json={'reference': reference, 'attempt': attempt, 'mode': 'solo_partial'})
+    assert result.status_code == 200
+    assert result.json()['total'] < 85
+    assert result.json()['worst_moment']['reference_ms'] < 3000

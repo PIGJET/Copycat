@@ -21,3 +21,11 @@
   height: 100%;
   pointer-events: none;
 }
+
+.challenge-recorder__videos .challenge-recorder__reference {
+  width: 100%;
+  max-width: 640px;
+  height: min(360px, 56.25vw);
+  object-fit: contain;
+  background: #0b0812;
+}

@@ -54,10 +54,10 @@ export function createLiveScorer(reference: PoseRecording) {
       if (frame.t < referenceMs - 200) continue;
       if (frame.t > referenceMs) break;
       let weight = 0, error = 0, points = 0;
-      actual.forEach((a, i) => {
-        const b = frame.directions[i];
-        if (!a || !b) return;
-        const degrees = angle(a, b);
+      frame.directions.forEach((b, i) => {
+        if (!b) return;
+        const a = actual[i];
+        const degrees = a ? angle(a, b) : 60;
         weight += weights[i];
         error += degrees * weights[i];
         points += Math.max(0, Math.min(100, 100 - 2 * (degrees - 10))) * weights[i];

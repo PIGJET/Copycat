@@ -5,6 +5,7 @@ export interface ReferenceClip {
   videoUrl: string;
   durationMs: number;
   recording: PoseRecording;
+  cueImages?: { t: number; dataUrl: string }[];
 }
 
 export interface AttemptVideo {

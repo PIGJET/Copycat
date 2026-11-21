@@ -66,3 +66,11 @@ test('a confident joint outside the image does not count as visible', () => {
   const cutOff = pose.map((point, i) => i === 28 ? { ...point, y: 1.1 } : point)
   assert.equal(referenceQuality([{ t: 0, landmarks: cutOff }], 67).coverage, 0)
 })
+
+test('partial reference accepts a visible arm without hips or legs', () => {
+  const partial = Array.from({length: 33}, () => ({x: .5, y: .5, z: 0, visibility: 0}))
+  partial[11] = {x: .4, y: .2, z: 0, visibility: 1}
+  partial[13] = {x: .6, y: .3, z: 0, visibility: 1}
+  const frames = Array.from({length: 75}, (_, i) => ({t: i * 1000 / 15, landmarks: partial}))
+  assert.equal(referenceQuality(frames, 5000, {allowPartial: true}).usable, true)
+})

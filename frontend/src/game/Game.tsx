@@ -227,7 +227,7 @@ export default function Game({ onBack }: { onBack?: () => void }) {
             <dl className="solo-breakdown">
               {([['Arms', turn.score.arms], ['Legs', turn.score.legs], ['Torso', turn.score.torso],
                 ['Timing', turn.score.timing]] as const).map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{value ?? '—'}</dd></div>
+                <div key={label}><dt>{label}</dt><dd>{value ?? 'Not scored'}</dd></div>
               ))}
             </dl>
             {turn.score.worst_part && <p>Weakest part overall: <strong>{turn.score.worst_part}</strong></p>}

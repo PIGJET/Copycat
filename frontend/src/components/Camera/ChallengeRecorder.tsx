@@ -192,7 +192,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
 
     const turn: Turn = {
       controller: new AbortController(),
-      poses: new AttemptCapture(reference.durationMs),
+      poses: new AttemptCapture(reference.durationMs, { allowPartial: true }),
       phase: 'countdown',
     };
     turnRef.current = turn;
@@ -293,6 +293,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
         <div>
           <span>Reference</span>
           <video
+            className="challenge-recorder__reference"
             ref={referenceVideo}
             src={reference.videoUrl}
             playsInline

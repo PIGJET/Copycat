@@ -1,135 +1,73 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { ReferenceClip } from '../../types/challenge';
-import { cueGeometry, cuePosition, selectPoseCues } from '../../utils/poseCues';
+import { cuePosition } from '../../utils/poseCues';
 import type { SourceSize } from '../../utils/poseCues';
 import './PoseCueTrack.css';
 
 type Phase = 'ready' | 'countdown' | 'starting' | 'playing' | 'failed' | 'complete';
-
-interface Props {
-  reference: ReferenceClip;
-  source: SourceSize;
-  videoRef: RefObject<HTMLVideoElement | null>;
-  phase: Phase;
-}
-
-const LIMBS = [[11, 13, 15], [12, 14, 16], [23, 25, 27], [24, 26, 28]];
+interface Props { reference: ReferenceClip; source: SourceSize; videoRef: RefObject<HTMLVideoElement | null>; phase: Phase }
+const EDGES = [[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
 
 export function PoseCueTrack({ reference, source, videoRef, phase }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastTime = useRef(0);
-  const cues = useMemo(() => selectPoseCues(reference.recording, reference.durationMs, source),
-    [reference.recording, reference.durationMs, source]);
-  const geometry = useMemo(() => cueGeometry(cues, source), [cues, source]);
+  const cues = useMemo(() => (reference.cueImages ?? []).flatMap(cue => {
+    const frame = reference.recording.frames.find(f => f.t === cue.t);
+    if (!frame?.landmarks) return [];
+    const image = new Image();
+    image.src = cue.dataUrl;
+    return [{ ...cue, image, landmarks: frame.landmarks }];
+  }), [reference]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let animation = 0;
-
-    function draw(timeMs: number) {
-      if (!canvas || !context) return;
+    const draw = () => {
       const width = canvas.clientWidth, height = canvas.clientHeight;
-      if (!width || !height) return;
-      const ratio = window.devicePixelRatio || 1;
-      const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
-      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-        canvas.width = pixelWidth;
-        canvas.height = pixelHeight;
+      if (!width || !height || !source.width || !source.height) return;
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== Math.round(width*dpr) || canvas.height !== Math.round(height*dpr)) {
+        canvas.width = Math.round(width*dpr); canvas.height = Math.round(height*dpr);
       }
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
-      context.fillStyle = '#241a35';
-      context.fillRect(0, 0, width, height);
-      if (!geometry.poses.length) return;
-
-      const marker = width * .2;
-      const cardWidth = Math.min(100, Math.max(58, width * .13));
-      const cardHeight = Math.min(150, height - 30);
-      const extentX = Math.max(1, geometry.maxX - geometry.minX);
-      const extentY = Math.max(1, geometry.maxY - geometry.minY);
-      const scale = Math.min((cardWidth - 28) / extentX, (cardHeight - 32) / extentY);
-      const centerX = (geometry.minX + geometry.maxX) / 2;
-      const centerY = (geometry.minY + geometry.maxY) / 2;
-      const reduced = motion.matches;
-      const due = geometry.poses.filter(pose => pose.t <= timeMs).at(-1);
-      const next = geometry.poses.find(pose => pose.t > timeMs);
-      const staticPoses = reduced ? (due ? [due, next] : geometry.poses.slice(0, 2)).filter(pose => pose !== undefined) : geometry.poses;
-
-      for (const pose of staticPoses) {
-        const position = cuePosition(pose.t, timeMs, width);
-        const x = reduced ? (pose === staticPoses[0] ? marker : width * .72) : position.x;
-        if (x < -cardWidth || x > width + cardWidth) continue;
-        const highlighted = position.highlighted;
-        context.fillStyle = highlighted ? '#b6ff00' : '#37294b';
-        context.strokeStyle = highlighted ? '#e0ffab' : '#6e577f';
-        context.lineWidth = 2;
-        context.beginPath();
-        context.roundRect(x - cardWidth / 2, 10, cardWidth, cardHeight, 12);
-        context.fill();
-        context.stroke();
-        context.save();
-        context.translate(x - centerX * scale, 10 + cardHeight / 2 - centerY * scale);
-        context.scale(scale, scale);
-        const point = (index: number) => pose.points[index];
-        const lines = [...LIMBS, [11, 12], [11, 23], [12, 24], [23, 24]];
-        for (const [color, strokeWidth] of [['#11101b', 11], ['#f5efff', 7]] as const) {
-          context.strokeStyle = color;
-          context.lineWidth = strokeWidth / scale;
-          context.lineCap = 'round';
-          context.lineJoin = 'round';
-          for (const line of lines) {
-            const visible = line.map(point).filter(p => p !== null);
-            if (visible.length !== line.length) continue;
-            context.beginPath();
-            context.moveTo(visible[0].x, visible[0].y);
-            for (const p of visible.slice(1)) context.lineTo(p.x, p.y);
-            context.stroke();
-          }
-          context.beginPath();
-          context.arc(pose.head.x, pose.head.y, pose.head.radius, 0, Math.PI * 2);
-          context.stroke();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#241a35'; ctx.fillRect(0, 0, width, height);
+      const due = cues.filter(c => c.t <= lastTime.current).at(-1);
+      const next = cues.find(c => c.t > lastTime.current);
+      const visible = motion.matches ? (due ? [due, next].filter(c => c !== undefined) : cues.slice(0, 2)) : cues;
+      const cardW = Math.min(140, Math.max(76, width * .16));
+      const cardH = Math.min(height - 30, 145);
+      visible.forEach((cue, index) => {
+        const pos = cuePosition(cue.t, lastTime.current, width);
+        const x = motion.matches ? (index === 0 ? width * .2 : width * .72) : pos.x;
+        if (x < -cardW || x > width + cardW) return;
+        const scale = Math.min(cardW / source.width, cardH / source.height);
+        const w = source.width * scale, h = source.height * scale;
+        const left = x - w / 2, top = 8 + (cardH - h) / 2;
+        if (cue.image.complete && cue.image.naturalWidth) ctx.drawImage(cue.image, left, top, w, h);
+        ctx.strokeStyle = pos.highlighted ? '#b6ff00' : '#fff'; ctx.lineWidth = 2;
+        for (const [a, b] of EDGES) {
+          const p = cue.landmarks[a], q = cue.landmarks[b];
+          if (!p || !q || p.visibility < .5 || q.visibility < .5 || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1 || q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1) continue;
+          ctx.beginPath(); ctx.moveTo(left + p.x*w, top + p.y*h); ctx.lineTo(left + q.x*w, top + q.y*h); ctx.stroke();
         }
-        context.restore();
-        context.fillStyle = highlighted ? '#16112b' : '#d9d0e5';
-        context.font = '12px system-ui';
-        context.textAlign = 'center';
-        context.fillText(`${(pose.t / 1000).toFixed(1)}s`, x, cardHeight + 4);
-      }
-      context.fillStyle = '#b6ff00';
-      context.fillRect(marker - 2, 8, 4, cardHeight + 4);
-      context.font = 'bold 12px system-ui';
-      context.textAlign = 'center';
-      context.fillText('MATCH', marker, height - 5);
-    }
-
-    function tick() {
-      if (phase === 'playing') lastTime.current = (videoRef.current?.currentTime ?? 0) * 1000;
-      draw(lastTime.current);
-      if (phase === 'playing') animation = requestAnimationFrame(tick);
-    }
-
+        ctx.fillStyle = pos.highlighted ? '#b6ff00' : '#fff';
+        for (const p of cue.landmarks) {
+          if (!p || p.visibility < .5 || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) continue;
+          ctx.beginPath(); ctx.arc(left + p.x*w, top + p.y*h, 2, 0, Math.PI*2); ctx.fill();
+        }
+      });
+      ctx.fillStyle = '#b6ff00'; ctx.fillRect(width*.2 - 2, 6, 4, cardH + 5);
+    };
+    const tick = () => { if (phase === 'playing') lastTime.current = (videoRef.current?.currentTime ?? 0) * 1000; draw(); if (phase === 'playing') animation = requestAnimationFrame(tick); };
     if (phase === 'ready' || phase === 'countdown' || phase === 'starting') lastTime.current = 0;
     if (phase === 'complete') lastTime.current = reference.durationMs;
-    const resize = new ResizeObserver(() => draw(lastTime.current));
-    resize.observe(canvas);
-    const redraw = () => draw(lastTime.current);
-    motion.addEventListener('change', redraw);
-    tick();
-    return () => {
-      cancelAnimationFrame(animation);
-      resize.disconnect();
-      motion.removeEventListener('change', redraw);
-    };
-  }, [geometry, phase, reference.durationMs, videoRef]);
-
-  return <div className="pose-cue-track" aria-label="Upcoming reference poses">
-    <span>Upcoming moves</span>
-    <canvas ref={canvasRef} aria-hidden="true" />
-    {source.width > 0 && source.height > 0 && cues.length === 0 && <span>No clear poses available for this clip.</span>}
-  </div>;
+    const resize = new ResizeObserver(draw); resize.observe(canvas);
+    motion.addEventListener('change', draw); cues.forEach(c => c.image.addEventListener('load', draw)); tick();
+    return () => { cancelAnimationFrame(animation); resize.disconnect(); motion.removeEventListener('change', draw); cues.forEach(c => c.image.removeEventListener('load', draw)); };
+  }, [cues, phase, reference.durationMs, source, videoRef]);
+  return <div className="pose-cue-track" aria-label="Upcoming reference poses"><span>Upcoming moves</span><canvas ref={canvasRef} aria-hidden="true" />{source.width > 0 && !cues.length && <span>No clear poses available for this clip.</span>}</div>;
 }
