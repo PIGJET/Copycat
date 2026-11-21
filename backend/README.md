@@ -133,7 +133,8 @@ yt-dlp --version
 node --version
 ```
 
-Restart uvicorn after changing PATH. yt-dlp uses the explicitly selected Node runtime and
+Restart uvicorn after changing PATH. FFmpeg must support the scale filter’s reset_sar option
+(tested with FFmpeg 9.0.2); this preserves display aspect ratio when producing square pixels. yt-dlp uses the explicitly selected Node runtime and
 its EJS components; see [runtime setup](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
 Homebrew's native yt-dlp is invoked directly; no Python yt-dlp/ffmpeg package is required.
 The importer ignores personal yt-dlp configuration, disables disk cache, and uses no cookies.
@@ -151,7 +152,8 @@ authorized video. Error bodies are JSON; check the status/content type before pl
 
 The endpoint returns a completed `video/mp4` response. It retrieves a bounded full source,
 accurately trims the selected section via transcoding, then verifies H.264/yuv420p, dimensions,
-duration (within 250 ms of requested) and near-zero start time using ffprobe. The final clip
+both container and visual-stream duration (within 250 ms of requested) and near-zero
+start times using ffprobe. A long audio track cannot mask a truncated visual stream. The final clip
 is its own timeline; do not add the original YouTube start offset to score timestamps.
 Reference frames are extracted in the browser with MediaPipe, not by FFmpeg or this endpoint.
 Game should fetch a Blob, create an object URL and revoke it when no longer used.
@@ -182,3 +184,7 @@ MP4 download followed by browser MediaPipe extraction. This implementation uses 
 existing FastAPI stack and returns a completed clip in one response instead of adding a
 persistent video-serving route. [yt-dlp options](https://github.com/yt-dlp/yt-dlp),
 [FFmpeg documentation](https://ffmpeg.org/ffmpeg.html).
+
+Live retrieval check: yt-dlp returned “video unavailable” for the public test ID used during
+development. Native conversion is verified, but a successful live YouTube import still needs
+to be checked with a working authorized source on the demo network.

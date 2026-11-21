@@ -105,7 +105,7 @@ def test_pipeline_uses_fixed_commands_and_correct_trim(monkeypatch, tmp_path):
         if args[0].endswith('ffprobe'):
             return json.dumps({'format': {'duration': '30', 'start_time': '0'},
                 'streams': [{'codec_type': 'video', 'codec_name': 'h264',
-                             'pix_fmt': 'yuv420p', 'width': 640, 'height': 480}]}).encode()
+                             'pix_fmt': 'yuv420p', 'width': 640, 'height': 480, 'duration': '30', 'start_time': '0'}]}).encode()
         return b''
     monkeypatch.setattr(rv, 'run_process', fake)
     assert asyncio.run(rv.prepare_reference(URL, 20, 30, tmp_path)) == tmp_path / 'clip.mp4'
@@ -237,3 +237,98 @@ def test_native_mp4_normalization(monkeypatch, tmp_path):
     monkeypatch.setattr(rv, 'run_process', source)
     output = asyncio.run(rv.prepare_reference(URL, 1, 5, tmp_path))
     assert output.stat().st_size > 0
+
+
+def test_video_stream_must_cover_entire_section():
+    probe = {'format': {'duration': '6', 'start_time': '0'}, 'streams': [
+        {'codec_type': 'video', 'codec_name': 'h264', 'pix_fmt': 'yuv420p',
+         'width': 640, 'height': 480, 'start_time': '0', 'duration': '3'},
+        {'codec_type': 'audio', 'duration': '6'}]}
+    with pytest.raises(rv.ImportFailure):
+        rv.validate_output(probe, 6)
+
+
+def test_file_response_io_runs_off_event_loop(monkeypatch):
+    import threading
+    loop_thread = None
+    read_threads = []
+    cleanup_threads = []
+    real_read = Path.read_bytes
+    real_cleanup = __import__('tempfile').TemporaryDirectory.cleanup
+    async def fake(url, start_seconds, duration_seconds, work_dir, disconnected):
+        nonlocal loop_thread
+        loop_thread = threading.get_ident()
+        output = work_dir / 'clip.mp4'
+        output.write_bytes(b'clip')
+        return output
+    def read(path):
+        read_threads.append(threading.get_ident())
+        return real_read(path)
+    def cleanup(directory):
+        cleanup_threads.append(threading.get_ident())
+        return real_cleanup(directory)
+    monkeypatch.setattr(rv, 'prepare_reference', fake)
+    monkeypatch.setattr(Path, 'read_bytes', read)
+    monkeypatch.setattr(__import__('tempfile').TemporaryDirectory, 'cleanup', cleanup)
+    with TestClient(app) as client:
+        assert client.post('/reference-video', json=BODY).status_code == 200
+    assert read_threads and all(t != loop_thread for t in read_threads)
+    assert cleanup_threads and all(t != loop_thread for t in cleanup_threads)
+
+
+@pytest.mark.skipif(not rv.shutil.which('ffmpeg') or not rv.shutil.which('ffprobe'),
+                    reason='native FFmpeg tools not installed')
+def test_anamorphic_display_aspect_ratio_preserved(monkeypatch, tmp_path):
+    import subprocess
+    real_run, real_which = rv.run_process, rv.shutil.which
+    monkeypatch.setattr(rv.shutil, 'which', lambda name:
+        '/fake/yt-dlp' if name == 'yt-dlp' else (real_which(name) or '/fake/node'))
+    async def source(args, work_dir, deadline, disconnected=None):
+        if args[0] == '/fake/yt-dlp':
+            if '--dump-single-json' in args:
+                return b'{"duration": 6}'
+            subprocess.run([real_which('ffmpeg'), '-nostdin', '-v', 'error', '-f', 'lavfi',
+                '-i', 'testsrc2=size=320x240:rate=15', '-vf', 'setsar=2', '-t', '6',
+                '-c:v', 'libx264', str(tmp_path/'source.mp4')], check=True)
+            return b''
+        return await real_run(args, work_dir, deadline, disconnected)
+    monkeypatch.setattr(rv, 'run_process', source)
+    output = asyncio.run(rv.prepare_reference(URL, 0, 5, tmp_path))
+    probe = json.loads(subprocess.check_output([real_which('ffprobe'), '-v', 'error',
+        '-show_streams', '-of', 'json', str(output)]))['streams'][0]
+    assert probe['width'] / probe['height'] == pytest.approx(8 / 3, abs=.01)
+    assert probe['sample_aspect_ratio'] == '1:1'
+
+
+def test_output_budget_enforced_during_encoding(monkeypatch, tmp_path):
+    monkeypatch.setattr(rv, 'MAX_OUTPUT_BYTES', 10)
+    async def scenario():
+        with pytest.raises(rv.ImportFailure) as exc:
+            await rv.run_process([sys.executable, '-c',
+                'from pathlib import Path; import time; Path("clip.mp4").write_bytes(b"x"*100); time.sleep(.5)'],
+                tmp_path, asyncio.get_running_loop().time() + 5)
+        assert exc.value.reason == 'output_size'
+    asyncio.run(scenario())
+
+
+@pytest.mark.skipif(not rv.shutil.which('ffmpeg') or not rv.shutil.which('ffprobe'),
+                    reason='native FFmpeg tools not installed')
+def test_audio_overhang_cannot_hide_short_video(monkeypatch, tmp_path):
+    import subprocess
+    real_run, real_which = rv.run_process, rv.shutil.which
+    monkeypatch.setattr(rv.shutil, 'which', lambda name:
+        '/fake/yt-dlp' if name == 'yt-dlp' else (real_which(name) or '/fake/node'))
+    async def source(args, work_dir, deadline, disconnected=None):
+        if args[0] == '/fake/yt-dlp':
+            if '--dump-single-json' in args:
+                return b'{"duration": 8}'
+            subprocess.run([real_which('ffmpeg'), '-nostdin', '-v', 'error',
+                '-f', 'lavfi', '-i', 'testsrc2=size=320x240:rate=15:duration=3',
+                '-f', 'lavfi', '-i', 'sine=frequency=440:duration=8',
+                '-c:v', 'libx264', '-c:a', 'aac', str(tmp_path/'source.mp4')], check=True)
+            return b''
+        return await real_run(args, work_dir, deadline, disconnected)
+    monkeypatch.setattr(rv, 'run_process', source)
+    with pytest.raises(rv.ImportFailure) as exc:
+        asyncio.run(rv.prepare_reference(URL, 0, 6, tmp_path))
+    assert exc.value.reason == 'invalid_output'

@@ -63,7 +63,11 @@ def validate_output(probe: dict, duration: float) -> None:
         actual = float(info['duration'])
         start = float(info.get('start_time', 0))
         video = next(s for s in probe['streams'] if s['codec_type'] == 'video')
-        if (not math.isfinite(actual) or abs(actual - duration) > 0.25
+        visual_duration = float(video['duration'])
+        visual_start = float(video.get('start_time', 0))
+        if (not math.isfinite(visual_duration) or abs(visual_duration - duration) > 0.25
+                or not math.isfinite(visual_start) or abs(visual_start) > 0.25
+                or not math.isfinite(actual) or abs(actual - duration) > 0.25
                 or not math.isfinite(start) or abs(start) > 0.25
                 or video['codec_name'] != 'h264' or video['pix_fmt'] != 'yuv420p'
                 or not 0 < video['width'] <= 1280 or not 0 < video['height'] <= 720):
@@ -95,6 +99,9 @@ async def run_process(args: list[str], work_dir: Path, deadline: float,
                     raise ImportFailure(499, 'Video preparation canceled.', 'disconnected')
                 if work_size(work_dir) > MAX_WORK_BYTES:
                     raise ImportFailure(502, 'This video is too large. Try a shorter source or a local MP4.', 'size_limit')
+                clip = work_dir / 'clip.mp4'
+                if clip.exists() and clip.stat().st_size > MAX_OUTPUT_BYTES:
+                    raise ImportFailure(502, 'The prepared video is too large.', 'output_size')
                 if process.returncode is not None:
                     break
                 await asyncio.sleep(POLL_SECONDS)
@@ -155,7 +162,7 @@ async def prepare_reference(url: str, start_seconds: float, duration_seconds: fl
     await run_process([tools['ffmpeg'], '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
         '-ss', str(start_seconds), '-i', str(sources[0]), '-t', str(duration_seconds),
         '-map', '0:v:0', '-map', '0:a:0?', '-vf',
-        'scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1',
+        'scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2:reset_sar=1',
         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
         '-r', '30', '-c:a', 'aac', '-b:a', '128k', '-map_metadata', '-1',
         '-avoid_negative_ts', 'make_zero', '-movflags', '+faststart', str(output)],

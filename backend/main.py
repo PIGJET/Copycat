@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 import reference_video
@@ -108,12 +109,13 @@ async def reference_video_import(req: ReferenceVideoRequest, request: Request):
     if not reference_video.IMPORT_LOCK.acquire(blocking=False):
         return JSONResponse(status_code=503, content={
             "detail": "Another dance is being prepared. Try again shortly.", "reason": "busy"})
+    directory = None
     try:
-        with tempfile.TemporaryDirectory(prefix="copycat-reference-") as directory:
-            output = await reference_video.prepare_reference(
-                req.url, req.start_seconds, req.duration_seconds, Path(directory), request.is_disconnected)
-            # Bounded bytes outlive the temporary file, including response disconnects.
-            data = output.read_bytes()
+        directory = await run_in_threadpool(tempfile.TemporaryDirectory, prefix="copycat-reference-")
+        output = await reference_video.prepare_reference(
+            req.url, req.start_seconds, req.duration_seconds, Path(directory.name), request.is_disconnected)
+        # Bounded bytes outlive the temporary file, including response disconnects.
+        data = await run_in_threadpool(output.read_bytes)
         return Response(content=data, media_type="video/mp4")
     except reference_video.ImportFailure as exc:
         return JSONResponse(status_code=exc.status, content={"detail": exc.detail, "reason": exc.reason})
@@ -122,4 +124,8 @@ async def reference_video_import(req: ReferenceVideoRequest, request: Request):
             "detail": "Video storage is unavailable. Try again or choose a local MP4.",
             "reason": "storage_error"})
     finally:
-        reference_video.IMPORT_LOCK.release()
+        try:
+            if directory is not None:
+                await run_in_threadpool(directory.cleanup)
+        finally:
+            reference_video.IMPORT_LOCK.release()
