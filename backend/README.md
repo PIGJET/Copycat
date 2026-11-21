@@ -32,15 +32,20 @@ cp .env.example .env        # then paste your Gemini key into .env
 
 ## `POST /score`
 
-Send both recordings as MediaPipe Pose landmarks (33 per frame). `t` is a timestamp
-in ms; any starting value works (e.g. `performance.now()`), and frame rates can differ.
-A landmark is `{"x", "y", "z", "visibility"}` or `[x, y, z, visibility]`, using
-MediaPipe's normalised image coordinates. Landmarks with visibility below 0.5 are ignored.
+Send both recordings as MediaPipe Pose landmarks (33 per frame), in the CONTRACT.md format:
+`{"t": ms, "lm": [[x, y, visibility], ...]}`. `t` can start anywhere (e.g. `performance.now()`)
+and frame rates can differ. Also accepted: `"landmarks"` instead of `"lm"`, 4-value
+`[x, y, z, visibility]` lists, and `{"x", "y", "z", "visibility"}` dicts.
+Landmarks with visibility below 0.5 are ignored.
+
+Frames that are `null` (no pose detected), or whose `lm` is `null`, are skipped. If fewer than
+5 usable frames remain, you get a 422 whose `detail` tells the player to step back so their
+whole body is in frame. You can show that `detail` text directly.
 
 ```json
 {
-  "reference": {"frames": [{"t": 0, "landmarks": [{"x": 0.51, "y": 0.22, "z": -0.1, "visibility": 0.99}, "... 33 total"]}, "..."]},
-  "attempt":   {"frames": [{"t": 0, "landmarks": ["..."]}, "..."]}
+  "reference": {"frames": [{"t": 0, "lm": [[0.51, 0.22, 0.99], "... 33 total"]}, null, "..."]},
+  "attempt":   {"frames": [{"t": 0, "lm": null}, {"t": 33, "lm": ["..."]}, "..."]}
 }
 ```
 
@@ -57,7 +62,7 @@ Response (scores 0-100; `arms`/`legs`/`torso` are `null` if that group was never
 ```
 
 `worst_moment`/`best_moment` are timestamps in each recording's own timeline: use them to
-grab the frames for `/roast`. Unscoreable input (no frames, no visible pose, no `t`) is a 422.
+grab the frames for `/roast`. Other unscoreable input (no visible pose, a frame missing `t`) is also a 422.
 
 How the score works: limb directions -> resample to 15 fps -> dynamic time warping
 (up to 1 s of drift) -> per-limb angle error (10° is free, 60° or worse is 0). Limbs that

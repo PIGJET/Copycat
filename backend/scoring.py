@@ -68,6 +68,12 @@ DTW_WINDOW = FPS  # 1 second
 MOMENT_WINDOW = 7
 
 
+MIN_USABLE_FRAMES = 5
+NOT_ENOUGH_FRAMES_MSG = (
+    "We couldn't see enough of you. Step back so your whole body is in frame, then try again."
+)
+
+
 class ScoringError(ValueError):
     """Input can't be scored (e.g. no usable pose)."""
 
@@ -77,11 +83,20 @@ class ScoringError(ValueError):
 # ---------------------------------------------------------------------------
 
 def _point(lm: Any) -> tuple[float, float, float]:
-    """Return (x, y, visibility) from a landmark given as dict or list."""
+    """Return (x, y, visibility) from a landmark.
+
+    Dict: {"x", "y", "z"?, "visibility"?}. List: [x, y, visibility] (contract
+    format), [x, y, z, visibility], or bare [x, y] (fully visible).
+    """
     if isinstance(lm, dict):
         return float(lm["x"]), float(lm["y"]), float(lm.get("visibility", 1.0))
     vals = list(lm)
-    vis = float(vals[3]) if len(vals) >= 4 else 1.0
+    if len(vals) == 3:
+        vis = float(vals[2])
+    elif len(vals) >= 4:
+        vis = float(vals[3])
+    else:
+        vis = 1.0
     return float(vals[0]), float(vals[1]), vis
 
 
@@ -118,15 +133,22 @@ def _frame_vectors(landmarks: Sequence[Any]) -> np.ndarray:
 def _parse(recording: Any) -> tuple[np.ndarray, np.ndarray]:
     """Return (times_ms[n], vectors[n, segments, 2]) sorted by time."""
     frames = recording.get("frames") if isinstance(recording, dict) else recording
-    if not frames:
-        raise ScoringError("recording has no frames")
     times, vecs = [], []
-    for f in frames:
-        t = f.get("t") if isinstance(f, dict) else None
+    for f in frames or []:
+        if f is None:
+            continue  # no pose detected this frame
+        if not isinstance(f, dict):
+            raise ScoringError("each frame must be an object like {\"t\": ms, \"lm\": [...]}")
+        lm = f["lm"] if "lm" in f else f.get("landmarks")
+        if lm is None or len(lm) < 29:
+            continue
+        t = f.get("t")
         if t is None:
             raise ScoringError("every frame needs a timestamp 't' in ms")
         times.append(float(t))
-        vecs.append(_frame_vectors(f.get("landmarks")))
+        vecs.append(_frame_vectors(lm))
+    if len(times) < MIN_USABLE_FRAMES:
+        raise ScoringError(NOT_ENOUGH_FRAMES_MSG)
     order = np.argsort(times, kind="stable")
     return np.asarray(times)[order], np.asarray(vecs)[order]
 
@@ -217,9 +239,12 @@ def _moving_average(x: np.ndarray, w: int) -> np.ndarray:
 def score_dance(reference: Any, attempt: Any) -> dict[str, Any]:
     """Score how well `attempt` copies `reference`.
 
-    Each recording is {"frames": [{"t": ms, "landmarks": [33 landmarks]}, ...]}
-    (or just the list of frames). A landmark is {"x","y","z","visibility"} or
-    [x, y, z, visibility]; x/y are MediaPipe's normalised image coordinates.
+    Each recording is {"frames": [{"t": ms, "lm": [33 landmarks]}, ...]}
+    (or just the list of frames; "landmarks" works as well as "lm"). Null frames
+    and frames with null lm are skipped. A landmark is [x, y, visibility],
+    [x, y, z, visibility] or {"x","y","z","visibility"}; x/y are MediaPipe's
+    normalised image coordinates. Fewer than MIN_USABLE_FRAMES usable frames
+    raises ScoringError asking the player to step back.
     """
     ref_t, ref_v = _resample(*_parse(reference))
     att_t, att_v = _resample(*_parse(attempt))
