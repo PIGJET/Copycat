@@ -31,6 +31,11 @@
       <button class="mode solo" data-mode="Solo"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 2h6v6H9zM6 10h12v4h3v6h-5v-4h-1v6H9v-6H8v4H3v-6h3z"/></svg></span><span class="mode-copy"><span class="mode-title">SOLO PLAY</span></span><span class="key">1</span></button>
       <button class="mode team" data-mode="Team"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 24"><path d="M5 2h6v6H5zm16 0h6v6h-6zM2 10h12v4h4v-4h12v12h-6v-6h-2v6h-6v-4h-4v4H6v-6H4v6H0V12h2z"/></svg></span><span class="mode-copy"><span class="mode-title">TEAM PLAY</span></span><span class="key">2</span></button>
     </div>
+    <aside class="home-music" id="home-music" aria-label="Home music" hidden>
+      <div id="home-music-player"></div>
+      <p id="home-music-status" role="status"></p>
+      <a id="home-music-source" href="https://www.youtube.com/watch?v=mRN_T6JkH-c" target="_blank" rel="noopener noreferrer">Music on YouTube</a>
+    </aside>
   </section>
   <section class="lobby-screen" aria-labelledby="lobby-title" hidden>
     <div class="lobby-nav"><button class="text-button" id="home">BACK TO MENU</button></div>
@@ -49,6 +54,7 @@
 <script src="demo-data.js"></script>
 <script src="round-ui.js"></script>
 <script src="game-ui.js"></script>
+<script src="home-music.js"></script>
 </body></html>
 
 

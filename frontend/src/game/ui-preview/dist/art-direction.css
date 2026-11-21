@@ -35,6 +35,11 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
 .mode:active { transform:translateY(2px) }
 .mode:focus-visible,.start-button:focus-visible { outline:0; box-shadow:inset 0 0 0 3px white }
 .key { border:0; font-family:var(--body); font-size:12px; opacity:.6 }
+.home-music { width:240px; max-width:100%; margin:32px auto 0; text-align:left }
+.home-music iframe { display:block; width:240px; max-width:100%; height:200px; border:0 }
+.home-music p { font-size:14px; line-height:1.4; margin:10px 0; color:var(--muted) }
+.home-music p:empty { display:none }
+.home-music a { display:inline-block; margin-top:8px; color:#b6a2c7; font-size:14px; text-underline-offset:3px }
 
 /* Character-selection tiles: one colored edge instead of nested glowing frames. */
 .roster-frame { border:0; background:transparent; box-shadow:none; padding:0 }
