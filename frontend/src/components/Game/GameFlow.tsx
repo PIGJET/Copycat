@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CameraCheckPage, DashboardPage, FinalePage, HomePage, LeaderboardPage, LobbyPage, ScorePage, TempoPage } from "./index";
+import type { PoseSequence } from "../../types/pose";
 import type { Player, Ranking, Score } from "./uiTypes";
 
 type Screen = "home" | "lobby" | "camera" | "tempo" | "dashboard" | "score" | "leaderboard" | "finale";
@@ -8,8 +9,8 @@ const emptyScore: Score = { total: null, arms: null, legs: null, torso: null, ti
 const soloPlayer: Player = { id: "solo-player", name: "You", avatar: "cat" };
 const referencePlayer: Player = { id: "reference", name: "Reference", avatar: "robot" };
 
-/** UI navigation shell. Recording and score results are intentionally not simulated. */
 export function GameFlow() {
+  const recordingsByRound = useRef(new Map<number, Map<string, PoseSequence>>());
   const [screen, setScreen] = useState<Screen>("home");
   const [mode, setMode] = useState<Mode>("team");
   const [players, setPlayers] = useState<Player[]>([soloPlayer]);
@@ -28,6 +29,7 @@ export function GameFlow() {
   const rankings: Ranking[] = players.map(player => ({ player, average: null, attempts: 0 }));
 
   function returnHome() {
+    recordingsByRound.current.clear();
     setScreen("home");
     setRound(0);
     setTurnIndex(0);
@@ -46,7 +48,11 @@ export function GameFlow() {
     setScreen("leaderboard");
   }
 
-  function completeTurn() {
+  function completeTurn(recording: PoseSequence) {
+    const recordings = recordingsByRound.current.get(round) ?? new Map<string, PoseSequence>();
+    recordings.set(recording.playerId, recording);
+    recordingsByRound.current.set(round, recordings);
+
     if (creatorTurn) {
       openNextTurn();
       return;
@@ -76,6 +82,7 @@ export function GameFlow() {
   }
 
   function replay() {
+    recordingsByRound.current.clear();
     setRound(0);
     setTurnIndex(0);
     setScreen("camera");

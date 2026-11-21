@@ -1,8 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { usePoseDetection } from "../../hooks/usePoseDetection";
 
-function Camera() {
+import type { Ref } from "react";
+import type { PoseSequence } from "../../types/pose";
+
+export type CameraHandle = {
+  startRecording: () => boolean;
+  stopRecording: (playerId: string) => PoseSequence;
+};
+
+type CameraProps = {
+  ref: Ref<CameraHandle>;
+  onReadyChange: (ready: boolean) => void;
+};
+
+function Camera({ ref, onReadyChange }: CameraProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -15,6 +29,7 @@ function Camera() {
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+    let active = true;
 
     async function startCamera() {
       try {
@@ -23,9 +38,17 @@ function Camera() {
           audio: false,
         });
 
+        if (!active) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          const [track] = stream.getVideoTracks();
+          track?.addEventListener("ended", () => setIsPlaying(false), { once: true });
           await videoRef.current.play();
+          if (active) setIsPlaying(track?.readyState === "live");
         }
       } catch (error) {
         console.error("Could not access camera:", error);
@@ -35,6 +58,7 @@ function Camera() {
     startCamera();
 
     return () => {
+      active = false;
       stream?.getTracks().forEach((track) => track.stop());
     };
   }, []);
@@ -72,26 +96,22 @@ function Camera() {
     }
   }, [landmarks]);
 
-  function handleStartRecording() {
-    startRecording();
-    console.log("Recording started!");
-  }
+  const ready = isReady && isPlaying;
+  useEffect(() => {
+    onReadyChange(ready);
+  }, [onReadyChange, ready]);
 
-  function handleStopRecording() {
-    const sequence = stopRecording("player-1");
-
-    console.log("Recorded dance:", sequence);
-    console.log("Number of frames:", sequence.frames.length);
-  }
+  useImperativeHandle(ref, () => ({
+    startRecording() {
+      if (!ready) return false;
+      startRecording();
+      return true;
+    },
+    stopRecording,
+  }));
 
   return (
     <div>
-      <h2>Dance Camera</h2>
-
-      <p>
-        {isReady ? "Pose detection ready!" : "Loading pose detection..."}
-      </p>
-
       <div style={{ position: "relative", maxWidth: "640px" }}>
         <video
           ref={videoRef}
@@ -116,16 +136,6 @@ function Camera() {
             transform: "scaleX(-1)",
           }}
         />
-      </div>
-
-      <div style={{ marginTop: "16px", display: "flex", gap: "12px" }}>
-        <button onClick={handleStartRecording} disabled={!isReady}>
-          Start Recording
-        </button>
-
-        <button onClick={handleStopRecording} disabled={!isReady}>
-          Stop Recording
-        </button>
       </div>
     </div>
   );
