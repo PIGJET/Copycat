@@ -1,0 +1,287 @@
+"""Compare two dances recorded as MediaPipe pose landmarks.
+
+Pipeline:
+  1. Turn each frame's 33 landmarks into limb direction angles (2D, image coords).
+  2. Resample both recordings to a fixed 15 fps grid.
+  3. Line them up with dynamic time warping (DTW) so small timing drift
+     doesn't wreck the pose scores.
+  4. Score each limb along the aligned path, plus a timing score from how far
+     the alignment strays from "same moment in both recordings".
+
+Scores are 0-100. Timestamps are in milliseconds, in each recording's own timeline.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Any, Sequence
+
+import numpy as np
+
+FPS = 15
+STEP_MS = 1000.0 / FPS
+MIN_VISIBILITY = 0.5
+
+# MediaPipe Pose landmark indices
+L_SHOULDER, R_SHOULDER = 11, 12
+L_ELBOW, R_ELBOW = 13, 14
+L_WRIST, R_WRIST = 15, 16
+L_HIP, R_HIP = 23, 24
+L_KNEE, R_KNEE = 25, 26
+L_ANKLE, R_ANKLE = 27, 28
+MID_SHOULDER, MID_HIP = "mid_shoulder", "mid_hip"  # virtual points
+
+# name -> (from, to, group)
+SEGMENTS: dict[str, tuple[Any, Any, str]] = {
+    "left upper arm": (L_SHOULDER, L_ELBOW, "arms"),
+    "left forearm": (L_ELBOW, L_WRIST, "arms"),
+    "right upper arm": (R_SHOULDER, R_ELBOW, "arms"),
+    "right forearm": (R_ELBOW, R_WRIST, "arms"),
+    "left thigh": (L_HIP, L_KNEE, "legs"),
+    "left shin": (L_KNEE, L_ANKLE, "legs"),
+    "right thigh": (R_HIP, R_KNEE, "legs"),
+    "right shin": (R_KNEE, R_ANKLE, "legs"),
+    "shoulders": (L_SHOULDER, R_SHOULDER, "torso"),
+    "hips": (L_HIP, R_HIP, "torso"),
+    "spine": (MID_HIP, MID_SHOULDER, "torso"),
+}
+SEGMENT_NAMES = list(SEGMENTS)
+GROUPS = ("arms", "legs", "torso")
+
+# total = pose * (1 - TIMING_SHARE + TIMING_SHARE * timing/100), so timing can't
+# rescue a bad copy (standing still "on time" shouldn't score well).
+TIMING_SHARE = 0.3
+# Limbs that barely move in the reference count less toward the total pose
+# score. A limb's weight is its mean angular spread (deg) / MOTION_FULL_DEG,
+# clamped to [MIN_WEIGHT, 1].
+MOTION_FULL_DEG = 30.0
+MIN_WEIGHT = 0.15
+
+# Angle error (degrees) -> score. Within TOLERANCE is perfect, MAX_ERR or worse is 0.
+TOLERANCE_DEG = 10.0
+MAX_ERR_DEG = 60.0
+# Mean timing lag (ms) at which the timing score hits 0.
+MAX_LAG_MS = 1000.0
+# DTW may drift at most this far off the diagonal (frames), on top of any length difference.
+DTW_WINDOW = FPS  # 1 second
+# Smoothing window (frames) for picking worst/best moments.
+MOMENT_WINDOW = 7
+
+
+class ScoringError(ValueError):
+    """Input can't be scored (e.g. no usable pose)."""
+
+
+# ---------------------------------------------------------------------------
+# Parsing
+# ---------------------------------------------------------------------------
+
+def _point(lm: Any) -> tuple[float, float, float]:
+    """Return (x, y, visibility) from a landmark given as dict or list."""
+    if isinstance(lm, dict):
+        return float(lm["x"]), float(lm["y"]), float(lm.get("visibility", 1.0))
+    vals = list(lm)
+    vis = float(vals[3]) if len(vals) >= 4 else 1.0
+    return float(vals[0]), float(vals[1]), vis
+
+
+def _frame_vectors(landmarks: Sequence[Any]) -> np.ndarray:
+    """(n_segments, 2) unit direction vectors for one frame; NaN where not visible."""
+    out = np.full((len(SEGMENTS), 2), np.nan)
+    if landmarks is None or len(landmarks) < 29:
+        return out
+    pts = [_point(lm) for lm in landmarks]
+
+    def get(idx: Any) -> tuple[float, float] | None:
+        if idx == MID_SHOULDER:
+            a, b = get(L_SHOULDER), get(R_SHOULDER)
+        elif idx == MID_HIP:
+            a, b = get(L_HIP), get(R_HIP)
+        else:
+            x, y, v = pts[idx]
+            return (x, y) if v >= MIN_VISIBILITY else None
+        if a is None or b is None:
+            return None
+        return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+
+    for k, (a_idx, b_idx, _) in enumerate(SEGMENTS.values()):
+        a, b = get(a_idx), get(b_idx)
+        if a is None or b is None:
+            continue
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        norm = math.hypot(dx, dy)
+        if norm > 1e-9:
+            out[k] = (dx / norm, dy / norm)
+    return out
+
+
+def _parse(recording: Any) -> tuple[np.ndarray, np.ndarray]:
+    """Return (times_ms[n], vectors[n, segments, 2]) sorted by time."""
+    frames = recording.get("frames") if isinstance(recording, dict) else recording
+    if not frames:
+        raise ScoringError("recording has no frames")
+    times, vecs = [], []
+    for f in frames:
+        t = f.get("t") if isinstance(f, dict) else None
+        if t is None:
+            raise ScoringError("every frame needs a timestamp 't' in ms")
+        times.append(float(t))
+        vecs.append(_frame_vectors(f.get("landmarks")))
+    order = np.argsort(times, kind="stable")
+    return np.asarray(times)[order], np.asarray(vecs)[order]
+
+
+# ---------------------------------------------------------------------------
+# Resampling
+# ---------------------------------------------------------------------------
+
+def _resample(times: np.ndarray, vecs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Resample to a FPS grid from first to last frame.
+
+    Each segment's x/y components are interpolated over the frames where that
+    segment was visible (held flat past the ends), then renormalised.
+    Segments never visible stay NaN.
+    """
+    if times[-1] - times[0] < STEP_MS:
+        raise ScoringError("recording is too short to score")
+    grid = np.arange(times[0], times[-1] + 1e-6, STEP_MS)
+    out = np.full((len(grid), vecs.shape[1], 2), np.nan)
+    for s in range(vecs.shape[1]):
+        ok = ~np.isnan(vecs[:, s, 0])
+        if ok.sum() == 0:
+            continue
+        for c in range(2):
+            out[:, s, c] = np.interp(grid, times[ok], vecs[ok, s, c])
+        norm = np.linalg.norm(out[:, s], axis=1, keepdims=True)
+        norm[norm < 1e-9] = 1.0
+        out[:, s] /= norm
+    return grid, out
+
+
+# ---------------------------------------------------------------------------
+# Alignment
+# ---------------------------------------------------------------------------
+
+def _angle_errors(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Angle (radians, 0..pi) between unit vectors a[..., 2] and b[..., 2]."""
+    dot = np.clip(np.sum(a * b, axis=-1), -1.0, 1.0)
+    return np.arccos(dot)
+
+
+def _dtw(cost: np.ndarray) -> list[tuple[int, int]]:
+    n, m = cost.shape
+    window = max(DTW_WINDOW, abs(n - m))
+    acc = np.full((n + 1, m + 1), np.inf)
+    acc[0, 0] = 0.0
+    for i in range(1, n + 1):
+        lo = max(1, i - window)
+        hi = min(m, i + window)
+        for j in range(lo, hi + 1):
+            acc[i, j] = cost[i - 1, j - 1] + min(acc[i - 1, j], acc[i, j - 1], acc[i - 1, j - 1])
+    # backtrack
+    i, j = n, m
+    path = [(i - 1, j - 1)]
+    while i > 1 or j > 1:
+        candidates = []
+        if i > 1 and j > 1:
+            candidates.append((acc[i - 1, j - 1], i - 1, j - 1))
+        if i > 1:
+            candidates.append((acc[i - 1, j], i - 1, j))
+        if j > 1:
+            candidates.append((acc[i, j - 1], i, j - 1))
+        _, i, j = min(candidates)
+        path.append((i - 1, j - 1))
+    path.reverse()
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Scoring
+# ---------------------------------------------------------------------------
+
+def _err_to_score(err_rad: float) -> float:
+    deg = math.degrees(err_rad)
+    frac = (deg - TOLERANCE_DEG) / (MAX_ERR_DEG - TOLERANCE_DEG)
+    return 100.0 * (1.0 - min(1.0, max(0.0, frac)))
+
+
+def _moving_average(x: np.ndarray, w: int) -> np.ndarray:
+    if len(x) < w:
+        return np.full_like(x, x.mean())
+    kernel = np.ones(w) / w
+    pad = w // 2
+    padded = np.pad(x, (pad, w - 1 - pad), mode="edge")
+    return np.convolve(padded, kernel, mode="valid")
+
+
+def score_dance(reference: Any, attempt: Any) -> dict[str, Any]:
+    """Score how well `attempt` copies `reference`.
+
+    Each recording is {"frames": [{"t": ms, "landmarks": [33 landmarks]}, ...]}
+    (or just the list of frames). A landmark is {"x","y","z","visibility"} or
+    [x, y, z, visibility]; x/y are MediaPipe's normalised image coordinates.
+    """
+    ref_t, ref_v = _resample(*_parse(reference))
+    att_t, att_v = _resample(*_parse(attempt))
+
+    # Segments usable in both recordings
+    valid = ~np.isnan(ref_v[:, :, 0]).all(axis=0) & ~np.isnan(att_v[:, :, 0]).all(axis=0)
+    if not valid.any():
+        raise ScoringError("no body parts were visible in both recordings")
+    seg_idx = np.flatnonzero(valid)
+
+    # Per-frame-pair cost: mean angle error over usable segments
+    r = ref_v[:, seg_idx][:, None]  # (n, 1, s, 2)
+    a = att_v[:, seg_idx][None, :]  # (1, m, s, 2)
+    cost = _angle_errors(r, a).mean(axis=-1)  # (n, m)
+
+    path = _dtw(cost)
+    pi = np.array([p[0] for p in path])
+    pj = np.array([p[1] for p in path])
+
+    # Per-segment errors along the path
+    seg_err = _angle_errors(ref_v[pi][:, seg_idx], att_v[pj][:, seg_idx])  # (len, s)
+    parts = {
+        SEGMENT_NAMES[s]: round(_err_to_score(float(seg_err[:, k].mean())), 1)
+        for k, s in enumerate(seg_idx)
+    }
+
+    groups: dict[str, float] = {}
+    for g in GROUPS:
+        vals = [v for name, v in parts.items() if SEGMENTS[name][2] == g]
+        groups[g] = round(float(np.mean(vals)), 1) if vals else None  # type: ignore[assignment]
+
+    # Timing: how far apart (ms from each recording's start) matched frames are
+    lag_ms = np.abs((ref_t[pi] - ref_t[0]) - (att_t[pj] - att_t[0]))
+    timing = round(100.0 * max(0.0, 1.0 - float(lag_ms.mean()) / MAX_LAG_MS), 1)
+
+    # Pose score weighted by how much each limb moves in the reference
+    ref_dirs = ref_v[:, seg_idx]
+    mean_dir = ref_dirs.mean(axis=0)
+    mean_dir /= np.maximum(np.linalg.norm(mean_dir, axis=-1, keepdims=True), 1e-9)
+    spread_deg = np.degrees(_angle_errors(ref_dirs, mean_dir[None]).mean(axis=0))
+    weights = np.clip(spread_deg / MOTION_FULL_DEG, MIN_WEIGHT, 1.0)
+    seg_scores = np.array([parts[SEGMENT_NAMES[s]] for s in seg_idx])
+    pose = float((weights * seg_scores).sum() / weights.sum())
+    total = round(pose * (1 - TIMING_SHARE + TIMING_SHARE * timing / 100.0), 1)
+
+    worst_part = min(parts, key=parts.get)
+
+    # Worst / best moments: smoothed per-step pose error along the path
+    step_err = _moving_average(seg_err.mean(axis=1), MOMENT_WINDOW)
+    worst_k, best_k = int(np.argmax(step_err)), int(np.argmin(step_err))
+
+    def moment(k: int) -> dict[str, int]:
+        return {"reference_ms": int(round(ref_t[pi[k]])), "attempt_ms": int(round(att_t[pj[k]]))}
+
+    return {
+        "total": total,
+        "arms": groups["arms"],
+        "legs": groups["legs"],
+        "torso": groups["torso"],
+        "timing": timing,
+        "worst_part": worst_part,
+        "worst_moment": moment(worst_k),
+        "best_moment": moment(best_k),
+        "parts": parts,
+    }
