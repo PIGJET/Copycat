@@ -83,3 +83,30 @@
     to { visibility: hidden; }
   }
 }
+
+.dashboard-dance-bonus,
+.dashboard-hype-total {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #73d9e9;
+  border-radius: 5px;
+  background: #171020;
+  color: #73d9e9;
+  font: 400 0.85rem/1.15 Silkscreen, monospace;
+}
+
+.dashboard-hype-total {
+  position: absolute;
+  inset: auto auto var(--camera-hud-inset, 0.85rem) var(--camera-hud-inset, 0.85rem);
+  z-index: 1;
+  display: grid;
+  gap: 0.2rem;
+  min-width: 4.5rem;
+  border-left-width: 4px;
+  pointer-events: none;
+}
+
+.dashboard-hype-total strong {
+  color: #fff8e8;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
