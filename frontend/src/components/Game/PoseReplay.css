@@ -27,3 +27,32 @@
   border-block: 0.32rem solid transparent;
   border-left: 0.5rem solid #73d9e9;
 }
+
+.pose-replay-inset {
+  position: absolute;
+  right: var(--camera-hud-inset, 0.75rem);
+  bottom: var(--camera-hud-inset, 0.75rem);
+  z-index: 2;
+  width: clamp(6.5rem, 25%, 12rem);
+  overflow: hidden;
+  border: 2px solid #73d9e9;
+  border-radius: 8px;
+  background: #171020;
+  box-shadow: 0 3px 12px #080611;
+  pointer-events: none;
+}
+
+.pose-replay-inset .pose-replay-caption {
+  position: static;
+  gap: 0.35rem;
+  max-width: none;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  border-radius: 0;
+  font-size: clamp(0.625rem, 1.45vw, 0.85rem);
+}
+
+.pose-replay-inset .pose-replay-icon {
+  border-block-width: 0.24rem;
+  border-left-width: 0.4rem;
+}

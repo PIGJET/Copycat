@@ -13,7 +13,7 @@ function landmarksOf(frame: ScoreFrame): NormalizedLandmark[] | null {
 }
 
 /** Replays a recorded dance as a skeleton (used when the creator's take has no video). */
-export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame[]; durationMs: number; creator: string }) {
+export function PoseReplay({ frames, durationMs, creator, startedAt }: { frames: ScoreFrame[]; durationMs: number; creator: string; startedAt?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -23,14 +23,15 @@ export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame
 
     const drawing = new DrawingUtils(context);
     const timed = frames.filter((f): f is NonNullable<ScoreFrame> => f !== null);
-    const start = performance.now();
+    const start = startedAt ?? performance.now();
+    const frameOrigin = startedAt === undefined ? timed[0]?.t ?? 0 : 0;
     let request = 0;
     let frameIndex = -1;
 
     const draw = (now: number) => {
-      const elapsed = now - start;
+      const elapsed = Math.min(now - start, durationMs);
       const previousIndex = frameIndex;
-      while (timed[frameIndex + 1] && timed[frameIndex + 1].t - (timed[0]?.t ?? 0) <= elapsed) frameIndex++;
+      while (timed[frameIndex + 1] && timed[frameIndex + 1].t - frameOrigin <= elapsed) frameIndex++;
 
       const landmarks = timed[frameIndex] ? landmarksOf(timed[frameIndex]) : null;
       if (frameIndex !== previousIndex) {
@@ -46,7 +47,7 @@ export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame
 
     request = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(request);
-  }, [frames, durationMs]);
+  }, [frames, durationMs, startedAt]);
 
   return (
     <>

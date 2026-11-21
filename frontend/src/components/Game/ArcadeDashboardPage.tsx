@@ -34,6 +34,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
   const [replaying, setReplaying] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const recordingDeadline = useRef<number | null>(null);
+  const [captureStartedAt, setCaptureStartedAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const recording = secondsLeft !== null;
   const cueTracker = useRef(new DanceCueTracker());
@@ -65,7 +66,9 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
         clipCapture.current = { recorder, done };
       } catch { /* Pose scoring remains available when video encoding fails. */ }
     }
-    recordingDeadline.current = performance.now() + recordingSeconds * 1000;
+    const startedAt = performance.now();
+    recordingDeadline.current = startedAt + recordingSeconds * 1000;
+    setCaptureStartedAt(startedAt);
     cueTracker.current.reset();
     setDanceCue(null);
     setSecondsLeft(recordingSeconds);
@@ -120,6 +123,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
     if (clipCapture.current !== capture) return;
     clipCapture.current = null;
     setSecondsLeft(null);
+    setCaptureStartedAt(null);
     onRecordingChange?.(false);
     if (sequence.frames.length === 0) {
       setCaptureError("No poses captured. Step into frame and try again.");
@@ -170,6 +174,11 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
         </div>
       )}
       {replaying && reference && <PoseReplay frames={reference.frames} durationMs={reference.duration} creator={creator.name} />}
+      {reference && captureStartedAt !== null && (
+        <div className="pose-replay-inset">
+          <PoseReplay frames={reference.frames} durationMs={reference.duration} creator={creator.name} startedAt={captureStartedAt} />
+        </div>
+      )}
       {recording && <DanceFeedback cue={danceCue} role={isCreator ? "creator" : "copier"} />}
       {!arcade && secondsLeft !== null && (
         <div className="dashboard-recording-timer" role="timer" aria-label="Recording time remaining">
