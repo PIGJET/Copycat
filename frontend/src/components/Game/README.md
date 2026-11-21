@@ -1,6 +1,10 @@
 # React game UI
 
-These presentational React components adapt the screens from `frontend/src/game/ui-preview/dist`. They are exported from this folder's `index.ts`; the shared `App.tsx` is intentionally not wired to them. The owning game flow selects which page to render and supplies real state and callbacks.
+These presentational React components adapt the screens from `frontend/src/game/ui-preview/dist`. They are exported from this folder's `index.ts`; `App.tsx` mounts `GameFlow`, which selects the active page and supplies state and callbacks.
+
+`GameFlow.tsx` is the navigation shell mounted by `App.tsx`. It links Home → Lobby (team only) → Camera setup → BPM setup → turn dashboard → score reveal → leaderboard → finale. Quick games and solo mode skip extra creator rounds; Full team games rotate the creator. Buttons navigate through the whole presentation flow.
+
+The current flow is UI-only: Camera setup does not start the recorder, gameplay does not record video, and score values remain unscored. Connect the recorder and `/score` response before treating score or finale content as game results.
 
 ```tsx
 import { HomePage, LobbyPage, DashboardPage } from "./components/Game";
@@ -23,7 +27,7 @@ Available page components:
 
 - `HomePage`: solo/team mode selection and sound control.
 - `LobbyPage`: player entry, add/remove, avatar choice, quick/full format and validation.
-- `CameraPage`: camera setup status and continue actions.
+- `CameraCheckPage`: pre-game camera setup status and continue actions.
 - `TempoPage`: BPM selection and setup actions.
 - `DashboardPage`: creator or challenger turn, standings, tracking status, preview controls and beat guide.
 - `ScorePage`: a score and body-area breakdown.

@@ -1,6 +1,6 @@
 import type { Player } from "./uiTypes";
 import { ArcadeButton, GameHeader, PageFrame, PosePlaceholder } from "./primitives";
-export type CameraPageProps = { player?: Player; onMenu: () => void; onEnableCamera?: () => void; onContinue: () => void; status?: string; detail?: string; busy?: boolean };
-export function CameraPage({ player, onMenu, onEnableCamera, onContinue, status = "Camera off", detail = "Check your head and feet are visible.", busy = false }: CameraPageProps) {
+export type CameraCheckPageProps = { player?: Player; onMenu: () => void; onEnableCamera?: () => void; onContinue: () => void; status?: string; detail?: string; busy?: boolean };
+export function CameraCheckPage({ player, onMenu, onEnableCamera, onContinue, status = "Camera off", detail = "Check your head and feet are visible.", busy = false }: CameraCheckPageProps) {
  return <PageFrame><GameHeader title="CAMERA CHECK" onMenu={onMenu}/><div className="camera-check-layout"><section className="camera-check-stage" aria-label="Camera preview"><div className="camera-check-viewport"><div className="camera-check-placeholder"><PosePlaceholder/><strong>{status}</strong></div></div></section><aside className="camera-check-settings"><div className="camera-check-status"><strong role="status">{player?.name ? `${player.name}'s camera` : "Camera setup"}</strong><span>{detail}</span></div><div className="camera-check-actions">{onEnableCamera && <ArcadeButton secondary onClick={onEnableCamera} disabled={busy}>ENABLE CAMERA</ArcadeButton>}<ArcadeButton onClick={onContinue} disabled={busy}>CONTINUE</ArcadeButton></div></aside></div></PageFrame>;
 }
