@@ -1,12 +1,5 @@
+import Game from './game/Game';
 
-import Camera from "./components/Camera/Camera";
-
-function App() {
-  return (
-    <div>
-      <Camera />
-    </div>
-  );
+export default function App() {
+  return <Game />;
 }
-
-export default App;

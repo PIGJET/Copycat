@@ -8,9 +8,23 @@ import {
 import type { PoseLandmark, PoseSequence } from "../types/pose";
 import { PoseRecorder } from "../utils/poseRecorder";
 
-export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | null>) {
+interface PoseOptions {
+  sampleIntervalMs?: number;
+  onSample?: (timestamp: number, landmarks: PoseLandmark[] | null) => void;
+}
+
+export function usePoseDetection(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  { sampleIntervalMs, onSample }: PoseOptions = {},
+) {
   const [landmarks, setLandmarks] = useState<PoseLandmark[] | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const sampleCallback = useRef(onSample);
+
+  useEffect(() => {
+    sampleCallback.current = onSample;
+  }, [onSample]);
 
   const landmarkerRef = useRef<PoseLandmarker | null>(null);
   const recorderRef = useRef(new PoseRecorder());
@@ -19,6 +33,7 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
     let active = true;
     let animationFrameId = 0;
     let lastVideoTime = -1;
+    let lastSlot = -1;
 
     async function initialize() {
       const vision = await FilesetResolver.forVisionTasks(
@@ -55,28 +70,21 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
       const landmarker = landmarkerRef.current;
 
       if (video && landmarker && video.readyState >= 2) {
-        if (video.currentTime !== lastVideoTime) {
+        const sampledAt = performance.now();
+        const slot = sampleIntervalMs ? Math.floor(sampledAt / sampleIntervalMs) : 0;
+        if (video.currentTime !== lastVideoTime && (!sampleIntervalMs || slot !== lastSlot)) {
           lastVideoTime = video.currentTime;
-
-          const results = landmarker.detectForVideo(
-            video,
-            performance.now()
-          );
-
-          if (results.landmarks.length > 0) {
-            const detectedLandmarks = results.landmarks[0].map((point) => ({
-              x: point.x,
-              y: point.y,
-              z: point.z,
-              visibility: point.visibility ?? 0,
-            }));
-
-            setLandmarks(detectedLandmarks);
-
-            // Save the frame if recording is active
-            recorderRef.current.addFrame(detectedLandmarks);
-          } else {
-            setLandmarks(null);
+          lastSlot = slot;
+          try {
+            const points = landmarker.detectForVideo(video, sampledAt).landmarks[0];
+            const detected = points?.length === 33 ? points : null;
+            setLandmarks(detected);
+            sampleCallback.current?.(sampledAt, detected);
+            if (detected) recorderRef.current.addFrame(detected, sampledAt);
+          } catch {
+            setError("Pose tracking stopped. Reload the camera and try again.");
+            setIsReady(false);
+            return;
           }
         }
       }
@@ -85,7 +93,10 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
     }
 
     initialize().catch((error) => {
-      console.error("MediaPipe initialization failed:", error);
+      if (active) {
+        console.error("MediaPipe initialization failed:", error);
+        setError("Could not load pose tracking. Reload the camera and try again.");
+      }
     });
 
     return () => {
@@ -95,7 +106,7 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
       landmarkerRef.current?.close();
       landmarkerRef.current = null;
     };
-  }, [videoRef]);
+  }, [videoRef, sampleIntervalMs]);
 
   function startRecording() {
     recorderRef.current.start();
@@ -108,6 +119,7 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
   return {
     landmarks,
     isReady,
+    error,
     startRecording,
     stopRecording,
   };

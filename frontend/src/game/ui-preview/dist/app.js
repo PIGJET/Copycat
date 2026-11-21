@@ -1,0 +1,17 @@
+const ns='http://www.w3.org/2000/svg';
+const letters={C:['01111','11000','11000','11000','11000','11000','01111'],O:['01110','11011','11011','11011','11011','11011','01110'],P:['11110','11011','11011','11110','11000','11000','11000'],Y:['11011','11011','01110','00100','00100','00100','00100'],A:['01110','11011','11011','11111','11011','11011','11011'],T:['11111','11111','00100','00100','00100','00100','00100']};
+const wordmark=document.querySelector('#wordmark');
+for(const [index,letter] of [...'COPYCAT'].entries())for(const [y,row] of letters[letter].entries())for(const [x,pixel] of [...row].entries())if(pixel==='1'){const r=document.createElementNS(ns,'rect');r.setAttribute('x',index*69+x*11.4);r.setAttribute('y',y*11);r.setAttribute('width',11.5);r.setAttribute('height',11.1);r.setAttribute('fill',y<4?'#ceff62':'#b6ff00');wordmark.appendChild(r)}
+// Original code-drawn pixel dancers; no external image assets.
+const dancer=['........hhh.....','.......hhhhh....','.......hsssh....','.......hsssh....','........sss.....','..ss....ppp.....','..ss...ppppp....','...pp.ppppppp...','....pppppppppp..','.....pppppp.ppss','......ppppp...ss','......bbbbb.....','.....bbbbbbb....','....bbb...bbb...','...bbb.....bbb..','..bbb.......bb..','..ww.........ww.','..wwww.......www'];
+function drawDancer(target,colors,flip){const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 96 108');if(flip)svg.style.transform='scaleX(-1)';for(const[y,row]of dancer.entries())for(const[x,c]of[...row].entries())if(c!=='.'){const r=document.createElementNS(ns,'rect');for(const[k,v]of Object.entries({x:x*6,y:y*6,width:6,height:6,fill:colors[c]}))r.setAttribute(k,v);svg.appendChild(r)}document.getElementById(target).appendChild(svg)}
+drawDancer('dancer-left',{h:'#b6ff00',s:'#ffb799',p:'#9b4dff',b:'#513179',w:'#00f0ff'},false);
+drawDancer('dancer-right',{h:'#ff2ea6',s:'#ae6d54',p:'#00f0ff',b:'#197b96',w:'#ffec7a'},true);
+const dialog=document.querySelector('dialog');let audio;let soundOn=false;
+function blip(freq=330){if(!soundOn)return;audio??=new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.5,audio.currentTime+.09);g.gain.setValueAtTime(.035,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.13);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.14)}
+document.querySelector('#sound').addEventListener('click',e=>{soundOn=!soundOn;e.currentTarget.setAttribute('aria-pressed',String(soundOn));e.currentTarget.setAttribute('aria-label',`Turn sound ${soundOn?'off':'on'}`);e.currentTarget.innerHTML=`<span>♪</span> SOUND ${soundOn?'ON':'OFF'}`;blip()});
+function selectMode(mode){if(dialog.open||document.querySelector('#avatar-dialog').open)return;blip(mode==='Solo'?330:440);if(mode==='Team'){openLobby();return}startSoloPreview()}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>selectMode(b.dataset.mode)));
+document.querySelector('#back').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+document.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||dialog.open||document.querySelector('.title-screen').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='1')selectMode('Solo');if(e.key==='2')selectMode('Team')});
+
