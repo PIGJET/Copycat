@@ -39,10 +39,10 @@
   <section class="lobby-screen" aria-labelledby="lobby-title" hidden>
     <div class="lobby-nav"><button class="text-button" id="home">BACK TO MENU</button></div>
     <h2 id="lobby-title" tabindex="-1">PLAYER LOBBY</h2>
-    <fieldset class="game-length" aria-label="Round format"><label><input type="radio" name="game-length" value="quick" checked><strong>Quick</strong><span>One creator</span></label><label><input type="radio" name="game-length" value="full"><strong>Full</strong><span>Everyone creates</span></label></fieldset>
     <div class="roster-frame"><div class="roster-heading"><span id="player-count" aria-live="polite">PLAYERS (2 / 4)</span></div><div id="player-grid" class="player-grid"></div></div>
-    <div class="lobby-bottom"><p id="lobby-status" role="status">Enter player names.</p><button class="start-button" id="start-team" disabled>START</button></div>
+    <div class="lobby-bottom"><p id="lobby-status" role="status" hidden></p><button class="start-button" id="start-team" disabled>START</button></div>
   </section>
+  <p id="gameplay-music-status" class="sr-only" role="status"></p>
   <section id="game-screen" class="game-screen" aria-label="Game preview" hidden></section>
   <div class="floor" aria-hidden="true"></div>
 </main>
@@ -53,6 +53,8 @@
 <script src="demo-data.js"></script>
 <script src="round-ui.js"></script>
 <script src="finale-share.js"></script>
+<script src="gameplay-tracks.js"></script>
+<script src="gameplay-music.js"></script>
 <script src="game-ui.js"></script>
 <script src="home-music.js"></script>
 </body></html>

@@ -1,0 +1,8 @@
+33 Free Chiptune Loops by hyperpixel
+https://hyperpixel.itch.io/33-free-chiptune-loops
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The creator marks these loops CC0, allowing use, modification, and redistribution.
+Copycat adaptations: 25 distinct loops converted from 150 BPM to the assigned BPM with pitch-preserving FFmpeg atempo; encoded as AAC audio in MP4.
+Original track names and assignments are in manifest.json.
