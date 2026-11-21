@@ -38,7 +38,9 @@ export function GameFlow() {
   const creator = mode === "solo" ? referencePlayer : players[round] ?? players[0] ?? soloPlayer;
   const challengers = mode === "solo" ? players : players.filter(player => player.id !== creator.id);
   const creatorTurn = mode === "team" && turnIndex === 0;
-  const activePlayer = creatorTurn ? creator : challengers[Math.max(0, turnIndex - (mode === "team" ? 1 : 0))] ?? challengers[0] ?? soloPlayer;
+  const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
+  const activePlayer = creatorTurn ? creator : challengers[challengerIndex] ?? soloPlayer;
+  const nextChallenger = challengers[challengerIndex + 1];
   const reference = creatorTurn ? undefined : recordingsByRound.get(round)?.get(String(creator.id));
   const totalRounds = mode === "team" && format === "full" ? players.length : 1;
   const nextCreator = round + 1 < totalRounds ? players[round + 1] : undefined;
@@ -72,17 +74,12 @@ export function GameFlow() {
   }
 
   function openNextTurn() {
-    if (creatorTurn) {
-      if (challengers.length) setTurnIndex(1);
-      else setScreen("leaderboard");
-      return;
-    }
-    const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
-    if (challengerIndex + 1 < challengers.length) {
+    if (nextChallenger) {
       setTurnIndex(turnIndex + 1);
-      return;
+      setScreen("dashboard");
+    } else {
+      setScreen("leaderboard");
     }
-    setScreen("leaderboard");
   }
 
   function completeTurn(recording: PoseSequence) {
@@ -179,7 +176,7 @@ export function GameFlow() {
 
   if (screen === "judging") {
     if (judging.status === "scored") {
-      return <ScorePage player={activePlayer} score={judging.score} onContinue={openNextTurn} onMenu={returnHome} roundInfo={roundInfo} />;
+      return <ScorePage player={activePlayer} score={judging.score} continueLabel={nextChallenger ? `Next turn · ${nextChallenger.name}` : "See leaderboard"} onContinue={openNextTurn} onMenu={returnHome} roundInfo={roundInfo} />;
     }
 
     return (
