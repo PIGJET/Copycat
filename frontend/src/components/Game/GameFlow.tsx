@@ -6,6 +6,7 @@ import { checkHealth } from "../../game/api";
 import { getRecording } from "../../game/recordingSource";
 import { allAttempts, startError } from "../../game/rules";
 import { useGame } from "../../game/useGame";
+import { FinaleScene } from "../../shame/FinaleScene";
 import type { Player, RankingRow, ScoreResult } from "../../game/types";
 
 /** Screens before the game itself starts. After "game", useGame's phase decides the page. */
@@ -37,6 +38,8 @@ export function GameFlow() {
   const [revealPending, setRevealPending] = useState(false);
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [gameSeed, setGameSeed] = useState(newSeed);
+  /** The full-screen finale scene has finished (or fell back); show the headline. */
+  const [sceneDone, setSceneDone] = useState(false);
 
   // ---- GET /health ----
   useEffect(() => {
@@ -59,6 +62,7 @@ export function GameFlow() {
   const rankings = game.rankings.map(toRanking);
 
   function goHome() {
+    setSceneDone(false);
     game.restart();
     setRevealPending(false);
     setRecordingBusy(false);
@@ -75,6 +79,7 @@ export function GameFlow() {
     game.setMode(format);
     game.startGame();
     setGameSeed(newSeed());
+    setSceneDone(false);
     setScreen("camera");
   }
 
@@ -98,6 +103,7 @@ export function GameFlow() {
   }
 
   function replay() {
+    setSceneDone(false);
     game.restart();
     game.startGame(); // same players and mode
     setRevealPending(false);
@@ -187,7 +193,10 @@ export function GameFlow() {
       onNext={game.nextStep} />;
   }
 
-  // finale
+  // finale: the full-screen scene first (falls back to the plain finale on its own), then the headline
+  if (!sceneDone) {
+    return <FinaleScene loserClipUrl={game.loserWorstAttempt?.recording.videoUrl ?? null} onFinish={() => setSceneDone(true)} />;
+  }
   const roast = game.roast;
   const headline = roast.status === "done" && roast.result ? roast.result.headline
     : roast.status === "error" ? "REPORT UNAVAILABLE" : "DEVELOPING STORY...";
