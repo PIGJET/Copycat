@@ -39,7 +39,7 @@ function animateRankings(){
       el.classList.toggle('first-place',row===scored[0]);el.classList.toggle('last-place',row===last&&scored.length>1);
       badge.className='rank-change';badge.removeAttribute('role');badge.innerHTML='';
       if(movement.delta){const up=movement.delta>0;badge.classList.add(up?'rank-up':'rank-down');badge.setAttribute('role','img');badge.setAttribute('aria-label',`Moved ${up?'up':'down'} ${Math.abs(movement.delta)} ${Math.abs(movement.delta)===1?'place':'places'}`);badge.innerHTML=movementIcon(movement.delta)+`<span>${Math.abs(movement.delta)}</span>`}
-      else if(movement.isNew){badge.classList.add('rank-new');badge.setAttribute('aria-label','New entry');badge.textContent='NEW'}
+      else if(movement.isNew)badge.setAttribute('aria-label','New entry');
       else badge.setAttribute('aria-label','Rank unchanged');
     }
     const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
