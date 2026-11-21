@@ -5,13 +5,13 @@ const path=require('node:path');
 const vm=require('node:vm');
 const base=path.join(__dirname,'../dist');
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
-function setup({fetcher}={}) {
+function setup({fetcher,samples=new Float32Array(40000)}={}) {
  const events={},soundEvents={},windowEvents={},sources=[],calls=[],status={textContent:''};let engine;
  class Context {
   constructor(){this.currentTime=0;this.state='running';this.destination={};engine=this;}
   resume(){return Promise.resolve();}
   createGain(){return {gain:{value:1},connect(){}};}
-  decodeAudioData(){return Promise.resolve({duration:40});}
+  decodeAudioData(){return Promise.resolve({duration:samples.length/1000,sampleRate:1000,getChannelData:()=>samples});}
   createBufferSource(){const node={connect(){},disconnect(){},start(at,offset){this.at=at;this.offset=offset;},stop(){this.stopped=true;}};sources.push(node);return node;}
  }
  const document={hidden:false,querySelector:s=>s==='#sound'?{addEventListener:(t,f)=>soundEvents[t]=f}:status,addEventListener:(t,f)=>events[t]=f};
@@ -46,4 +46,17 @@ test('a stale download cannot start music after leaving gameplay',async()=>{
 });
 test('a failed music file reports failure and can be retried',async()=>{
  let ok=false;const h=setup({fetcher:async()=>({ok,arrayBuffer:async()=>new ArrayBuffer(4)})});await h.sync({});assert.match(h.status.textContent,/unavailable/);ok=true;await h.sync({});assert.equal(h.sources.length,1);assert.match(h.status.textContent,/Playing .*120 BPM/);
+});
+
+test('all players begin on the same energetic section after the countdown',async()=>{
+ const samples=new Float32Array(30000);
+ for(let i=8000;i<22000;i++) samples[i]=i%500<80?.8:.35;
+ const h=setup({samples});await h.sync({song:{title:'Test',src:'song.mp4',bpm:120}});
+ const cue=h.sources[0].offset;
+ assert(cue>=7.9 && cue<=12.1);
+ await h.sync({phase:'countdown',run:1});assert(h.sources[0].stopped);
+ assert.equal(h.sources.length,1);
+ await h.sync({phase:'recording'});assert.equal(h.sources[1].offset,cue);
+ h.engine.currentTime=2;assert.equal(h.api.position(),2);
+ await h.sync({turn:'0:challenge:0'});assert.equal(h.sources[2].offset,cue);
 });

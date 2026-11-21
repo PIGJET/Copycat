@@ -12,7 +12,7 @@
   if (idle) idle.volume = 0.16;
   function backgroundTrack() {
     if (game.hidden) return lobby && !lobby.hidden ? idle : menu;
-    if (game.classList.contains('waiting-music')) return idle;
+    if (game.classList.contains('results-leaderboard')) return idle;
     if (game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen')) return menu;
     return null;
   }

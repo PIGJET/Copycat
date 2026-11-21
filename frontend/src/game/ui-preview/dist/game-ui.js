@@ -21,8 +21,33 @@ function VideoPanel({label,player,original=false,large=false}){
 const trackingStates={ready:{label:'Tracking ready (demo)',help:'Keep your full body inside the frame.'},body:{label:'Full body not detected (demo)',help:'Step back so your head and feet fit in the frame.'},denied:{label:'Camera access denied (demo)',help:'Enable camera permission to use the integrated recorder.'},waiting:{label:'Waiting for tracking (demo)',help:'The recorder will enable capture when tracking is ready.'}};
 function RecordingControls(){const status=trackingStates[preview.tracking];return `<div class="capture-controls"><div class="tracking-status ${preview.tracking==='ready'?'tracking-ready':'tracking-warning'}"><strong id="tracking-label">${status.label}</strong><span>${status.help}</span></div><label class="preview-state">Preview state<select id="tracking-state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label>${ArcadeButton('PREVIEW RECORDING','record',false,preview.tracking!=='ready'||preview.phase!=='idle')}${!preview.solo?ArcadeButton('SKIP','skip',true):''}</div>${BeatGuide()}${preview.solo?`<div class="capture-bottom"><span>No video is being recorded.</span>${ArcadeButton('SKIP PREVIEW','skip',true)}</div>`:''}`}
 function BeatGuide(){return `<section class="beat-guide" aria-label="Visual metronome" style="--beat-duration:${60/preview.bpm}s"><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress><div class="beat-guide-inner"><div class="beat-time"><strong id="capture-time">10s</strong><span id="capture-phase">Recording preview</span></div><div class="beat-visual"><div class="beat-lane" aria-hidden="true"><div class="beat-flow"></div><div class="beat-hit-line"></div><div class="beat-hit-square"></div></div><div class="beat-count" aria-hidden="true">${[1,2,3,4].map(n=>`<span data-beat="${n}" ${n===1?'class="active-beat"':''}>${n}</span>`).join('')}</div></div><div class="beat-tools"><div class="beat-tempo"><span>BPM</span><strong>${preview.bpm}</strong></div><button class="ui-secondary" data-action="beat-toggle" aria-label="${preview.beatPlaying?'Pause':'Start'} beat guide" aria-pressed="${preview.beatPlaying}">${preview.beatPlaying?'PAUSE':'PLAY'}</button></div></div></section>`}
-function syncGameplayMusic(){globalThis.CopycatGameplayMusic?.sync({screen:preview.screen,bpm:preview.bpm,playing:preview.beatPlaying,turn:beatTurnKey(),run:preview.run})}
-function TempoScreen(){return `${GameHeader('SELECT BPM','SETUP')}<div class="tempo-setup" style="--beat-duration:${60/preview.bpm}s"><div class="tempo-value"><input id="tempo-bpm" type="number" min="60" max="180" step="5" value="${preview.bpm}" inputmode="numeric" aria-label="BPM"><span>bpm</span></div><label class="sr-only" for="tempo-slider">Choose BPM</label><input id="tempo-slider" class="tempo-slider" type="range" min="60" max="180" step="5" value="${preview.bpm}"><div class="tempo-scale"><span>60</span><span>180</span></div><div class="tempo-beats" aria-hidden="true">${[0,1,2,3].map(i=>`<span style="--beat-index:${i}"></span>`).join('')}</div><div class="tempo-actions">${ArcadeButton('START GAME','tempo-start')}${ArcadeButton('BACK TO CAMERA','tempo-camera',true)}</div></div>`}
+function syncGameplayMusic(){globalThis.CopycatGameplayMusic?.sync({screen:preview.screen,bpm:preview.bpm,song:preview.song,phase:preview.phase,playing:preview.beatPlaying,turn:beatTurnKey(),run:preview.run})}
+let chosenSong = null;
+let searchRequest = 0;
+const library = () => [
+  ...(globalThis.CopycatCatalog || []).map(row => ({...row, src:'songs/'+row.id+'.mp4'})),
+  ...Object.values(globalThis.CopycatTracks || {}).map(track => ({...track, id:'local-'+track.bpm}))
+];
+const songs = library();
+function searchSongs(query) {
+  const words = query.trim().toLowerCase().split(/\s+/);
+  return songs.filter(song => words.every(word => (song.title+' '+song.artist+' '+song.bpm).toLowerCase().includes(word)));
+}
+function songOptions(query) {
+  const matches = searchSongs(query);
+  const visible = matches.slice(0,100);
+  if (!query && chosenSong && !visible.includes(chosenSong)) visible.unshift(chosenSong);
+  return visible.map(song => `<option value="${escapeUI(song.id)}" ${song.id===chosenSong?.id?'selected':''}>${escapeUI(song.title)} · ${escapeUI(song.artist)} · ${song.bpm ? song.bpm+' BPM' : 'Preview'}</option>`).join('');
+}
+function songCredit(song) {
+  if (!song) return '';
+  return song.provider === 'deezer' ? `Preview by ${escapeUI(song.artist)} · <a href="https://www.deezer.com/track/${encodeURIComponent(song.id)}" target="_blank" rel="noopener">Deezer</a>` : 'Chiptune by hyperpixel · CC0';
+}
+function TempoScreen(){
+  chosenSong ??= songs[0];
+  return `${GameHeader('SELECT SONG','')}<div class="song-picker"><label for="song-query">Search ${songs.length.toLocaleString()} songs</label><input type="search" id="song-query" placeholder="Song title or original artist"><label class="sr-only" for="song-list">Songs</label><select id="song-list" size="7">${songOptions('')}</select><small id="song-credit">${songCredit(chosenSong)}</small><p id="song-status" role="status"></p><div class="tempo-actions">${ArcadeButton('START GAME','tempo-start')}${ArcadeButton('BACK TO CAMERA','tempo-camera',true)}</div></div>`;
+}
+
 /* Dashboard presentation adapter. Capture and scores still use the existing preview state. */
 function dashboardPortrait(player){return portrait(player)}
 function DashboardPose(){return `<svg class="dashboard-pose" viewBox="0 0 340 320" aria-hidden="true"><g class="pose-ghost" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="168" cy="51" r="25"/><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g class="pose-joints" fill="currentColor">${[[147,98],[122,163],[94,193],[205,105],[267,78],[136,207],[195,211],[110,254],[217,256],[86,298],[247,298]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="6"/>`).join('')}</g></svg>`}
@@ -68,7 +93,7 @@ function renderPreview(){
   gameRoot.classList.toggle('camera-check-screen',preview.screen==='camera');
   gameRoot.classList.toggle('tempo-setup-screen',preview.screen==='tempo');
   gameRoot.classList.toggle('finale-screen',preview.screen==='finale');
-  gameRoot.classList.toggle('waiting-music', ['score', 'leaderboard'].includes(preview.screen));
+
   gameRoot.classList.toggle('results-leaderboard',preview.screen==='leaderboard');
   const dashboardActive=['creator','challenge'].includes(preview.screen);
   gameRoot.classList.toggle('dance-dashboard',dashboardActive);
@@ -86,7 +111,7 @@ function renderPreview(){
   if(preview.screen==='score'){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;playCue('score')};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
 function enterPreview(crew,mode,solo=false,initialScreen='camera'){
-  announcedTurn = null;
+  announcedTurn = null; chosenSong = null; preview.song = null;
   clearPreviewTimers();globalThis.CopycatFinale?.clear();beatClock=null;Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:initialScreen,afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
   homeScreen.hidden=true;lobby.hidden=true;gameRoot.hidden=false;document.querySelector('.arcade').classList.add('in-game');document.querySelector('.arcade').classList.remove('in-lobby');renderPreview();
 }
@@ -123,13 +148,40 @@ function startCapturePreview(){
     const elapsed=(performance.now()-started)/1000;
     const previousPhase = preview.phase, previousCount = preview.count, previousSeconds = preview.seconds;
     if(elapsed<3){preview.phase='countdown';preview.count=Math.ceil(3-elapsed)}else{preview.phase='recording';preview.seconds=Math.max(0,Math.ceil(13-elapsed))}
+    if (previousPhase === 'countdown' && preview.phase === 'recording' && elapsed < 13) syncGameplayMusic();
     if (elapsed >= 13) { finishCapture(); return; }
     if (preview.phase !== previousPhase || preview.count !== previousCount || preview.seconds !== previousSeconds) updateCaptureUI();
   },100);
 }
-function enterDanceFloor() {
+async function enterDanceFloor() {
   if (preview.screen !== 'tempo') return;
-  setBeatTempo(gameRoot.querySelector('#tempo-bpm').value);
+  const list = gameRoot.querySelector('#song-list');
+  const song = songs.find(item => item.id === list.value);
+  if (!song) return;
+  const token = ++searchRequest;
+  const status = gameRoot.querySelector('#song-status');
+  const start = gameRoot.querySelector('[data-action="tempo-start"]');
+  start.disabled = true;
+  status.textContent = 'Preparing ' + song.title + '…';
+  try {
+    const response = await fetch(song.src, {method:'HEAD'});
+    if (!response.ok || !/audio|video/.test(response.headers.get('content-type') || '')) throw Error();
+    if (song.provider === 'deezer') {
+      const bpm = Number(response.headers.get('X-Song-BPM'));
+      if (!(bpm > 0 && Number.isFinite(bpm))) throw Error();
+      song.bpm = bpm;
+    }
+  } catch {
+    if (token === searchRequest && status.isConnected) {
+      status.textContent = 'Song unavailable. Try another song or search hyperpixel for bundled tracks.';
+      start.disabled = false;
+    }
+    return;
+  }
+  if (token !== searchRequest || !status.isConnected || preview.screen !== 'tempo') return;
+  chosenSong = song;
+  preview.song = song;
+  preview.bpm = song.bpm;
   preview.screen = preview.afterCamera;
   const showFloor = () => {
     renderPreview();
@@ -143,11 +195,26 @@ function enterDanceFloor() {
   }
 }
 
-function normaliseBPM(value,fallback=120){const n=String(value).trim()===''?NaN:Number(value);const safeFallback=Number.isFinite(Number(fallback))?Number(fallback):120;return Math.max(60,Math.min(180,Math.round((Number.isFinite(n)?n:safeFallback)/5)*5))}
-function setBeatTempo(value,syncInput=true){const bpm=normaliseBPM(value,preview.bpm);preview.bpm=bpm;gameRoot.querySelector('.tempo-setup')?.style.setProperty('--beat-duration',`${60/bpm}s`);const slider=gameRoot.querySelector('#tempo-slider');if(slider)slider.value=String(bpm);const input=gameRoot.querySelector('#tempo-bpm');if(input&&syncInput)input.value=String(bpm)}
-gameRoot.addEventListener('input',e=>{if(preview.screen!=='tempo')return;if(e.target.id==='tempo-slider')setBeatTempo(e.target.value);if(e.target.id==='tempo-bpm'&&e.target.value.trim()!==''&&Number.isFinite(Number(e.target.value)))setBeatTempo(e.target.value,false)});
-gameRoot.addEventListener('focusout',e=>{if(e.target.id==='tempo-bpm'&&preview.screen==='tempo')setBeatTempo(e.target.value)});
-gameRoot.addEventListener('change',e=>{if(e.target.id==='tempo-bpm'&&preview.screen==='tempo')setBeatTempo(e.target.value);if(e.target.id==='tracking-state'){preview.tracking=e.target.value;renderPreview();gameRoot.querySelector('#tracking-state').focus()}});
+gameRoot.addEventListener('input', event => {
+  if (event.target.id !== 'song-query') return;
+  const list = gameRoot.querySelector('#song-list');
+  list.innerHTML = songOptions(event.target.value);
+  list.selectedIndex = list.options.length ? 0 : -1;
+  chosenSong = songs.find(song => song.id === list.value);
+  gameRoot.querySelector('#song-credit').innerHTML = songCredit(chosenSong);
+  searchRequest++;
+  gameRoot.querySelector('#song-status').textContent = list.value ? '' : 'No matching songs.';
+  gameRoot.querySelector('[data-action="tempo-start"]').disabled = !list.value;
+});
+gameRoot.addEventListener('change',e=>{
+  if (e.target.id === 'song-list') {
+    searchRequest++;
+    chosenSong = songs.find(song => song.id === e.target.value);
+    gameRoot.querySelector('#song-credit').innerHTML = songCredit(chosenSong);
+    gameRoot.querySelector('#song-status').textContent = '';
+    gameRoot.querySelector('[data-action="tempo-start"]').disabled = !chosenSong;
+  }
+  if(e.target.id==='tracking-state'){preview.tracking=e.target.value;renderPreview();gameRoot.querySelector('#tracking-state').focus()}});
 gameRoot.addEventListener('click',e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   switch(b.dataset.action){

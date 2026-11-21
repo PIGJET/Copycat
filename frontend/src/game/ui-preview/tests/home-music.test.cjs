@@ -7,7 +7,7 @@ const source=fs.readFileSync(path.join(__dirname,'../dist/home-music.js'),'utf8'
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function setup({initialSound=true,play=()=>Promise.resolve()}={}){
   let screen='home';
-  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'||name==='tempo-setup-screen'&&screen==='tempo'||name==='waiting-music'&&['score','leaderboard'].includes(screen)}},status={textContent:''},calls={plays:0,pauses:0};
+  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'||name==='tempo-setup-screen'&&screen==='tempo'||name==='results-leaderboard'&&screen==='leaderboard'}},status={textContent:''},calls={plays:0,pauses:0};
   const soundEvents={},documentEvents={},windowEvents={};let observer;
   const music={volume:1,play(){calls.plays++;return play();},pause(){calls.pauses++;}};
   const lobby={get hidden(){return screen!=='lobby'}};
@@ -55,7 +55,7 @@ test('the idle loop covers the lobby and results, and yields to setup and dance 
   await h.navigate('lobby');assert.equal(h.idle.paused,false);
   await h.navigate('camera');assert.equal(h.idle.paused,true);
   await h.navigate('tempo');await h.navigate('challenge');assert.equal(h.idle.paused,true);
-  await h.navigate('score');assert.equal(h.idle.paused,false);
+  await h.navigate('score');assert.equal(h.idle.paused,true);
   await h.navigate('leaderboard');assert.equal(h.idle.paused,false);
   await h.toggle(false);assert.equal(h.idle.paused,true);
   await h.toggle(true);await h.visibility(true);assert.equal(h.idle.paused,true);

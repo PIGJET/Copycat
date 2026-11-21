@@ -331,3 +331,8 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
   .results-leaderboard .rank-row.first-place { min-height:96px; }
   .results-leaderboard .first-place .rank-score { font-size:38px; }
 }
+.song-picker { margin:24px auto; max-width:620px; display:grid; gap:12px; font:500 18px var(--body) }
+.song-picker input,.song-picker select { width:100%; padding:12px; background:#171323; color:#fff; border:1px solid #786188; font:inherit }
+.song-picker option { padding:8px }
+.song-picker a { color:var(--cyan) }
+.song-picker #song-status:empty { display:none }
