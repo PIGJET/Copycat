@@ -60,7 +60,7 @@ test('camera errors map to actionable UI states without camera access',()=>{
 });
 function cameraHarness(getMedia){
   const elements=new Map();
-  const element=selector=>{if(!elements.has(selector))elements.set(selector,{disabled:selector.includes('camera-continue'),hidden:false,textContent:'',srcObject:null,readyState:2,videoWidth:1280,videoHeight:720,classList:{add(){},remove(){}},addEventListener(){},play:async()=>{}});return elements.get(selector)};
+  const element=selector=>{if(!elements.has(selector))elements.set(selector,{disabled:selector.includes('camera-continue'),hidden:false,textContent:'',srcObject:null,parentElement:{hidden:true},readyState:2,videoWidth:1280,videoHeight:720,classList:{add(){},remove(){}},addEventListener(){},play:async()=>{}});return elements.get(selector)};
   const sandbox=vm.createContext({document:{querySelector:element},navigator:{mediaDevices:{getUserMedia:getMedia}},preview:{screen:'camera'}});
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../dist/round-ui.js'),'utf8')+';globalThis.camera={enableCameraCheck,stopCameraCheck};',sandbox);
   return {sandbox,elements,element,camera:sandbox.camera};

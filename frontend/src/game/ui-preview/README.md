@@ -32,7 +32,7 @@ The design scanner reports zero findings across twelve active HTML/CSS/JS source
 
 This is the existing buildless UI preview, not a React application. This preview was originally created before the React repository and backend contract were supplied. Scores are fixtures, video frames are labeled placeholders, and Gemini is not connected. No actual backend, recorder, tracking, or sharing integration has been tested. See INTEGRATION.md for the handoff and DESIGN.md for visual rules and the no-filler-copy preference.
 
-Team gameplay uses a top player strip and a bottom visual metronome. Demo BPM is adjustable from 60 to 180 before recording, with play/pause and optional sound through the existing mute button. The guide is not synchronized to music until the media integration supplies a playback clock.
+Team gameplay uses a top player strip and a bottom visual metronome. BPM is selected before gameplay in fixed 5 BPM intervals from 60 to 180, with play/pause and optional sound through the existing mute button. The guide is not synchronized to music until the media integration supplies a playback clock.
 
 
 Leaderboard updates retain the previous order while averages count to their new values, then slide into the new order with up/down arrows. Rank sounds follow the existing mute setting. Reduced-motion skips counting/sliding. Unranked players get NEW instead of an invented previous rank. Averages may rise or fall; scoring rules are unchanged.
@@ -43,4 +43,7 @@ The visual finish uses bundled Silkscreen and Barlow font files in dist/fonts, w
 
 Home music plays the bundled dist/audio/night-shade.mp3 track (AdhesiveWombat — Night Shade) without a visible player or YouTube connection. Sound defaults on at 25% volume and loops continuously through home, lobby, and camera setup. Browser-blocked autoplay retries after a click or keypress. Gameplay, muting, or hiding the tab pauses playback. Menus resume from the same position. Run node --test tests/home-music.test.cjs for lifecycle tests.
 
-BPM setup follows camera check in Solo and Team. Choose 60–180 BPM with the slider or number input, then START GAME. The chosen BPM sets the beat guide throughout turns and rounds. Songs will be added later; this does not alter the menu song speed. Music keeps playing during setup. Direct review: dist/index.html?demo=tempo. Both Solo and Team have a beat guide. Tests: node --test tests/demo-model.test.cjs tests/home-music.test.cjs tests/tempo-setup.test.cjs (21 pass).
+BPM setup follows camera check in Solo and Team. Use the slider or type a value from 60 through 180 BPM. The slider moves in steps of 5; typed values round to the nearest 5 when leaving the field or starting the game. The default is 120; Back to Camera preserves your choice. The chosen BPM sets the beat guide throughout turns and rounds. Songs will be added later; this does not alter the menu song speed. Music keeps playing during setup. Direct review: dist/index.html?demo=tempo. Both Solo and Team have a beat guide. Tests: node --test tests/demo-model.test.cjs tests/home-music.test.cjs tests/tempo-setup.test.cjs.
+
+
+Song handoff: provide one track for each preset (60–180 BPM in 5 BPM increments). No preset song is connected yet. The existing menu music is unchanged; the selected tempo drives only the visual/metronome beat guide. Keep gameplay tempo fixed across players and rounds so future songs can use the same preset.
