@@ -187,9 +187,9 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
       </div></>;
   if (arcade) return <>{cameraStage}{createPortal(<>
     {recording ? (
-      <ArcadeButton key="finish" onClick={stopCapture}>Finish turn</ArcadeButton>
+      <ArcadeButton key="finish" className="dashboard-turn-action dashboard-turn-action-finish" onClick={stopCapture}>Finish turn</ArcadeButton>
     ) : (
-      <ArcadeButton key="start" onClick={startTurn} disabled={!ready || preparing}>
+      <ArcadeButton key="start" className="dashboard-turn-action" onClick={startTurn} disabled={!ready || preparing}>
         {reference ? "Watch move & start" : ready ? "Start recording" : "Waiting for tracking"}
       </ArcadeButton>
     )}
