@@ -12,7 +12,7 @@ function setup(){
     homeScreen:{hidden:false},lobby:{hidden:true},window:{scrollTo(){}},location:{search:''},soundOn:false,
     cameraCalls,crewColors:['#b6ff00','#ff2ea6'],portrait:()=>'',URLSearchParams,clearInterval,clearTimeout,setTimeout,setInterval,cancelAnimationFrame(){},matchMedia:()=>({matches:true}),goHome(){}});
   const read=file=>fs.readFileSync(path.join(__dirname,'../dist',file),'utf8');
-  vm.runInContext(read('round-ui.js')+'\nenableCameraCheck=()=>{cameraCalls.count++};\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,normaliseBPM,openDemoScreen};',context);
+  vm.runInContext(read('demo-data.js')+'\n'+read('round-ui.js')+'\nenableCameraCheck=()=>{cameraCalls.count++};\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,normaliseBPM,openDemoScreen};',context);
   const click=action=>{const button={disabled:false,dataset:{action}};for(const fn of handlers.click||[])fn({target:{closest:()=>button}});};
   const dispatch=(type,target)=>{for(const fn of handlers[type]||[])fn({target})};
   const input=value=>{const target=elements['#tempo-slider'];target.id='tempo-slider';target.value=String(value);dispatch('input',target)};

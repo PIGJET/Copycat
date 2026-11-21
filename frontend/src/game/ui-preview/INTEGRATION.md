@@ -48,3 +48,6 @@ For real playback, drive the guide from the existing media engine's playback tim
 
 The optional review route `?demo=camera` bypasses the lobby. Add `&camera-state=denied`, `missing`, or `busy` for labeled simulated error states. Hardware permission and actual webcam playback require manual browser approval and were not activated during automated browser QA. Mock-media tests cover stream activation, audio exclusion, denial handling, stopping, and late permission cleanup.
 
+
+
+In-game dashboard: DanceDashboard, DashboardScores, DashboardPose, and DashboardBeatGuide adapt existing preview state for creator/challenger capture screens only. Dashboard styles are scoped to dance-dashboard/dashboard-active. The skeleton is an illustration, not pose output; webcam and reference clips remain labeled unconnected. Scores come from existing completed-turn fixtures, with unscored players shown as a dash. Countdown, ten-second preview, rotation, BPM, mute, pause, and results use the existing handlers. Recorder/MediaPipe and backend integration are unchanged.
