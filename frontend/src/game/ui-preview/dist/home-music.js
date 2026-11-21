@@ -1,104 +1,44 @@
-// Stream the selected track through the official player; never extract its audio.
+// Local MP3 background audio; the existing sound button is the only control.
 (() => {
   const home = document.querySelector('.title-screen');
-  const panel = document.querySelector('#home-music');
+  const music = document.querySelector('#home-music');
   const status = document.querySelector('#home-music-status');
-  const sound = document.querySelector('#sound');
-  let player = null;
-  let readyPlayer = null;
-  let loading = false;
-  let failed = false;
-  let autoplayBlocked = false;
-  let apiPromise;
+  let blocked = false;
+  let request = 0;
+  music.volume = 0.25;
   const shouldPlay = () => soundOn && !home.hidden && !document.hidden;
 
-  function loadAPI() {
-    if (window.YT?.Player) return Promise.resolve();
-    return apiPromise ??= new Promise((resolve, reject) => {
-      const previous = window.onYouTubeIframeAPIReady;
-      const timeout = setTimeout(() => reject(new Error('YouTube did not load')), 15000);
-      window.onYouTubeIframeAPIReady = () => {
-        clearTimeout(timeout);
-        if (typeof previous === 'function') previous();
-        resolve();
-      };
-      const script = document.createElement('script');
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.onerror = () => { clearTimeout(timeout); reject(new Error('YouTube unavailable')); };
-      document.head.appendChild(script);
-    });
-  }
-
   async function syncMusic() {
-    const active = shouldPlay();
-    panel.hidden = !soundOn || home.hidden;
-    if (!active) {
-      readyPlayer?.pauseVideo();
+    const current = ++request;
+    if (!shouldPlay()) {
+      music.pause();
       return;
     }
-    if (readyPlayer) {
-      readyPlayer.playVideo();
-      return;
-    }
-    if (player || loading || failed) return;
-    loading = true;
-    status.textContent = 'Loading music…';
     try {
-      await loadAPI();
-      // Navigation or muting may have happened while the API was loading.
-      if (!shouldPlay()) return;
-      player = new window.YT.Player('home-music-player', {
-        width: 240,
-        height: 200,
-        videoId: 'mRN_T6JkH-c',
-        playerVars: {
-          playsinline: 1, controls: 1, loop: 1, playlist: 'mRN_T6JkH-c',
-          origin: location.origin,
-        },
-        events: {
-          onReady(event) {
-            readyPlayer = event.target;
-            readyPlayer.getIframe().title = 'Home music — YouTube player';
-            readyPlayer.setVolume(25);
-            status.textContent = '';
-            if (shouldPlay()) readyPlayer.playVideo();
-            else readyPlayer.pauseVideo();
-          },
-          onAutoplayBlocked() {
-            autoplayBlocked = true;
-            status.textContent = 'Click or press a key to start the music.';
-          },
-          onStateChange(event) {
-            if (event.data === 1) {
-              autoplayBlocked = false;
-              if (shouldPlay()) status.textContent = '';
-              else event.target.pauseVideo();
-            }
-          },
-          onError() {
-            failed = true;
-            status.textContent = 'This track cannot play here. Open it on YouTube below.';
-          },
-        },
-      });
-    } catch {
-      failed = true;
-      status.textContent = 'Music is unavailable. Open it on YouTube below.';
-    } finally {
-      loading = false;
+      await music.play();
+      // A play promise may finish after navigation, mute, or a tab change.
+      if (!shouldPlay()) music.pause();
+      if (current === request) {
+        blocked = false;
+        status.textContent = '';
+      }
+    } catch (error) {
+      if (current !== request || error.name === 'AbortError') return;
+      blocked = error.name === 'NotAllowedError';
+      status.textContent = blocked
+        ? 'Click or press a key to start the background music.'
+        : 'Background music is unavailable.';
     }
   }
 
-  sound.addEventListener('click', syncMusic);
-  // Browser autoplay policy can require a gesture. Respect mute and navigation
-  // handlers before retrying, so a mode or mute click never starts hidden music.
+  document.querySelector('#sound').addEventListener('click', syncMusic);
   const retryPlayback = () => {
-    if (autoplayBlocked && shouldPlay()) syncMusic();
+    if (blocked && shouldPlay()) syncMusic();
   };
   document.addEventListener('click', retryPlayback);
   document.addEventListener('keydown', retryPlayback);
   new MutationObserver(syncMusic).observe(home, { attributes: true, attributeFilter: ['hidden'] });
   document.addEventListener('visibilitychange', syncMusic);
-  window.addEventListener('pagehide', () => readyPlayer?.pauseVideo());
+  window.addEventListener('pagehide', () => music.pause());
   syncMusic();
 })();
