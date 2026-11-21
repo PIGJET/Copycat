@@ -55,7 +55,7 @@ function animateRankings(){
   setValues(0);rankFrame=requestAnimationFrame(frame);
 }
 
-function CameraCheckScreen(){return `${GameHeader('CAMERA CHECK','SETUP')}<div class="camera-check-layout"><section class="camera-check-stage" aria-label="Camera preview"><div class="video-panel-head"><span>CAMERA PREVIEW</span><span class="camera-local-label">LOCAL ONLY</span></div><div class="camera-check-viewport"><video id="check-video" autoplay muted playsinline hidden aria-label="Local webcam preview"></video><div id="check-placeholder" class="camera-check-placeholder">${poseOutline()}<strong id="camera-placeholder-title">Camera off</strong><span>Enable your camera to check the framing.</span></div><div class="camera-frame-guide" aria-hidden="true"></div></div></section><aside class="camera-check-settings"><div id="camera-demo-state" class="demo-tag" hidden>SIMULATED STATE</div><div class="camera-check-status"><span>CAMERA</span><strong id="camera-status" role="status">Not enabled</strong><span id="camera-status-detail">No permission requested.</span></div><div class="camera-feed-info"><span>VIDEO FEED</span><strong id="camera-feed">Waiting for camera</strong></div><div class="camera-framing"><span>FRAMING</span><p>Step back until your head and feet fit inside the frame.</p><p class="data-note">Body tracking is not connected in this UI preview.</p></div><div class="camera-check-actions">${ArcadeButton('ENABLE CAMERA','camera-enable',true)}${ArcadeButton('CONTINUE','camera-continue',false,true)}${ArcadeButton('CONTINUE DEMO','camera-demo',true)}</div><p class="camera-privacy">Live preview only. Nothing is recorded or uploaded.</p></aside></div>`}
+function CameraCheckScreen(){return `${GameHeader('CAMERA CHECK','')}<div class="camera-check-layout"><section class="camera-check-stage" aria-label="Camera preview"><div class="camera-check-viewport"><video id="check-video" autoplay muted playsinline hidden aria-label="Local webcam preview"></video><div id="check-placeholder" class="camera-check-placeholder">${poseOutline()}<strong id="camera-placeholder-title">Camera off</strong></div></div></section><aside class="camera-check-settings"><div id="camera-demo-state" class="demo-tag" hidden>SIMULATED STATE</div><div class="camera-check-status" hidden><strong id="camera-status" role="status"></strong><span id="camera-status-detail"></span></div><div class="camera-check-actions">${ArcadeButton('ENABLE CAMERA','camera-enable',true)}${ArcadeButton('CONTINUE','camera-continue',false,true)}${ArcadeButton('CONTINUE DEMO','camera-demo',true)}</div></aside></div>`}
 const cameraMessages={
   denied:{title:'Camera access denied',detail:'Allow camera access in your browser, then try again.'},
   missing:{title:'No camera found',detail:'Connect a webcam, then try again.'},
@@ -68,22 +68,22 @@ function stopCameraCheck(){checkEpoch++;checkReady=false;if(checkStream){checkSt
 function showCameraFailure(kind,simulated=false){
   const message=cameraMessages[kind]||cameraMessages.unavailable;checkReady=false;
   const status=document.querySelector('#camera-status');if(!status)return;
-  status.textContent=message.title;status.classList.add('camera-status-error');document.querySelector('#camera-status-detail').textContent=message.detail;
+  status.parentElement.hidden=false;status.textContent=message.title;status.classList.add('camera-status-error');document.querySelector('#camera-status-detail').textContent=message.detail;
   document.querySelector('#camera-placeholder-title').textContent=message.title;
   document.querySelector('#check-video').hidden=true;document.querySelector('#check-placeholder').hidden=false;
-  document.querySelector('#camera-feed').textContent='No video feed';document.querySelector('[data-action="camera-continue"]').disabled=true;
+  document.querySelector('[data-action="camera-continue"]').disabled=true;
   const enable=document.querySelector('[data-action="camera-enable"]');enable.disabled=false;enable.textContent='TRY CAMERA';document.querySelector('#camera-demo-state').hidden=!simulated;
 }
-function applyCameraDemoState(){const state=new URLSearchParams(location.search).get('camera-state');if(['denied','missing','busy'].includes(state))showCameraFailure(state,true)}
+function applyCameraDemoState(){const state=new URLSearchParams(location.search).get('camera-state');if(['denied','missing','busy'].includes(state)){showCameraFailure(state,true);return true}return false}
 async function enableCameraCheck(){
   stopCameraCheck();const epoch=checkEpoch,enable=document.querySelector('[data-action="camera-enable"]');if(!enable)return;
-  enable.disabled=true;document.querySelector('#camera-demo-state').hidden=true;const status=document.querySelector('#camera-status');status.classList.remove('camera-status-error');status.textContent='Requesting camera…';document.querySelector('#camera-status-detail').textContent='Respond to the browser permission prompt.';
+  enable.disabled=true;document.querySelector('[data-action="camera-continue"]').disabled=true;document.querySelector('#camera-demo-state').hidden=true;const status=document.querySelector('#camera-status');status.parentElement.hidden=false;status.classList.remove('camera-status-error');status.textContent='Requesting camera…';document.querySelector('#camera-status-detail').textContent='Respond to the browser permission prompt.';
   if(!navigator.mediaDevices?.getUserMedia){showCameraFailure('unavailable');return}
   try{
     const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
     if(epoch!==checkEpoch||preview.screen!=='camera'){stream.getTracks().forEach(track=>track.stop());return}
     checkStream=stream;const video=document.querySelector('#check-video');video.hidden=false;document.querySelector('#check-placeholder').hidden=true;
-    const ready=()=>{if(epoch!==checkEpoch||preview.screen!=='camera'||!stream.active)return;checkReady=true;status.textContent='Camera ready';document.querySelector('#camera-status-detail').textContent='Check your head and feet are visible.';document.querySelector('#camera-feed').textContent=`${video.videoWidth} × ${video.videoHeight}`;document.querySelector('[data-action="camera-continue"]').disabled=false;enable.disabled=false;enable.textContent='RESTART CAMERA'};
+    const ready=()=>{if(epoch!==checkEpoch||preview.screen!=='camera'||!stream.active)return;checkReady=true;status.parentElement.hidden=true;status.textContent='Camera ready';document.querySelector('#camera-status-detail').textContent='Check your head and feet are visible.';document.querySelector('[data-action="camera-continue"]').disabled=false;enable.disabled=false;enable.textContent='RESTART CAMERA'};
     video.onloadeddata=ready;video.srcObject=stream;await video.play();if(video.readyState>=2)ready();
     stream.getVideoTracks().forEach(track=>{track.onended=()=>{if(epoch===checkEpoch)showCameraFailure('ended')}});
   }catch(error){if(epoch!==checkEpoch||preview.screen!=='camera')return;stopCameraCheck();showCameraFailure(cameraFailureKind(error.name))}
@@ -91,5 +91,5 @@ async function enableCameraCheck(){
 document.querySelector('#game-screen').addEventListener('click',e=>{
   const button=e.target.closest('[data-action]');if(!button||button.disabled)return;
   if(button.dataset.action==='camera-enable')enableCameraCheck();
-  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.screen=preview.afterCamera;renderPreview()}
+  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.screen='tempo';renderPreview()}
 });

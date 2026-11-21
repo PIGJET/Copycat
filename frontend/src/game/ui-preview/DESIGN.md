@@ -45,7 +45,7 @@ Do not add SaaS navigation, marketing sections, feature-card grids, glass surfac
 
 Team creator and challenge screens use a compact, colored player strip across the top. The active performer is indicated with a border and a small pointer; labels distinguish creator, current turn, and watching. There are no live performance ratings. The original-video panel is larger than the challenger panel, giving the reference dance more stage space without obscuring either body.
 
-A beat guide sits beneath the capture controls. Repeating ticks move toward a fixed hit line, a small diamond pulses on the beat, and a four-count indicator follows the same tempo. The tempo is adjustable from 60–180 BPM before a recording preview, defaults to 120, and persists across turns in that preview session. Play/pause controls stop both motion and beat sounds. Optional ticks follow the existing Sound control, which defaults off. Recording progress and seconds remain distinct from rhythm timing.
+A beat guide sits beneath the capture controls. Repeating ticks move toward a fixed hit line, a small diamond pulses on the beat, and a four-count indicator follows the same tempo. The tempo is selected during setup from 60–180 BPM in fixed 5 BPM intervals, defaults to 120, and persists across turns in that preview session. Play/pause controls stop both motion and beat sounds. Optional ticks follow the existing Sound control, which defaults off. Recording progress and seconds remain distinct from rhythm timing.
 
 The guide is an independent demo metronome, not extracted from a song or synchronized with a recorded clip. Real integration must supply the music tempo and a shared playback clock. CSS motion stops for reduced-motion preferences. Beat scheduling is cancelled on navigation and while the document is hidden. Solo keeps its original layout. These changes use original pixel portraits and shapes; no reference-game artwork or branding is reused.
 
@@ -53,7 +53,7 @@ The guide is an independent demo metronome, not extracted from a song or synchro
 
 Round leaderboards keep the previous order for a 900ms score-count sequence, pause briefly, then slide the same player tiles to their new places over 700ms. Movement is keyed by player ID. The arrows point up in lime and down in #FF5C74 red, with the number of places changed and accessible direction labels. New scored players use a neutral NEW label. Average-score and timing tie-break rules remain unchanged; averages can animate downward when results lower them. Short rising/falling synthesized tones follow the existing mute button. Navigation cancels animation and queued sounds. Reduced motion commits results immediately.
 
-Solo and Team entry paths now include camera check before gameplay. It presents a large mirrored local preview, framing guidance, camera status, and feed dimensions. Camera permission is requested only by Enable Camera. Continue requires a usable stream; Continue Demo remains available for presentation review. There is no microphone capture, recording, upload, or automatic sharing. Body tracking is explicitly unconnected. Streams stop on leaving, and late permission resolutions are released instead of activating a camera after navigation. Test-only denied/missing/busy states are labeled simulated.
+Solo and Team entry paths now include camera check before gameplay. It presents a large mirrored local preview, framing guidance, camera status, and feed dimensions. Camera permission is requested automatically on entering camera check; the button retries after a denial. Continue requires a usable stream; Continue Demo remains available for presentation review. There is no microphone capture, recording, upload, or automatic sharing. Body tracking is explicitly unconnected. Streams stop on leaving, and late permission resolutions are released instead of activating a camera after navigation. Test-only denied/missing/busy states are labeled simulated.
 
 
 
@@ -70,3 +70,17 @@ Player tiles remain in the same four-column desktop/two-column narrow layout, bu
 Main buttons use a solid lower edge and small pressed displacement. Secondary buttons are quieter, with underlines and hover/focus feedback. Selected avatars retain their lime treatment and gain a small pixel check for a non-color selection cue. No additional decorative animation is introduced. The requested countdown, metronome, rank movement, and sounds retain their behavior and reduced-motion support.
 
 Apply these rules consistently to existing screens. Do not reintroduce glowing cards, heavy Arial display headings, decorative slogans, repeated status chips, broad letter spacing, or extra containers. The broadcast finale may retain its white/red framing because it is functional genre-specific presentation.
+
+BPM setup uses the established pixel heading, large lime tempo value, a slider and numeric input at 60–180 BPM in 5 BPM intervals, and START GAME action. Four restrained square pulses preview tempo visually. It follows camera check in both modes; no song, scoring, or recorder integration is added. Menu music continues until the creator/challenge screen. The same metronome is available in Solo and Team.
+
+
+Lobby hierarchy: the larger Player Lobby heading leads, followed by compact Quick/Full options, a left-aligned player count above the roster, and one prominent Start action below. Round format has an accessible group name without a visible Game length label.
+
+
+Dashboard polish retains the three columns and pixel wordmark. Only the camera frame glows. Compact borderless score rows, a muted leader crown, leader-named reference and one turn instruction establish hierarchy. Background floor opacity is 0.165 (70% below the previous 0.55). The bottom timeline has four clock-driven markers, BPM, remaining time and one playback control; reduced motion retains active-beat color without scaling transitions.
+
+
+Character customization uses head portraits only. Retain hats, eyewear, and face accessories with three independent arrow pairs. Body artwork, outfits, and lower-body choices are removed. Selected head accessories persist across species changes and gameplay portraits.
+
+
+Dancing-screen focus: remove the right-hand reference panel. The landscape camera expands across the available space beside a compact score rail; turn heading and actions align with the camera. At narrow widths the camera leads and scores follow. Beat timing and turn progression are unchanged.

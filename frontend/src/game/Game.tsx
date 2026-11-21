@@ -10,7 +10,7 @@ import './game.css';
 
 const SAMPLE_URL = 'https://www.youtube.com/watch?v=i-54NhTqlH8';
 
-export default function Game() {
+export default function Game({ onBack }: { onBack?: () => void }) {
   const [clip, setClip] = useState<ReferenceClip | null>(null);
   const [turn, dispatch] = useReducer(turnReducer, { stage: 'ready' });
   const [feedback, setFeedback] = useState<LiveFeedback | null>(null);
@@ -141,6 +141,7 @@ export default function Game() {
         <header className="solo-game__header">
           <h1>Copycat</h1>
           <span>Solo</span>
+          {onBack && <button type="button" onClick={onBack}>Back to menu</button>}
         </header>
 
         {!clip ? (

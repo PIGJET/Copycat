@@ -36,6 +36,31 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
 .mode:focus-visible,.start-button:focus-visible { outline:0; box-shadow:inset 0 0 0 3px white }
 .key { border:0; font-family:var(--body); font-size:12px; opacity:.6 }
 
+/* Tempo is a setup choice, using the same display type and tactile action. */
+.tempo-setup { width:min(650px,100%); margin:40px auto 50px; text-align:center }
+.tempo-intro { color:#c5b4d1; font-size:18px; line-height:1.5; margin:0 }
+.tempo-value { display:flex; justify-content:center; align-items:baseline; gap:12px; margin:14px 0 26px }
+.tempo-value input { width:3.5ch; min-width:0; padding:0 0 6px; border:0; border-bottom:2px solid #62477c; border-radius:0; background:transparent; color:var(--lime); font:400 96px/1.2 var(--display); text-align:center; appearance:textfield }
+.tempo-value input::-webkit-inner-spin-button,.tempo-value input::-webkit-outer-spin-button { appearance:none; margin:0 }
+.tempo-value input:focus-visible { outline:3px solid var(--cyan); outline-offset:5px }
+.tempo-value>span { font-size:24px; color:#c5b4d1 }
+.tempo-slider { display:block; width:100%; height:44px; margin:0; padding:0; appearance:none; background:transparent; cursor:pointer; accent-color:var(--lime) }
+.tempo-slider::-webkit-slider-runnable-track { height:6px; background:#62477c }
+.tempo-slider::-moz-range-track { height:6px; background:#62477c }
+.tempo-slider::-webkit-slider-thumb { appearance:none; width:20px; height:26px; margin-top:-10px; background:var(--lime); border:0; border-bottom:4px solid #6a9800; border-radius:0 }
+.tempo-slider::-moz-range-thumb { width:20px; height:22px; background:var(--lime); border:0; border-bottom:4px solid #6a9800; border-radius:0 }
+.tempo-slider:focus-visible { outline:3px solid var(--cyan); outline-offset:4px }
+.tempo-scale { display:flex; justify-content:space-between; margin-top:10px; color:#b5a1c5; font-size:14px }
+.tempo-beats { display:flex; justify-content:center; gap:18px; margin:28px 0 }
+.tempo-beats span { width:12px; height:12px; background:#62477c; animation:tempo-tick calc(var(--beat-duration) * 4) steps(1,end) infinite; animation-delay:calc(var(--beat-index) * var(--beat-duration)) }
+.tempo-actions { display:flex; flex-direction:column; align-items:center; gap:14px }
+.tempo-setup .ui-primary { min-width:220px }
+.beat-tempo { display:flex; flex-direction:column; gap:4px; color:#b39cc5; font-size:11px }
+.beat-tempo strong { color:var(--lime); font:600 20px/1.2 var(--body) }
+@keyframes tempo-tick { 0% { background:var(--lime) } 25%,100% { background:#62477c } }
+@media(max-width:700px) { .tempo-setup { margin:40px auto; padding:0 12px } .tempo-value input { font-size:72px } .tempo-value>span { font-size:20px } }
+@media(max-height:800px) and (min-width:701px) { .tempo-setup { margin-top:24px; margin-bottom:24px } .tempo-value input { font-size:80px } .tempo-beats { margin:26px 0 } }
+
 /* Character-selection tiles: one colored edge instead of nested glowing frames. */
 .roster-frame { border:0; background:transparent; box-shadow:none; padding:0 }
 .roster-heading { padding:0 2px; margin-bottom:16px; font-size:14px; font-weight:600 }
@@ -79,7 +104,8 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
 .avatar-option[aria-pressed=true]::after { content:''; position:absolute; top:9px; right:8px; width:12px; height:10px; background:var(--lime); clip-path:polygon(0 30%,25% 30%,25% 55%,75% 0,100% 0,100% 25%,35% 100%,0 65%) }
 
 /* Gameplay frames keep only the edges needed to separate video and controls. */
-.video-panel,.camera-check-stage { border:1px solid #473453; background:var(--surface-deep) }
+.video-panel { border:1px solid #473453; background:var(--surface-deep) }
+.camera-check-stage { border:0; background:var(--surface-deep) }
 .video-panel-head { background:var(--surface); border-bottom:1px solid #36273f; font-family:var(--body); font-size:14px }
 .video-panel-head>span { letter-spacing:0; font-weight:600; text-transform:lowercase }
 .video-placeholder { background:var(--surface-deep) }
@@ -138,12 +164,9 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
 .data-note { font-size:15px; color:#b6a2c7 }
 .rank-change { font-family:var(--body); font-size:14px; font-weight:600 }
 .rank-new { font-size:12px; letter-spacing:0; text-transform:lowercase }
-.camera-check-status,.camera-feed-info { border-bottom:0 }
-.camera-check-status>span:first-child,.camera-feed-info>span,.camera-framing>span { font-size:13px; font-weight:400; text-transform:lowercase; letter-spacing:0 }
+.camera-check-status { border-bottom:0 }
 .camera-check-status strong { font-size:24px; font-weight:600 }
 .camera-check-placeholder strong { font-family:var(--body); font-weight:600 }
-.camera-check-settings .data-note { font-size:14px }
-.camera-feed-info>strong { font-family:var(--body); font-weight:600 }
 .news-top { padding-top:12px; padding-bottom:12px }
 .channel-brand { font-family:var(--body); font-weight:700; font-size:28px; line-height:1 }
 .news-banner { font-family:var(--body); font-weight:700; font-size:24px; line-height:1; letter-spacing:0 }
@@ -208,6 +231,53 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
   .beat-tools .ui-secondary { font-size:10px; min-width:44px; padding:8px 4px }
   .beat-tools label { font-size:9px }
   .beat-time>span { font-size:10px }
-  .camera-check-settings .data-note { font-size:14px }
   .news-headline h3 { font-size:26px }
 }
+
+
+@media(prefers-reduced-motion:reduce) { .tempo-beats span { animation:none } .tempo-beats span:first-child { background:var(--lime) } }
+
+/* Lobby hierarchy: title, round format, player roster, primary action. */
+.lobby-screen #lobby-title { font-size:clamp(38px,5.2vw,64px); line-height:1.12; letter-spacing:-1px; margin:8px 0 28px }
+.lobby-screen .lobby-nav { margin-bottom:16px }
+.lobby-screen .game-length { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:min(560px,100%); gap:12px; margin:0 auto 36px }
+.lobby-screen .game-length label { display:grid; grid-template-columns:16px minmax(0,1fr); column-gap:10px; row-gap:3px; align-items:center; min-height:76px; padding:12px 16px; text-align:left; color:#e4d9ed }
+.lobby-screen .game-length input { grid-row:1 / 3; align-self:center }
+.lobby-screen .game-length strong { font-size:20px; line-height:1.2; font-weight:600 }
+.lobby-screen .game-length span { grid-column:2; width:auto; font-size:14px; line-height:1.3; color:#b6a2c7 }
+.lobby-screen .game-length label:has(input:checked) { color:var(--lime) }
+.lobby-screen .game-length label:has(input:focus-visible) { outline:2px solid var(--cyan); outline-offset:4px }
+.lobby-screen .roster-heading { justify-content:flex-start; margin-bottom:12px; font-size:14px; font-weight:600 }
+.lobby-screen .roster-heading span:first-child { color:#c5b4d1 }
+.lobby-screen .player-name { font-size:22px; font-weight:600 }
+.lobby-screen .lobby-bottom { display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:32px }
+.lobby-screen .lobby-bottom>p:first-child { min-height:0; margin:0; font-size:14px; color:#b6a2c7 }
+.lobby-screen .start-button { width:min(320px,100%); min-height:56px; padding:14px 24px; font-size:22px }
+@media(max-width:700px) {
+  .lobby-screen #lobby-title { font-size:clamp(32px,6.8vw,48px); margin:8px 0 24px }
+  .lobby-screen .game-length { gap:8px; margin-bottom:28px }
+  .lobby-screen .game-length label { padding:10px; column-gap:8px }
+  .lobby-screen .game-length strong { font-size:18px }
+  .lobby-screen .lobby-bottom { margin-top:24px }
+}
+@media(max-height:800px) and (min-width:1000px) {
+  .lobby-screen #lobby-title { font-size:56px; margin-bottom:24px }
+  .lobby-screen .game-length { margin-bottom:28px }
+}
+
+/* Head-only customization: hats, eyewear, and face accessories. */
+.character-selector { position:relative; width:100%; max-width:232px; padding-inline:44px; margin:0 auto 16px }
+.character-selector .avatar-button { display:block; width:100%; height:176px; aspect-ratio:auto; margin:0; padding:0 }
+.character-selector .avatar-button svg { display:block; width:100%; height:176px; max-width:none }
+.character-selector .avatar-button:hover svg { transform:none }
+.cosmetic-arrow { position:absolute; display:grid; place-items:center; width:44px; height:40px; min-height:40px; padding:0; border:0; background:transparent; color:var(--player-color); line-height:1; transform:translateY(-50%); touch-action:manipulation }
+.cosmetic-arrow.previous { left:0 }
+.cosmetic-arrow.next { right:0 }
+.cosmetic-arrow.hat { top:32px }
+.cosmetic-arrow.eyewear { top:96px }
+.cosmetic-arrow.lowerFace { top:144px }
+.cosmetic-arrow:hover { background:var(--surface); color:var(--white) }
+.cosmetic-arrow:focus-visible { outline:2px solid var(--player-color); outline-offset:2px }
+.avatar-option svg { width:72px; height:88px }
+@media(max-width:1000px) { .character-selector { padding-inline:36px } .cosmetic-arrow { width:36px } }
+@media(max-width:700px) { .character-selector { padding-inline:32px } .cosmetic-arrow { width:32px } }

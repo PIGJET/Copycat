@@ -1,5 +1,5 @@
-import Game from './game/Game';
+import { GameFlow } from "./components/Game/GameFlow";
 
 export default function App() {
-  return <Game />;
+  return <GameFlow />;
 }
