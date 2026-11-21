@@ -3,7 +3,7 @@ import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { usePoseDetection } from "../../hooks/usePoseDetection";
 
 import type { Ref } from "react";
-import type { PoseSequence } from "../../types/pose";
+import type { PoseLandmark, PoseSequence } from "../../types/pose";
 
 export type CameraHandle = {
   startRecording: () => boolean;
@@ -13,9 +13,10 @@ export type CameraHandle = {
 type CameraProps = {
   ref: Ref<CameraHandle>;
   onReadyChange: (ready: boolean) => void;
+  onPose?: (landmarks: PoseLandmark[] | null) => void;
 };
 
-function Camera({ ref, onReadyChange }: CameraProps) {
+function Camera({ ref, onReadyChange, onPose }: CameraProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,6 +96,10 @@ function Camera({ ref, onReadyChange }: CameraProps) {
       });
     }
   }, [landmarks]);
+
+  useEffect(() => {
+    onPose?.(landmarks);
+  }, [landmarks, onPose]);
 
   const ready = isReady && isPlaying;
   useEffect(() => {

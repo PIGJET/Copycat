@@ -2,14 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Camera from "../Camera/Camera";
 import type { CameraHandle } from "../Camera/Camera";
-import type { PoseSequence } from "../../types/pose";
+import type { PoseLandmark, PoseSequence } from "../../types/pose";
 import { PoseReplay } from "./PoseReplay";
 import type { Player, Ranking } from "./uiTypes";
 import { ArcadeButton, PageFrame, PlayerAvatar } from "./primitives";
 import "./DashboardCountdown.css";
 import "./DashboardMetronome.css";
 import "./DashboardTurnPrompt.css";
+import "./DashboardDanceFeedback.css";
+import { danceMotion } from "../../game/danceMotion";
 const recordingSeconds = 10;
+const motionCallouts = ["Nice move!", "Great flow!", "On a roll!", "Feel the beat!"];
+const moveCooldownMs = 550;
+const hypePerMove = 10;
 
 export type DashboardPageProps = { player: Player; creator: Player; players: Ranking[]; round: number; rounds: number; phase?: string; trackingStatus?: string; bpm?: number; onMenu: () => void; onRecord: (recording: PoseSequence) => void; onSkip?: () => void; reference?: PoseSequence; onTrackingChange?: (status: string) => void; onRecordingChange?: (recording: boolean) => void; soundOn?: boolean; onSoundToggle?: () => void };
 export function DashboardPage({ player, creator, players, round, rounds, phase = "idle", trackingStatus = "ready", bpm = 120, onMenu, onRecord, onSkip, reference, onTrackingChange, onRecordingChange, soundOn, onSoundToggle }: DashboardPageProps) {
@@ -21,6 +26,9 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
   const recordingDeadline = useRef<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const recording = secondsLeft !== null;
+  const previousPose = useRef<{ at: number; landmarks: PoseLandmark[] } | null>(null);
+  const lastMoveAt = useRef<number | null>(null);
+  const [danceCue, setDanceCue] = useState<{ at: number; streak: number; hits: number } | null>(null);
   const [captureError, setCaptureError] = useState("");
   const isCreator = player.id === creator.id;
   const ready = trackingStatus === "ready" && cameraReady;
@@ -34,9 +42,36 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
     }
     setCaptureError("");
     recordingDeadline.current = performance.now() + recordingSeconds * 1000;
+    previousPose.current = null;
+    lastMoveAt.current = null;
+    setDanceCue(null);
     setSecondsLeft(recordingSeconds);
     onRecordingChange?.(true);
   }, [onRecordingChange]);
+
+  const handleDancePose = useCallback((landmarks: PoseLandmark[] | null) => {
+    if (recordingDeadline.current === null) return;
+    if (!landmarks) {
+      previousPose.current = null;
+      lastMoveAt.current = null;
+      return;
+    }
+
+    const now = performance.now();
+    const before = previousPose.current;
+    if (before && now - before.at < 150) return;
+    previousPose.current = { at: now, landmarks };
+    if (!before || now - before.at > 350 || !danceMotion(before.landmarks, landmarks)) return;
+
+    const lastMove = lastMoveAt.current;
+    if (lastMove !== null && now - lastMove < moveCooldownMs) return;
+    lastMoveAt.current = now;
+    setDanceCue(previous => ({
+      at: now,
+      hits: (previous?.hits ?? 0) + 1,
+      streak: previous && lastMove !== null && now - lastMove < 1900 ? previous.streak + 1 : 1,
+    }));
+  }, []);
 
   function startTurn() {
     setShowTurnPrompt(false);
@@ -109,7 +144,7 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
       {onSoundToggle && <ArcadeButton secondary aria-pressed={soundOn} onClick={onSoundToggle}>Sound {soundOn ? "On" : "Off"}</ArcadeButton>}
       </div></header><div className="dashboard-turn"><PlayerAvatar player={player} className="dashboard-turn-avatar" /><div><h2>{player.name}’s turn</h2><p>{isCreator ? "Create a dance for everyone to copy." : reference ? `Watch ${creator.name}’s move, then copy it after the countdown.` : "Get in frame and record your dance."}</p></div></div><div className="dashboard-arena"><aside className="dashboard-scores" aria-label="Round standings"><div className="dashboard-panel-title"><h3>Scores</h3><span>Average /100</span></div><ol>{players.map(row => <li className={`dashboard-score-row ${row.player.id === player.id ? "is-current" : ""}`} key={row.player.id} aria-current={row.player.id === player.id ? "true" : undefined}><PlayerAvatar player={row.player} className="dashboard-avatar"/><span className="dashboard-score-player"><strong>{row.player.name}</strong>
         {row.player.id === player.id && <span className="dashboard-up-now">Up now</span>}
-      </span><strong className="dashboard-score-value">{row.average ?? "—"}</strong></li>)}</ol></aside><div className="dashboard-stage"><div className="dashboard-camera-scene"><div className="dashboard-camera-feed" hidden={replaying}><Camera ref={cameraRef} onReadyChange={setCameraReady} /></div>
+      </span><strong className="dashboard-score-value">{row.average ?? "—"}</strong></li>)}</ol></aside><div className="dashboard-stage"><div className="dashboard-camera-scene"><div className="dashboard-camera-feed" hidden={replaying}><Camera ref={cameraRef} onReadyChange={setCameraReady} onPose={handleDancePose} /></div>
       {showTurnPrompt && (
         <div className="dashboard-turn-prompt" role="status">
           <PlayerAvatar player={player} className="dashboard-turn-prompt-avatar" />
@@ -125,6 +160,19 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
         </div>
       )}
       {replaying && reference && <PoseReplay sequence={reference} creator={creator.name} />}
+      {recording && danceCue && (
+        <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
+          <span className="dashboard-dance-hype">+{hypePerMove} Hype</span>
+          <strong>{danceCue.streak % 5 === 0 ? "Dance frenzy!" : motionCallouts[(danceCue.hits - 1) % motionCallouts.length]}</strong>
+          {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
+        </div>
+      )}
+      {recording && (
+        <div className="dashboard-hype-total">
+          <span>Hype</span>
+          <strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * hypePerMove}</strong>
+        </div>
+      )}
       {secondsLeft !== null && (
         <div className="dashboard-recording-timer" role="timer" aria-label="Recording time remaining">
           <span>Recording</span>
