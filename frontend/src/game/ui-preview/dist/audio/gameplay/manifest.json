@@ -1,0 +1,282 @@
+{
+  "source": "https://hyperpixel.itch.io/33-free-chiptune-loops",
+  "license": "CC0-1.0",
+  "adaptation": "Distinct source loops, pitch-preserving tempo adjustment from 150 BPM, AAC in MP4.",
+  "tracks": [
+    {
+      "bpm": 60,
+      "title": "Knight dawn indoors",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/60.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 32.0,
+      "sourceFile": "01 Knight dawn indoors.ogg",
+      "sha256": "90947496a457de2d056bd0884cc3b1a9cb62819971987b64310155f9a0f1aed2"
+    },
+    {
+      "bpm": 65,
+      "title": "Knight dawn town",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/65.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 29.53846153846154,
+      "sourceFile": "02 Knight dawn town.ogg",
+      "sha256": "c5a1af601882d33f84000a6aeb1542c702add528ba79bfc77accf66c4fd13d90"
+    },
+    {
+      "bpm": 70,
+      "title": "Knight dawn road",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/70.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 27.428571428571427,
+      "sourceFile": "03 Knight dawn road.ogg",
+      "sha256": "393a156ffcffe12594158df3bf83cfd058ec954d433cd477228346e7edd0c17b"
+    },
+    {
+      "bpm": 75,
+      "title": "Knight morning road",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/75.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 25.6,
+      "sourceFile": "04 Knight morning road.ogg",
+      "sha256": "e4f3fbcc72863a613004b15915beb4949cabb0cc9a6afb0b33593e60db70c7cd"
+    },
+    {
+      "bpm": 80,
+      "title": "Knight morning forest",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/80.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 24.0,
+      "sourceFile": "05 Knight morning forest.ogg",
+      "sha256": "995a909564b179c56c972764c4583eeb68aebfb42f03c81072457a998fba4364"
+    },
+    {
+      "bpm": 85,
+      "title": "Knight morning hills",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/85.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 22.58823529411765,
+      "sourceFile": "06 Knight morning hills.ogg",
+      "sha256": "b0f338c09ff5f6385fd90d85e2d6868842d63b02b4c69f64ddb6554e3a9c056f"
+    },
+    {
+      "bpm": 90,
+      "title": "Knight day hills",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/90.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 21.333333333333332,
+      "sourceFile": "07 Knight day hills.ogg",
+      "sha256": "6ee63d31f46b55ee32d03f71296651a6eacf39a5bb37a5aadfb108a93b2f1e76"
+    },
+    {
+      "bpm": 95,
+      "title": "Knight day town",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/95.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 20.210526315789473,
+      "sourceFile": "08 Knight day town.ogg",
+      "sha256": "4dce29d965a7524aa0f172e8b289a56bdb22eae2363d2615a4dc27510eb4f420"
+    },
+    {
+      "bpm": 100,
+      "title": "Knight day castle",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/100.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 19.2,
+      "sourceFile": "09 Knight day castle.ogg",
+      "sha256": "f44bf9151bdb73599b14705a39a5b4d9bf0984684e8c3849012120d7b259ebe2"
+    },
+    {
+      "bpm": 105,
+      "title": "Knight day feast",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/105.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 18.285714285714285,
+      "sourceFile": "10 Knight day feast.ogg",
+      "sha256": "6bd080fc90a8bf19e9c28c2a7b108a3d35baccb01e06cf5b0836782b363b982f"
+    },
+    {
+      "bpm": 110,
+      "title": "Knight evening castle",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/110.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 17.454545454545453,
+      "sourceFile": "11 Knight evening castle.ogg",
+      "sha256": "6862a27935a2fcf25d9aa49c1fed7500e1af11d9abcb705fd27f52f57e51dbcf"
+    },
+    {
+      "bpm": 115,
+      "title": "Knight evening road",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/115.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 16.695652173913043,
+      "sourceFile": "12 Knight evening road.ogg",
+      "sha256": "c47de1c37041fe9a75d624ac94e169ef54ea178e373a3d377269a0eca7c4eb76"
+    },
+    {
+      "bpm": 120,
+      "title": "Knight evening forest",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/120.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 16.0,
+      "sourceFile": "13 Knight evening forest.ogg",
+      "sha256": "14c40433ef769741198ac9315f1fcf1d3fba36c932d63e6612734f1c0896c05b"
+    },
+    {
+      "bpm": 125,
+      "title": "Knight evening cave",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/125.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 15.36,
+      "sourceFile": "14 Knight evening cave.ogg",
+      "sha256": "dbfc63692f26fbd6084206cbfefe600687846574ed7313eb6e30356c51cc8fdd"
+    },
+    {
+      "bpm": 130,
+      "title": "Knight midnight road",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/130.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 14.76923076923077,
+      "sourceFile": "15 Knight midnight road.ogg",
+      "sha256": "2b323c1912ee9e50694f5bb7c76134abb2f90a83d988e4b1573e57bdd0bcfe5e"
+    },
+    {
+      "bpm": 135,
+      "title": "Knight midnight cave",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/135.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 14.222222222222221,
+      "sourceFile": "16 Knight midnight cave.ogg",
+      "sha256": "24bd50e2f462241b7f6ff8a949adffc2404dd364fd39b6c8514b40241cd58064"
+    },
+    {
+      "bpm": 140,
+      "title": "Knight midnight castle",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/140.mp4",
+      "sourceBpm": 150,
+      "beats": 32,
+      "loopSeconds": 13.714285714285714,
+      "sourceFile": "17 Knight midnight castle.ogg",
+      "sha256": "f79b84c95f7e658cc18cce0b2ab9bc7f57f41670e83593693e4fa9b72d777a88"
+    },
+    {
+      "bpm": 145,
+      "title": "Robot morning lab",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/145.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 19.862068965517242,
+      "sourceFile": "26 Robot morning lab.ogg",
+      "sha256": "ce17470439ff06d3a09157c35363b584ec1e35c6c50cdb9cf84ed477e7f576b3"
+    },
+    {
+      "bpm": 150,
+      "title": "Robot morning commons",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/150.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 19.2,
+      "sourceFile": "27 Robot morning commons.ogg",
+      "sha256": "10ea6c10ab2ebdaff8e6d23214f10a92cbbbe42f8b5c15fb902033c2574bdfaa"
+    },
+    {
+      "bpm": 155,
+      "title": "Robot morning training",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/155.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 18.580645161290324,
+      "sourceFile": "28 Robot morning training.ogg",
+      "sha256": "7d293c5a96063ffd95e04ed257c51bd9a95dd889d8997a255b94712425b7c7aa"
+    },
+    {
+      "bpm": 160,
+      "title": "Robot day corridor",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/160.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 18.0,
+      "sourceFile": "29 Robot day corridor.ogg",
+      "sha256": "5da90df6329aed119ce4dd6e1982d01fd003e56a2b746b2891c91a2f2903cf2c"
+    },
+    {
+      "bpm": 165,
+      "title": "Robot day cave entrance",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/165.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 17.454545454545453,
+      "sourceFile": "30 Robot day cave entrance.ogg",
+      "sha256": "4467f2898f3f8b0583a68b01614e6c83635ae915007b415d5dfae8887dcb9823"
+    },
+    {
+      "bpm": 170,
+      "title": "Robot day deep cave",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/170.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 16.941176470588236,
+      "sourceFile": "31 Robot day deep cave.ogg",
+      "sha256": "e321f28e8674b5f8fefcbedf99d7a515dc810b375f9f21f76d489fe9d6323e15"
+    },
+    {
+      "bpm": 175,
+      "title": "Robot night training",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/175.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 16.457142857142856,
+      "sourceFile": "32 Robot night training.ogg",
+      "sha256": "754f01cc2e956e924bf1dc4ce2fb8d0f4943321f537d080cfaa55b8f9871979f"
+    },
+    {
+      "bpm": 180,
+      "title": "Robot night alert",
+      "artist": "hyperpixel",
+      "src": "audio/gameplay/180.mp4",
+      "sourceBpm": 150,
+      "beats": 48,
+      "loopSeconds": 16.0,
+      "sourceFile": "33 Robot night alert.ogg",
+      "sha256": "b7857114615ef4bea5ac45f03482bf9b455bb1a1015e536f21857d326dd43838"
+    }
+  ]
+}

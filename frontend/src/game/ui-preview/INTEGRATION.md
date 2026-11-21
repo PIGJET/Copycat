@@ -54,3 +54,7 @@ In-game dashboard: DanceDashboard, DashboardScores, DashboardPose, and Dashboard
 
 
 Dashboard cleanup: score rows share a quiet panel; one turn heading and leader-named reference replace repeated instructions. UI demo details live in Settings. Four beat markers use the performance.now clock, retain their phase across dashboard rerenders, and continue after countdown. Countdown and ten-second capture preview derive remaining time from the same monotonic start; late callbacks skip to elapsed time rather than accumulate drift. No camera, recorder, reference playback, or backend integration was added.
+
+
+## Finale replay delivery
+The finale uses local file sharing rather than an email/SMS service. After rendering the actual news replay, call `globalThis.CopycatFinale.setVideo(videoBlob, playerName)` with a nonempty video Blob. This attaches the finished video to the player, enables Watch again, native Web Share file delivery (when supported), and download for manual email/text attachment. It does not generate the news video, upload media, or deliver mail/SMS itself. An original dance recording is not automatically passed off as the completed news clip. The current demo has no footage; its send dialog explains this and disables delivery. New games and leaving clear the clip and revoke its object URL. Canceled/failed shares retain the clip without claiming delivery.
