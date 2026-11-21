@@ -4,7 +4,7 @@ These presentational React components adapt the screens from `frontend/src/game/
 
 `GameFlow.tsx` is the navigation shell mounted by `App.tsx`. It links Home → Lobby (team only) → Camera setup → BPM setup → turn dashboard → score reveal → leaderboard → finale. Quick games and solo mode skip extra creator rounds; Full team games rotate the creator. Buttons navigate through the whole presentation flow.
 
-The current flow is UI-only: Camera setup does not start the recorder, gameplay does not record video, and score values remain unscored. Connect the recorder and `/score` response before treating score or finale content as game results.
+Team play is wired to the real game logic: `GameFlow` drives every team screen from `useGame()` (`frontend/src/game/README.md`): players and validation, rotation, real `/score` results, the 422 redo buttons, rankings, and the `/roast` headline in the finale. Recordings currently come from `getRecording()` in `frontend/src/game/recordingSource.ts`, which returns mock recordings so the game runs without a camera. Swapping in the real recorder means changing that one function. Solo play is `SoloFlow.tsx`, the original UI-only shell, unchanged.
 
 ```tsx
 import { HomePage, LobbyPage, DashboardPage } from "./components/Game";

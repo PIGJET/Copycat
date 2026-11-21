@@ -1,129 +1,200 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CameraCheckPage, DashboardPage, FinalePage, HomePage, LeaderboardPage, LobbyPage, ScorePage, TempoPage } from "./index";
-import type { Player, Ranking, Score } from "./uiTypes";
+import { SoloFlow } from "./SoloFlow";
+import type { Player as UiPlayer, Ranking, Score } from "./uiTypes";
+import { checkHealth } from "../../game/api";
+import { getRecording } from "../../game/recordingSource";
+import { allAttempts, startError } from "../../game/rules";
+import { useGame } from "../../game/useGame";
+import type { Player, RankingRow, ScoreResult } from "../../game/types";
 
-type Screen = "home" | "lobby" | "camera" | "tempo" | "dashboard" | "score" | "leaderboard" | "finale";
-type Mode = "solo" | "team";
-const emptyScore: Score = { total: null, arms: null, legs: null, torso: null, timing: null };
-const soloPlayer: Player = { id: "solo-player", name: "You", avatar: "cat" };
-const referencePlayer: Player = { id: "reference", name: "Reference", avatar: "robot" };
+/** Screens before the game itself starts. After "game", useGame's phase decides the page. */
+type Screen = "home" | "lobby" | "camera" | "tempo" | "game";
 
-/** UI navigation shell. Recording and score results are intentionally not simulated. */
+const AVATARS = ["cat", "rabbit", "robot", "frog"];
+const DEFAULT_LOBBY: UiPlayer[] = [{ id: 1, name: "", avatar: "cat" }, { id: 2, name: "", avatar: "rabbit" }];
+const EMPTY_SCORE: Score = { total: null, arms: null, legs: null, torso: null, timing: null };
+const SERVER_DOWN = "Game server isn't running. Start the backend on port 8000, then retry.";
+
+const round1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
+const newSeed = () => Math.floor(Math.random() * 1e6);
+
+function toScore(s: ScoreResult | null | undefined): Score {
+  return s ? { total: s.total, arms: s.arms, legs: s.legs, torso: s.torso, timing: s.timing } : EMPTY_SCORE;
+}
+
+/** Team play runs on useGame (frontend/src/game). Solo play is SoloFlow, unchanged. */
 export function GameFlow() {
+  const game = useGame();
   const [screen, setScreen] = useState<Screen>("home");
-  const [mode, setMode] = useState<Mode>("team");
-  const [players, setPlayers] = useState<Player[]>([soloPlayer]);
-  const [format, setFormat] = useState<"quick" | "full">("quick");
-  const [round, setRound] = useState(0);
-  const [turnIndex, setTurnIndex] = useState(0);
+  const [solo, setSolo] = useState(false);
   const [bpm, setBpm] = useState(120);
   const [soundOn, setSoundOn] = useState(true);
-  const [lastScoredPlayer, setLastScoredPlayer] = useState<Player>(soloPlayer);
+  const [health, setHealth] = useState<"checking" | "ok" | "down">("checking");
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [lobbyError, setLobbyError] = useState<string | undefined>(undefined);
+  /** True from a copier's submit until they press CONTINUE on their score. */
+  const [revealPending, setRevealPending] = useState(false);
+  const [recordingBusy, setRecordingBusy] = useState(false);
+  const [gameSeed, setGameSeed] = useState(newSeed);
 
-  const creator = mode === "solo" ? referencePlayer : players[round] ?? players[0] ?? soloPlayer;
-  const challengers = mode === "solo" ? players : players.filter(player => player.id !== creator.id);
-  const creatorTurn = mode === "team" && turnIndex === 0;
-  const activePlayer = creatorTurn ? creator : challengers[Math.max(0, turnIndex - (mode === "team" ? 1 : 0))] ?? challengers[0] ?? soloPlayer;
-  const totalRounds = mode === "team" && format === "full" ? players.length : 1;
-  const rankings: Ranking[] = players.map(player => ({ player, average: null, attempts: 0 }));
+  // ---- GET /health ----
+  useEffect(() => {
+    let alive = true;
+    checkHealth().then((ok) => alive && setHealth(ok ? "ok" : "down"));
+    return () => { alive = false; };
+  }, []);
+  const recheckHealth = useCallback(() => {
+    setHealth("checking");
+    checkHealth().then((ok) => setHealth(ok ? "ok" : "down"));
+  }, []);
 
-  function returnHome() {
+  // ---- helpers ----
+  const toUi = (p: Player | null | undefined): UiPlayer => {
+    if (!p) return { id: "nobody", name: "", avatar: "cat" };
+    const index = Math.max(0, game.players.findIndex((x) => x.id === p.id));
+    return { id: p.id, name: p.name, avatar: avatars[p.name.toLocaleLowerCase()] ?? AVATARS[index % AVATARS.length] };
+  };
+  const toRanking = (r: RankingRow): Ranking => ({ player: toUi(r.player), average: round1(r.average), attempts: r.attempts.length });
+  const rankings = game.rankings.map(toRanking);
+
+  function goHome() {
+    game.restart();
+    setRevealPending(false);
+    setRecordingBusy(false);
+    setSolo(false);
     setScreen("home");
-    setRound(0);
-    setTurnIndex(0);
+    recheckHealth();
   }
 
-  function openNextTurn() {
-    if (creatorTurn) {
-      setTurnIndex(1);
-      return;
-    }
-    const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
-    if (challengerIndex + 1 < challengers.length) {
-      setTurnIndex(turnIndex + 1);
-      return;
-    }
-    setScreen("leaderboard");
-  }
-
-  function completeTurn() {
-    if (creatorTurn) {
-      openNextTurn();
-      return;
-    }
-    setLastScoredPlayer(activePlayer);
-    setScreen("score");
-  }
-
-  function continueAfterScore() {
-    const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
-    if (challengerIndex + 1 < challengers.length) {
-      setTurnIndex(turnIndex + 1);
-      setScreen("dashboard");
-    } else {
-      setScreen("leaderboard");
-    }
-  }
-
-  function advanceFromLeaderboard() {
-    if (round + 1 < totalRounds) {
-      setRound(round + 1);
-      setTurnIndex(0);
-      setScreen("dashboard");
-      return;
-    }
-    setScreen("finale");
-  }
-
-  function replay() {
-    setRound(0);
-    setTurnIndex(0);
+  /** Copy the lobby's players into useGame and start. */
+  function startFromLobby(players: UiPlayer[], format: "quick" | "full") {
+    setAvatars(Object.fromEntries(players.map((p) => [p.name.trim().toLocaleLowerCase(), p.avatar ?? "cat"])));
+    for (const p of game.players) game.removePlayer(p.id);
+    for (const p of players) game.addPlayer(p.name);
+    game.setMode(format);
+    game.startGame();
+    setGameSeed(newSeed());
     setScreen("camera");
   }
 
-  if (screen === "lobby") {
-    return <LobbyPage onBack={returnHome} onStart={(selectedPlayers, selectedFormat) => {
-      setPlayers(selectedPlayers);
-      setFormat(selectedFormat);
-      setRound(0);
-      setTurnIndex(0);
-      setScreen("camera");
-    }} />;
+  // Live lobby validation, using useGame's own rules and messages.
+  const { setMode } = game;
+  const onLobbyChange = useCallback((players: UiPlayer[], format: "quick" | "full") => {
+    setLobbyError(startError(players.map((p) => ({ id: String(p.id), name: p.name }))) ?? "");
+    setMode(format);
+  }, [setMode]);
+
+  async function record() {
+    const role = game.phase === "creatorRecording" ? "creator" : "copier";
+    setRecordingBusy(true);
+    try {
+      const recording = await getRecording({ role, danceSeed: gameSeed + game.state.roundIndex * 1000 });
+      game.submitRecording(recording);
+      if (role === "copier") setRevealPending(true);
+    } finally {
+      setRecordingBusy(false);
+    }
   }
 
+  function replay() {
+    game.restart();
+    game.startGame(); // same players and mode
+    setRevealPending(false);
+    setGameSeed(newSeed());
+    setScreen("camera");
+  }
+
+  // ---- solo ----
+  if (solo) return <SoloFlow onExit={() => { setSolo(false); setScreen("home"); }} />;
+
+  // ---- pre-game screens ----
+  const lobby = (
+    <LobbyPage
+      initialPlayers={game.players.length ? game.players.map(toUi) : DEFAULT_LOBBY}
+      initialFormat={game.mode}
+      error={game.setupError ?? lobbyError}
+      onChange={onLobbyChange}
+      onBack={goHome}
+      onStart={startFromLobby}
+    />
+  );
+  if (screen === "lobby") return lobby;
+  if ((screen === "camera" || screen === "tempo" || screen === "game") && game.phase === "setup") {
+    // Start was rejected (setupError), or the game was reset: back to the right pre-game screen.
+    return screen === "game" ? <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn((v) => !v)} onSolo={() => setSolo(true)} onTeam={() => setScreen("lobby")} /> : lobby;
+  }
   if (screen === "camera") {
-    return <CameraCheckPage player={mode === "solo" ? soloPlayer : creator} onMenu={returnHome}
+    return <CameraCheckPage player={toUi(game.creator)} onMenu={goHome}
       status="Camera preview is not connected" detail="Continue to BPM setup. Recorder integration is still needed."
       onContinue={() => setScreen("tempo")} />;
   }
-
   if (screen === "tempo") {
-    return <TempoPage key={`${mode}-${round}`} initialBpm={bpm} onMenu={returnHome} onBack={() => setScreen("camera")} onStart={selectedBpm => {
-      setBpm(selectedBpm);
-      setTurnIndex(0);
-      setScreen("dashboard");
+    return <TempoPage initialBpm={bpm} onMenu={goHome} onBack={() => setScreen("camera")} onStart={(selected) => {
+      setBpm(selected);
+      setScreen("game");
     }} />;
   }
 
-  if (screen === "dashboard") {
-    return <DashboardPage player={activePlayer} creator={creator} players={rankings} round={round + 1} rounds={totalRounds} bpm={bpm}
-      onMenu={returnHome} onRecord={completeTurn} onSkip={openNextTurn} />;
+  if (screen === "home") {
+    return <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn((v) => !v)}
+      notice={health === "down" ? SERVER_DOWN : undefined} onNoticeRetry={recheckHealth}
+      onSolo={() => setSolo(true)}
+      onTeam={() => setScreen("lobby")} />;
   }
 
-  if (screen === "score") {
-    return <ScorePage player={lastScoredPlayer} score={emptyScore} onMenu={returnHome} onContinue={continueAfterScore} />;
+  // ---- in-game: useGame's phase decides ----
+  if (game.phase === "scoring" || revealPending) {
+    if (game.phase === "scoring") {
+      const err = game.currentAttempt?.status === "error" ? game.currentAttempt.error : null;
+      const player = toUi(game.currentPlayer);
+      if (!err) {
+        return <ScorePage player={player} score={EMPTY_SCORE} status="Scoring…" continueDisabled onContinue={() => {}} onMenu={goHome} />;
+      }
+      if (err.recording === "reference") {
+        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+          continueLabel={`${game.creator?.name ?? "CREATOR"} RE-RECORDS`}
+          onContinue={() => { setRevealPending(false); game.redoReference(); }} />;
+      }
+      if (err.recording === "attempt") {
+        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+          continueLabel="RECORD AGAIN" onContinue={() => { setRevealPending(false); game.redoAttempt(); }} />;
+      }
+      return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+        continueLabel="RETRY" onContinue={game.retryScore}
+        secondaryAction={{ label: "RECORD AGAIN", onClick: () => { setRevealPending(false); game.redoAttempt(); } }} />;
+    }
+    // Scored: reveal the attempt that was just scored (the latest scored one).
+    const latest = allAttempts(game.rounds).filter((a) => a.score).at(-1);
+    const player = toUi(game.players.find((p) => p.id === latest?.playerId));
+    return <ScorePage player={player} score={toScore(latest?.score)} worstPart={latest?.score?.worst_part} onMenu={goHome}
+      onContinue={() => {
+        setRevealPending(false);
+        if (game.phase === "roundResults") game.nextStep();
+      }} />;
   }
 
-  if (screen === "leaderboard") {
-    return <LeaderboardPage players={rankings} onMenu={returnHome} onNext={advanceFromLeaderboard} />;
+  if (game.phase === "creatorRecording" || game.phase === "copying") {
+    return <DashboardPage player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
+      round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} phase={recordingBusy ? "recording" : "idle"}
+      onMenu={goHome} onRecord={record}
+      onSkip={() => { /* useGame has no skip rule yet; every copier must be scored. */ }} />;
   }
 
-  if (screen === "finale") {
-    const loser = players[players.length - 1] ?? soloPlayer;
-    return <FinalePage loser={loser} worstScore={emptyScore} headline="Results are waiting for gameplay scoring" roastLine="Connect recording and scoring to see the final report." players={rankings} onReplay={replay} onMenu={returnHome} />;
+  if (game.phase === "roundResults" || game.phase === "leaderboard") {
+    return <LeaderboardPage players={rankings} onMenu={goHome}
+      nextLabel={game.phase === "roundResults" ? "LEADERBOARD" : game.isLastRound ? "BREAKING NEWS" : "NEXT ROUND"}
+      onNext={game.nextStep} />;
   }
 
-  return <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn(value => !value)}
-    onSolo={() => { setMode("solo"); setPlayers([soloPlayer]); setRound(0); setScreen("camera"); }}
-    onTeam={() => { setMode("team"); setScreen("lobby"); }} />;
+  // finale
+  const roast = game.roast;
+  const headline = roast.status === "done" && roast.result ? roast.result.headline
+    : roast.status === "error" ? "REPORT UNAVAILABLE" : "DEVELOPING STORY...";
+  const roastLine = roast.status === "done" && roast.result ? roast.result.roast_line
+    : roast.status === "error" ? roast.error?.message ?? "" : "Our reporters are reviewing the footage.";
+  return <FinalePage loser={toUi(game.loser?.player)} worstScore={toScore(game.loserWorstAttempt?.score)}
+    headline={headline} roastLine={roastLine} players={rankings}
+    onRetry={roast.status === "error" ? game.retryRoast : undefined}
+    onReplay={replay} onMenu={goHome} />;
 }

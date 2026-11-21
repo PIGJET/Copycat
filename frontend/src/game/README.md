@@ -31,6 +31,7 @@ Only one `useGame()` should exist per game. Call it once near the top and pass `
 | `types.ts` | `Player`, `Recording`, `Attempt`, `Round`, `ScoreResult`, `RoastResult`, `GameMode`, `Phase`, … |
 | `rules.ts` | Pure rules: validation, rotation, rankings, tie-break, loser, roast request. |
 | `gameReducer.ts` | The state machine (pure). `useGame` adds the network calls. |
+| `recordingSource.ts` | `getRecording({ role, danceSeed })`: the one place recordings come from. Mock for now; swap in the real recorder here. |
 | `mockRecorder.ts` | `mockRecording()` makes a fake contract-format Recording, no camera needed. |
 | `DevHarness.tsx` | Unstyled click-through of a whole game against the real backend (not in `App.tsx`). |
 | `game.test.mjs` | Rule tests. |
