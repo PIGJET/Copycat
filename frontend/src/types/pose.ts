@@ -7,7 +7,7 @@ export interface PoseLandmark {
 }
 
 export interface PoseFrame {
-  timestamp: number;
+  t: number; // ms since recording started (CONTRACT.md)
   landmarks: PoseLandmark[];
 }
 

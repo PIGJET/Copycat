@@ -14,7 +14,7 @@ export class PoseRecorder {
     if (this.startTime === null) return;
 
     this.frames.push({
-      timestamp: performance.now() - this.startTime,
+      t: performance.now() - this.startTime,
       landmarks,
     });
   }

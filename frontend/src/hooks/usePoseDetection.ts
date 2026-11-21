@@ -22,7 +22,7 @@ export function usePoseDetection(videoRef: React.RefObject<HTMLVideoElement | nu
 
     async function initialize() {
       const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
       );
 
       if (!active) return;

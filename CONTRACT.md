@@ -12,11 +12,12 @@ gets a "breaking news" shame video.
 | Lane | Branch | Owns | Does |
 |---|---|---|---|
 | Backend | `backend-scoring-roast` / PRs to `main` | `backend/` | `/score` and `/roast` (Python, FastAPI) |
-| Recorder | `recorder` | _frontend folder TBD_ | Camera, countdown, MediaPipe Pose, produces a **Recording** (below) and keeps the video for screenshots |
-| Game | `game` | _frontend folder TBD_ | Players, rounds, calling `/score`, running averages, picking the loser |
-| Shame | `shame` | _frontend folder TBD_ | Grabs the worst-moment frames, calls `/roast`, plays the breaking-news video |
+| Recorder | `recorder` | `frontend/src/components/Camera/`, `frontend/src/hooks/`, `frontend/src/utils/`, `frontend/src/types/` | Camera, countdown, MediaPipe Pose, produces a **Recording** (below) and keeps the video for screenshots |
+| Game | `game` | `frontend/src/game/` | Players, rounds, calling `/score`, running averages, picking the loser |
+| Shame | `shame` | `frontend/src/shame/` | Grabs the worst-moment frames, calls `/roast`, plays the breaking-news video |
 
-Frontend owners: fill in the folders above when the scaffold lands.
+The frontend is React + TypeScript + Vite, in `frontend/` (`npm install`, then `npm run dev`).
+Shared frontend files (`App.tsx`, `main.tsx`, config) need a heads-up to the team before changing.
 
 ## Backend
 
@@ -43,6 +44,8 @@ Frontend owners: fill in the folders above when the scaffold lands.
 - When MediaPipe finds no person, send `null` for the frame or `"lm": null`. The backend skips those.
 - **Send raw, un-mirrored landmarks** for both the creator and the copier. Mirror the on-screen preview
   if you like, but never the data, or left and right get swapped.
+- The backend also accepts `"landmarks"` instead of `"lm"` and `{"x", "y", "z", "visibility"}` objects,
+  which is what the current recorder (`frontend/src/types/pose.ts`) sends. Extra keys like `playerId` are ignored.
 - About 10 seconds per recording. The backend resamples to 15 fps, so anything from 15 to 30 fps is fine.
 
 ## `POST /score`
