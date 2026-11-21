@@ -53,9 +53,12 @@ test('blocked autoplay retries on a gesture and still respects mute',async()=>{
   blocked=false;h.interact('keydown');await settle();assert.equal(h.idle.paused,false);assert.equal(h.status.textContent,'');
   await h.toggle(false);const plays=h.calls.plays;h.interact('click');assert.equal(h.calls.plays,plays);
 });
-test('index.html ships no third-party or YouTube music',()=>{
+test('no Night Shade, and the song catalog holds IDs only (no audio in the repo)',()=>{
   const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');
-  assert.doesNotMatch(html,/night-shade|song-catalog/);
-  assert.ok(!fs.existsSync(path.join(__dirname,'../dist/song-catalog.js')));
+  assert.doesNotMatch(html,/night-shade/);
   assert.ok(!fs.existsSync(path.join(__dirname,'../dist/audio/night-shade.mp3')));
+  const catalog=fs.readFileSync(path.join(__dirname,'../dist/song-catalog.js'),'utf8');
+  const rows=JSON.parse(catalog.slice(catalog.indexOf(' = ')+3).trim().replace(/;$/,''));
+  assert.ok(rows.length>1000);
+  assert.ok(rows.every(row=>/^\d+$/.test(row.id)&&!('src' in row)&&!('preview' in row)));
 });

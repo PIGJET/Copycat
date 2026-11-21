@@ -3,12 +3,16 @@ import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { replayDelivery } from './replayDelivery.ts'
+import { songServer } from './songServer.ts'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 
 // Liangray's arcade UI is the app: its page and assets live in src/game/ui-preview/dist (served as
 // the public dir), and the engine loads as a module on top of it (src/main.tsx -> arcade/bridge.tsx).
 const arcade = new URL('./src/game/ui-preview/dist/index.html', import.meta.url)
+// Liangray's real-song catalog: previews are fetched/converted on demand by songServer.ts.
+const catalog = readFileSync(new URL('./src/game/ui-preview/dist/song-catalog.js', import.meta.url), 'utf8')
+const tracks: {id:string}[] = JSON.parse(catalog.slice(catalog.indexOf(' = ') + 3).trim().replace(/;$/, ''))
 // frontend/public stays available too, for optional files such as public/scenes/proposal.mp4.
 const extraPublic = fileURLToPath(new URL('./public', import.meta.url))
 const TYPES: Record<string, string> = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' }
@@ -54,6 +58,7 @@ export default defineConfig({
   plugins: [
     react(),
     replayDelivery(), // Liangray's finale "Send replay" (email/SMS, needs keys in .env.local)
+    songServer(new Set(tracks.map(track => track.id))),
     extraPublicDir(),
     { name: 'copycat-arcade-entry', transformIndexHtml: { order: 'pre', handler() {
       return readFileSync(arcade, 'utf8').replace('</body>', '<script type="module" src="/src/main.tsx"></script></body>')

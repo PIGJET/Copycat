@@ -25,6 +25,7 @@ function syncGameplayMusic(){globalThis.CopycatGameplayMusic?.sync({screen:previ
 let chosenSong = null;
 let searchRequest = 0;
 const library = () => [
+  ...(globalThis.CopycatCatalog || []).map(row => ({...row, src:'songs/'+row.id+'.mp4'})),
   ...Object.values(globalThis.CopycatTracks || {}).map(track => ({...track, id:'local-'+track.bpm}))
 ];
 const songs = library();
@@ -40,8 +41,10 @@ function songOptions(query) {
 }
 function songCredit(song) {
   if (!song) return '';
-  return 'Chiptune by hyperpixel · CC0';
+  return song.provider === 'deezer' ? `Preview by ${escapeUI(song.artist)} · <a href="https://www.deezer.com/track/${encodeURIComponent(song.id)}" target="_blank" rel="noopener">Deezer</a>` : 'Chiptune by hyperpixel · CC0';
 }
+// Bundled CC0 loop nearest a BPM (unknown BPM -> 120). Used when a real song can't load.
+function closestChiptune(bpm){const target=bpm>0&&Number.isFinite(bpm)?bpm:120;return Object.values(globalThis.CopycatTracks||{}).map(track=>({...track,id:'local-'+track.bpm})).reduce((best,track)=>!best||Math.abs(track.bpm-target)<Math.abs(best.bpm-target)?track:best,null)}
 function TempoScreen(){
   chosenSong ??= songs[0];
   return `${GameHeader('SELECT SONG','')}<div class="song-picker"><label for="song-query">Search ${songs.length.toLocaleString()} songs</label><input type="search" id="song-query" placeholder="Song title or original artist"><label class="sr-only" for="song-list">Songs</label><select id="song-list" size="7">${songOptions('')}</select><small id="song-credit">${songCredit(chosenSong)}</small><p id="song-status" role="status"></p><div class="tempo-actions">${ArcadeButton('START GAME','tempo-start')}${ArcadeButton('BACK TO CAMERA','tempo-camera',true)}</div></div>`;
@@ -177,6 +180,9 @@ async function openFinale() {
     const ask = () => engine.roast(loser).then(result => { preview.roast = {status:'done', result} }, error => { preview.roast = {status:'error', error, retry:ask} }).then(updateHeadline);
     preview.roast.retry = ask;
     ask();
+    // Background music off before the scene's own audio (home-music.js keys off this class).
+    gameRoot.classList.remove('results-leaderboard');
+    globalThis.CopycatGameplayMusic?.stop();
     await engine.finaleScene(loser);
     if (run !== preview.run) return;
   }
@@ -273,20 +279,24 @@ async function enterDanceFloor() {
   const start = gameRoot.querySelector('[data-action="tempo-start"]');
   start.disabled = true;
   status.textContent = 'Preparing ' + song.title + '…';
+  let playing = song;
   try {
     const response = await fetch(song.src, {method:'HEAD'});
     if (!response.ok || !/audio|video/.test(response.headers.get('content-type') || '')) throw Error();
-  } catch {
-    if (token === searchRequest && status.isConnected) {
-      status.textContent = 'Song unavailable. Try another song or search hyperpixel for bundled tracks.';
-      start.disabled = false;
+    if (song.provider === 'deezer') {
+      const bpm = Number(response.headers.get('X-Song-BPM'));
+      if (!(bpm > 0 && Number.isFinite(bpm))) throw Error();
+      song.bpm = bpm;
     }
-    return;
+  } catch {
+    // No internet, not cached, or a server error: play the closest-BPM CC0 loop instead.
+    playing = closestChiptune(song.bpm);
   }
   if (token !== searchRequest || !status.isConnected || preview.screen !== 'tempo') return;
   chosenSong = song;
-  preview.song = song;
-  preview.bpm = song.bpm;
+  preview.song = playing;
+  preview.songFallback = playing !== song ? song : null;
+  preview.bpm = playing.bpm;
   preview.screen = preview.afterCamera;
   const showFloor = () => {
     renderPreview();
