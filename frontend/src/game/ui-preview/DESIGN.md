@@ -81,3 +81,6 @@ Dashboard polish retains the three columns and pixel wordmark. Only the camera f
 
 
 Character customization uses head portraits only. Retain hats, eyewear, and face accessories with three independent arrow pairs. Body artwork, outfits, and lower-body choices are removed. Selected head accessories persist across species changes and gameplay portraits.
+
+
+Dancing-screen focus: remove the right-hand reference panel. The landscape camera expands across the available space beside a compact score rail; turn heading and actions align with the camera. At narrow widths the camera leads and scores follow. Beat timing and turn progression are unchanged.
