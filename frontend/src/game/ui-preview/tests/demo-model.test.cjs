@@ -65,7 +65,7 @@ function cameraHarness(getMedia){
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../dist/round-ui.js'),'utf8')+';globalThis.camera={enableCameraCheck,stopCameraCheck};',sandbox);
   return {sandbox,elements,element,camera:sandbox.camera};
 }
-test('camera preview is opt-in, excludes audio, and releases tracks on exit',async()=>{
+test('camera access excludes audio and releases tracks on exit',async()=>{
   let requests=0,stops=0;const track={stop(){stops++}},stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
   const harness=cameraHarness(async constraints=>{requests++;assert.equal(constraints.audio,false);return stream});
   assert.equal(requests,0);

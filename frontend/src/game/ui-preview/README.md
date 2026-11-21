@@ -12,7 +12,7 @@ Eight screens: home, player lobby, camera check, creator recording, copy challen
 
 Open dist/index.html in a browser. No installation or build step is needed. Solo opens camera check before the practice challenge. Team opens the 2–4-player lobby. Enter distinct names, select avatars, choose Quick or Full, then Start. Camera check appears before the first creator. Ready controls are intentionally absent.
 
-Recording screens use a three-second countdown and a ten-second presentation timer. Skip Preview lets reviewers move through the screens immediately. Preview State shows waiting, full-body missing, and camera-denied UI states. The optional pre-game camera preview opens only after Enable Camera; nothing is recorded. Gameplay video panels remain placeholders.
+Recording screens use a three-second countdown and a ten-second presentation timer. Skip Preview lets reviewers move through the screens immediately. Preview State shows waiting, full-body missing, and camera-denied UI states. Camera check automatically requests camera access on entry; retry remains available after a denial. Nothing is recorded. Gameplay video panels remain placeholders.
 
 ## Direct review states
 

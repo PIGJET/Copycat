@@ -4,20 +4,20 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 function setup(){
-  const handlers={};const styles={};
+  const handlers={};const styles={};const cameraCalls={count:0};
   const elements={'#tempo-bpm':{value:'120'},'#tempo-slider':{value:'120'},'.tempo-setup':{style:{setProperty:(k,v)=>styles[k]=v}}};
   const root={hidden:true,innerHTML:'',classList:{toggle(){},remove(){}},replaceChildren(){},
     addEventListener:(type,fn)=>(handlers[type]??=[]).push(fn),querySelector:selector=>elements[selector]||null};
   const context=vm.createContext({document:{hidden:false,addEventListener(){},querySelector:selector=>selector==='#game-screen'?root:selector==='.arcade'?{classList:{add(){},remove(){},toggle(){}}}:selector==='#sound'?{addEventListener(){}}:null},
     homeScreen:{hidden:false},lobby:{hidden:true},window:{scrollTo(){}},location:{search:''},soundOn:false,
-    crewColors:['#b6ff00','#ff2ea6'],portrait:()=>'',URLSearchParams,clearInterval,clearTimeout,setTimeout,setInterval,cancelAnimationFrame(){},matchMedia:()=>({matches:true}),goHome(){}});
+    cameraCalls,crewColors:['#b6ff00','#ff2ea6'],portrait:()=>'',URLSearchParams,clearInterval,clearTimeout,setTimeout,setInterval,cancelAnimationFrame(){},matchMedia:()=>({matches:true}),goHome(){}});
   const read=file=>fs.readFileSync(path.join(__dirname,'../dist',file),'utf8');
-  vm.runInContext(read('round-ui.js')+'\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,normaliseBPM};',context);
+  vm.runInContext(read('round-ui.js')+'\nenableCameraCheck=()=>{cameraCalls.count++};\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,normaliseBPM,openDemoScreen};',context);
   const click=action=>{const button={disabled:false,dataset:{action}};for(const fn of handlers.click||[])fn({target:{closest:()=>button}});};
   const dispatch=(type,target)=>{for(const fn of handlers[type]||[])fn({target})};
   const input=value=>{const target=elements['#tempo-slider'];target.id='tempo-slider';target.value=String(value);dispatch('input',target)};
   const manual=(value,event='focusout')=>{const target=elements['#tempo-bpm'];target.id='tempo-bpm';target.value=String(value);dispatch('input',target);if(event)dispatch(event,target)};
-  return {ui:context.ui,root,elements,styles,click,input,manual};
+  return {ui:context.ui,root,elements,styles,click,input,manual,cameraCalls};
 }
 const crew=[{id:1,name:'Alex',avatar:'cat'},{id:2,name:'Jamie',avatar:'rabbit'}];
 test('team camera check leads to BPM setup and chosen tempo survives turns and rounds',()=>{
@@ -62,4 +62,14 @@ test('returning to camera preserves the tempo and a new session resets it',()=>{
   h.click('camera-demo');assert.match(h.root.innerHTML,/id="tempo-bpm"[^>]*value="140"/);
   h.click('tempo-start');assert.equal(h.ui.preview.bpm,140);
   h.ui.enterPreview(crew,'quick');assert.equal(h.ui.preview.bpm,120);
+});
+
+test('camera check automatically requests access on entry and re-entry only',()=>{
+  const h=setup();h.ui.enterPreview(crew,'quick');assert.equal(h.cameraCalls.count,1);
+  h.click('camera-demo');assert.equal(h.cameraCalls.count,1);
+  h.click('tempo-camera');assert.equal(h.cameraCalls.count,2);
+});
+test('direct tempo and creator reviews do not request camera access',()=>{
+  const h=setup();h.ui.openDemoScreen('tempo');assert.equal(h.cameraCalls.count,0);
+  h.ui.openDemoScreen('creator');assert.equal(h.cameraCalls.count,0);
 });

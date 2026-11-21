@@ -74,10 +74,10 @@ function showCameraFailure(kind,simulated=false){
   document.querySelector('[data-action="camera-continue"]').disabled=true;
   const enable=document.querySelector('[data-action="camera-enable"]');enable.disabled=false;enable.textContent='TRY CAMERA';document.querySelector('#camera-demo-state').hidden=!simulated;
 }
-function applyCameraDemoState(){const state=new URLSearchParams(location.search).get('camera-state');if(['denied','missing','busy'].includes(state))showCameraFailure(state,true)}
+function applyCameraDemoState(){const state=new URLSearchParams(location.search).get('camera-state');if(['denied','missing','busy'].includes(state)){showCameraFailure(state,true);return true}return false}
 async function enableCameraCheck(){
   stopCameraCheck();const epoch=checkEpoch,enable=document.querySelector('[data-action="camera-enable"]');if(!enable)return;
-  enable.disabled=true;document.querySelector('#camera-demo-state').hidden=true;const status=document.querySelector('#camera-status');status.parentElement.hidden=false;status.classList.remove('camera-status-error');status.textContent='Requesting camera…';document.querySelector('#camera-status-detail').textContent='Respond to the browser permission prompt.';
+  enable.disabled=true;document.querySelector('[data-action="camera-continue"]').disabled=true;document.querySelector('#camera-demo-state').hidden=true;const status=document.querySelector('#camera-status');status.parentElement.hidden=false;status.classList.remove('camera-status-error');status.textContent='Requesting camera…';document.querySelector('#camera-status-detail').textContent='Respond to the browser permission prompt.';
   if(!navigator.mediaDevices?.getUserMedia){showCameraFailure('unavailable');return}
   try{
     const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});

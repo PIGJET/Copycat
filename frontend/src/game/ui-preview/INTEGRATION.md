@@ -20,7 +20,7 @@ When the actual React repository is available, move these presentation structure
 | Leaderboard | `demoRankings` | Existing aggregate game results; average copied performances, exclude own-creator turns |
 | Finale | `NewsOverlay`, `finaleScreen` | Worst actual clip, existing commentary/headline, final rankings |
 
-The UI demonstration never calls a scoring API, Gemini, upload APIs, or sharing APIs. The new pre-game camera check alone calls getUserMedia after an explicit Enable Camera click, with audio disabled; it releases its preview tracks on exit. Countdown is a presentation timer, not a recording engine. No frame similarity or pose comparison is implemented. `videoUrl: null` in local demo records is an internal fixture field, not an API contract.
+The UI demonstration never calls a scoring API, Gemini, upload APIs, or sharing APIs. The pre-game camera check calls getUserMedia automatically when entered, with audio disabled; it releases its preview tracks on exit. Countdown is a presentation timer, not a recording engine. No frame similarity or pose comparison is implemented. `videoUrl: null` in local demo records is an internal fixture field, not an API contract.
 
 ## Preserved choices
 

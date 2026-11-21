@@ -44,12 +44,13 @@ function renderPreview(){
   document.querySelector('.arcade').classList.toggle('team-capture-active',teamCapture);
   document.querySelector('.arcade').classList.toggle('news-active',preview.screen==='finale');
   gameRoot.querySelector('#screen-title')?.focus();window.scrollTo(0,0);
+  if(preview.screen==='camera'&&!applyCameraDemoState())enableCameraCheck();
   if(['creator','challenge'].includes(preview.screen)&&preview.beatPlaying)startBeatGuide();
   if(preview.screen==='leaderboard')animateRankings();
   if(preview.screen==='score'){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;blip(660)};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
-function enterPreview(crew,mode,solo=false){
-  clearPreviewTimers();Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:'camera',afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
+function enterPreview(crew,mode,solo=false,initialScreen='camera'){
+  clearPreviewTimers();Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:initialScreen,afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
   homeScreen.hidden=true;lobby.hidden=true;gameRoot.hidden=false;document.querySelector('.arcade').classList.add('in-game');document.querySelector('.arcade').classList.remove('in-lobby');renderPreview();
 }
 function startTeamPreview(){enterPreview(players,document.querySelector('input[name="game-length"]:checked').value)}
@@ -99,8 +100,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBeatGui
 // Example: index.html?demo=score or ?demo=finale. All results remain demo fixtures.
 function openDemoScreen(name){
   const sample=[{id:101,name:'Alex',avatar:'cat'},{id:102,name:'Jamie',avatar:'rabbit'},{id:103,name:'Riley',avatar:'frog'},{id:104,name:'Taylor',avatar:'fox'}];
-  enterPreview(sample,'quick');
-  if(name==='camera'){applyCameraDemoState();return}
+  enterPreview(sample,'quick',false,name==='camera'?'camera':'creator');
+  if(name==='camera')return;
   if(name==='tempo'){preview.screen='tempo';renderPreview();return}
   if(name==='creator'){preview.screen='creator';renderPreview();return}
   preview.screen='challenge';
