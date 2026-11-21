@@ -72,3 +72,6 @@ Main buttons use a solid lower edge and small pressed displacement. Secondary bu
 Apply these rules consistently to existing screens. Do not reintroduce glowing cards, heavy Arial display headings, decorative slogans, repeated status chips, broad letter spacing, or extra containers. The broadcast finale may retain its white/red framing because it is functional genre-specific presentation.
 
 BPM setup uses the established pixel heading, large lime tempo value, a slider and numeric input at 60–180 BPM in 5 BPM intervals, and START GAME action. Four restrained square pulses preview tempo visually. It follows camera check in both modes; no song, scoring, or recorder integration is added. Menu music continues until the creator/challenge screen. The same metronome is available in Solo and Team.
+
+
+Lobby hierarchy: the larger Player Lobby heading leads, followed by compact Quick/Full options, a left-aligned player count above the roster, and one prominent Start action below. Round format has an accessible group name without a visible Game length label.
