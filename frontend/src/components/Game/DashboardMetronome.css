@@ -1,0 +1,77 @@
+.dance-dashboard .dashboard-metronome {
+  grid-template-columns: minmax(5rem, auto) minmax(0, 1fr);
+  gap: clamp(0.65rem, 2vw, 1.5rem);
+  padding: 0.85rem;
+  border: 1px solid #503460;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #25152f, #171020);
+}
+
+.dashboard-metronome-info {
+  display: grid;
+  gap: 0.3rem;
+  color: #eadbf5;
+}
+
+.dashboard-metronome-info strong {
+  font: 700 clamp(1rem, 2.6vw, 1.7rem)/1 Silkscreen, monospace;
+  white-space: nowrap;
+}
+
+.dashboard-metronome-info small,
+.dashboard-metronome-info span {
+  color: #bfa8ca;
+  font-size: 0.7rem;
+}
+
+
+.dashboard-metronome-rail {
+  position: relative;
+  height: clamp(1.25rem, 4vw, 2rem);
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #76578b;
+  border-radius: 6px;
+  background: #2a2036;
+}
+
+/* The three dividers mark beats 2 through 4 across one continuous bar. */
+.dashboard-metronome-rail::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(25% - 1px),
+    rgb(23 16 32 / 65%) calc(25% - 1px) 25%
+  );
+  pointer-events: none;
+}
+
+.dashboard-metronome-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #bc8ad7, #73d9e9 65%, #ffcb65);
+  clip-path: inset(0 100% 0 0);
+  animation: metronome-fill var(--measure-duration) linear infinite;
+}
+
+.dashboard-metronome-count {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 0.35rem;
+  color: #d2bbdf;
+  font: 700 0.75rem/1 Silkscreen, monospace;
+}
+
+.dashboard-metronome-count span:first-child {
+  color: #ffcb65;
+}
+
+@keyframes metronome-fill {
+  to { clip-path: inset(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-metronome-fill { animation-timing-function: steps(4, jump-start); }
+}

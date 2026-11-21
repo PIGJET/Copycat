@@ -36,6 +36,11 @@ export interface Recording {
   /** Object URL for videoBlob. The game revokes it when the recording is discarded. */
   videoUrl: string | null;
   durationMs: number;
+  /**
+   * Where pose t=0 sits in the video, in ms. The camera starts recording before the 3-2-1
+   * countdown, so the dance begins this far into the video. Missing = 0.
+   */
+  videoOffsetMs?: number;
 }
 
 export interface Moment {

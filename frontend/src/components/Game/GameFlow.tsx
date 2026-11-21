@@ -4,6 +4,8 @@ import Game from "../../game/Game";
 import type { Player as UiPlayer, Ranking, Score } from "./uiTypes";
 import { checkHealth } from "../../game/api";
 import { getRecording } from "../../game/recordingSource";
+import { isMockMode } from "../../game/teamTurn";
+import { TeamTurnDashboard } from "./TeamTurnDashboard";
 import { allAttempts, startError } from "../../game/rules";
 import { useGame } from "../../game/useGame";
 import { FinaleScene } from "../../shame/FinaleScene";
@@ -15,6 +17,8 @@ type Screen = "home" | "lobby" | "camera" | "tempo" | "game";
 const AVATARS = ["cat", "rabbit", "robot", "frog"];
 const DEFAULT_LOBBY: UiPlayer[] = [{ id: 1, name: "", avatar: "cat" }, { id: 2, name: "", avatar: "rabbit" }];
 const EMPTY_SCORE: Score = { total: null, arms: null, legs: null, torso: null, timing: null };
+/** Dev-only: ?mock=1 in the URL plays with fake recordings instead of the camera. */
+const MOCK = typeof window !== "undefined" && isMockMode(window.location.search);
 const SERVER_DOWN = "Game server isn't running. Start the backend on port 8000, then retry.";
 
 const round1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
@@ -90,6 +94,7 @@ export function GameFlow() {
     setMode(format);
   }, [setMode]);
 
+  /** Mock mode only (?mock=1): a fake recording instead of the camera. */
   async function record() {
     const role = game.phase === "creatorRecording" ? "creator" : "copier";
     setRecordingBusy(true);
@@ -131,9 +136,7 @@ export function GameFlow() {
     return screen === "game" ? <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn((v) => !v)} onSolo={() => setSolo(true)} onTeam={() => setScreen("lobby")} /> : lobby;
   }
   if (screen === "camera") {
-    return <CameraCheckPage player={toUi(game.creator)} onMenu={goHome}
-      status="Camera preview is not connected" detail="Continue to BPM setup. Recorder integration is still needed."
-      onContinue={() => setScreen("tempo")} />;
+    return <CameraCheckPage player={toUi(game.creator)} onMenu={goHome} mock={MOCK} onContinue={() => setScreen("tempo")} />;
   }
   if (screen === "tempo") {
     return <TempoPage initialBpm={bpm} onMenu={goHome} onBack={() => setScreen("camera")} onStart={(selected) => {
@@ -181,10 +184,22 @@ export function GameFlow() {
   }
 
   if (game.phase === "creatorRecording" || game.phase === "copying") {
-    // No onSkip: team play has no skip rule, so DashboardPage hides the Skip turn button.
-    return <DashboardPage player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
-      round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} phase={recordingBusy ? "recording" : "idle"}
-      onMenu={goHome} onRecord={record} />;
+    // No onSkip on either dashboard: team play has no skip rule, so the Skip turn button is hidden.
+    if (MOCK) {
+      return <DashboardPage player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
+        round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} phase={recordingBusy ? "recording" : "idle"}
+        onMenu={goHome} onRecord={record} />;
+    }
+    const role = game.phase === "creatorRecording" ? "creator" : "copier";
+    // A fresh key per turn remounts the recorder: new camera session, clean turn state.
+    return <TeamTurnDashboard key={`${game.state.roundIndex}:${game.phase}:${game.currentPlayer?.id}`}
+      role={role} reference={role === "copier" ? game.round?.reference ?? null : null}
+      player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
+      round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} onMenu={goHome}
+      onComplete={(recording) => {
+        game.submitRecording(recording);
+        if (role === "copier") setRevealPending(true);
+      }} />;
   }
 
   if (game.phase === "roundResults" || game.phase === "leaderboard") {
@@ -195,7 +210,9 @@ export function GameFlow() {
 
   // finale: the full-screen scene first (falls back to the plain finale on its own), then the headline
   if (!sceneDone) {
-    return <FinaleScene loserClipUrl={game.loserWorstAttempt?.recording.videoUrl ?? null} onFinish={() => setSceneDone(true)} />;
+    const clip = game.loserWorstAttempt?.recording;
+    return <FinaleScene loserClipUrl={clip?.videoUrl ?? null} clipStartMs={clip?.videoOffsetMs ?? 0}
+      clipDurationMs={clip?.durationMs} onFinish={() => setSceneDone(true)} />;
   }
   const roast = game.roast;
   const headline = roast.status === "done" && roast.result ? roast.result.headline

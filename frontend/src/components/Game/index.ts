@@ -9,5 +9,7 @@ export { TempoPage } from "./TempoPage";
 export type { TempoPageProps } from "./TempoPage";
 export { DashboardPage } from "./DashboardPage";
 export type { DashboardPageProps } from "./DashboardPage";
-export { ScorePage, LeaderboardPage, FinalePage } from "./ResultsPages";
+export { ScorePage, LeaderboardPage, FinalePage, WinnerPage } from "./ResultsPages";
+export { TeamTurnDashboard } from "./TeamTurnDashboard";
+export { PoseReplay } from "./PoseReplay";
 export { ArcadeButton, GameHeader, PageFrame, PlayerAvatar, PosePlaceholder } from "./primitives";

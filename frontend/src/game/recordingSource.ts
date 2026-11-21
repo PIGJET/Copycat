@@ -1,4 +1,5 @@
-// The one place the game gets a Recording from. Swap the body for the real recorder later.
+// Mock recordings for dev mode (?mock=1). Real team turns record from the camera in
+// components/Game/TeamTurnDashboard.tsx and hand the Recording straight to submitRecording.
 import { mockRecording } from "./mockRecorder.ts";
 import type { Recording } from "./types.ts";
 
@@ -9,13 +10,7 @@ export interface RecordingRequest {
   danceSeed: number;
 }
 
-/**
- * Get a 10-second Recording for the current turn.
- *
- * For now this returns a fake recording (no camera). To use the real recorder, replace the
- * body with a call that records from the camera and resolves with
- * { frames, videoBlob, videoUrl, durationMs }.
- */
+/** A fake 10-second Recording for the current turn (no camera, no video). */
 export async function getRecording({ role, danceSeed }: RecordingRequest): Promise<Recording> {
   if (role === "creator") return mockRecording({ seed: danceSeed });
   // Mock copiers vary from close copies to sloppy ones so scores differ.
