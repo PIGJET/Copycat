@@ -8,6 +8,7 @@ import { createLiveScorer } from '../../utils/liveScoring';
 import { REFERENCE_SAMPLE_MS } from '../../utils/referenceFrames';
 import { attemptToVideoMs } from '../../utils/replayTiming';
 import { cameraRecordingType, recordCameraVideo } from '../../utils/videoRecording';
+import { PoseCueTrack } from './PoseCueTrack';
 import './ChallengeRecorder.css';
 
 interface ChallengeRecorderProps {
@@ -52,6 +53,8 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [cuePhase, setCuePhase] = useState<'ready' | 'countdown' | 'starting' | 'playing' | 'failed' | 'complete'>('ready');
+  const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
   const score = useMemo(() => createLiveScorer(reference.recording), [reference.recording]);
   const recordingSupported = Boolean(cameraRecordingType());
 
@@ -59,6 +62,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
     const turn = turnRef.current;
     turnRef.current = null;
     if (turn) abortTurn(turn);
+    setCuePhase('failed');
     referenceVideo.current?.pause();
     setBusy(false);
     setStatus(message);
@@ -193,6 +197,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
     };
     turnRef.current = turn;
     video.currentTime = 0;
+    setCuePhase('countdown');
     setBusy(true);
     setStatus('Preparing camera recording…');
     try {
@@ -212,6 +217,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
           return;
         }
         turn.phase = 'starting';
+        setCuePhase('starting');
         setStatus('Starting playback…');
         turn.timer = window.setTimeout(() => fail('The dance could not start playing. Try again.'), 5000);
         void video.play().catch(() => {
@@ -231,6 +237,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
     turn.startedAt = performance.now();
     turn.poses.start(turn.startedAt);
     turn.phase = 'playing';
+    setCuePhase('playing');
     setStatus('Dance!');
   }
 
@@ -249,6 +256,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
     }
 
     turn.phase = 'finalizing';
+    setCuePhase('complete');
     const recording = turn.poses.finish();
     if (!recording) {
       fail(TRACKING_LOST);
@@ -268,6 +276,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
       turnRef.current = null;
       setBusy(false);
       setCompleted(true);
+      setCuePhase('complete');
       setStatus('Turn complete');
       onComplete({ playerId, recording, video: recorded });
     } catch (error) {
@@ -288,7 +297,10 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
             src={reference.videoUrl}
             playsInline
             preload="auto"
-            onLoadedData={() => setReferenceReady(true)}
+            onLoadedData={event => {
+              setReferenceReady(true);
+              setSourceSize({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight });
+            }}
             onPlaying={startCapture}
             onEnded={() => void finishTurn()}
             onPause={interruptPlayback}
@@ -309,6 +321,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
           </div>
         </div>
       </div>
+      <PoseCueTrack reference={reference} source={sourceSize} videoRef={referenceVideo} phase={cuePhase} />
       <p role="status">{issue || status || (cameraReady && pose.isReady && referenceReady ? 'Ready to dance' : 'Getting ready…')}</p>
       <button
         type="button"
