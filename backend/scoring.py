@@ -336,3 +336,112 @@ def score_dance(reference: Any, attempt: Any) -> dict[str, Any]:
         "best_moment": moment(best_k),
         "parts": parts,
     }
+
+
+def _partial_grid(frames: Any, start: float, grid: np.ndarray) -> np.ndarray:
+    """Resample only short gaps bounded by visible samples; never extrapolate."""
+    out = np.full((len(grid), len(SEGMENTS), 2), np.nan)
+    def visible_vectors(frame: dict) -> np.ndarray:
+        landmarks = frame.get('landmarks', frame.get('lm'))
+        if landmarks is None:
+            return _frame_vectors(None)
+        filtered = []
+        for point in landmarks:
+            x, y, visibility = _point(point)
+            if not (math.isfinite(x) and math.isfinite(y) and 0 <= x <= 1 and 0 <= y <= 1):
+                visibility = 0
+            filtered.append([x, y, visibility])
+        return _frame_vectors(filtered)
+    data = [(float(f['t']) - start, visible_vectors(f))
+            for f in frames if isinstance(f, dict)]
+    if not data:
+        return out
+    data.sort(key=lambda p: p[0])
+    times = np.asarray([p[0] for p in data])
+    vectors = np.asarray([p[1] for p in data])
+    for s in range(len(SEGMENTS)):
+        valid = np.isfinite(vectors[:, s, 0])
+        ts, vs = times[valid], vectors[valid, s]
+        if not len(ts):
+            continue
+        right = np.searchsorted(ts, grid)
+        left = np.clip(right - 1, 0, len(ts) - 1)
+        right = np.clip(right, 0, len(ts) - 1)
+        exact = np.isclose(ts[right], grid, atol=0.01)
+        between = (ts[left] <= grid) & (grid <= ts[right]) & ((ts[right] - ts[left]) <= 200.001)
+        good = exact | between
+        span = ts[right] - ts[left]
+        fraction = np.divide(grid - ts[left], span, out=np.zeros_like(grid), where=span > 0)
+        interpolated = vs[left] * (1 - fraction[:, None]) + vs[right] * fraction[:, None]
+        norm = np.linalg.norm(interpolated, axis=1)
+        good &= norm > 1e-9
+        out[good, s] = interpolated[good] / norm[good, None]
+    return out
+
+
+def score_solo_partial(reference: Any, attempt: Any) -> dict[str, Any]:
+    ref_frames = [f for f in reference.get('frames', []) if isinstance(f, dict)]
+    att_frames = [f for f in attempt.get('frames', []) if isinstance(f, dict)]
+    if len(ref_frames) < MIN_USABLE_FRAMES:
+        raise ScoringError(NOT_ENOUGH_FRAMES_MSG, 'too few reference frames', 'reference')
+    if not att_frames:
+        raise ScoringError(NOT_ENOUGH_FRAMES_MSG, 'attempt contains no timestamps', 'attempt')
+    # Solo timestamps are relative to clip/playback start, even if early samples are missing.
+    ref_start = 0.0
+    att_start = 0.0
+    duration = max(float(f['t']) for f in ref_frames) - ref_start
+    if duration < STEP_MS:
+        raise ScoringError(TOO_SHORT_MSG, 'reference too short', 'reference')
+    grid = np.arange(0, duration + 0.001, STEP_MS)
+    ref = _partial_grid(ref_frames, ref_start, grid)
+    player = _partial_grid(att_frames, att_start, grid)
+    ref_ok = np.isfinite(ref[:, :, 0])
+    player_ok = np.isfinite(player[:, :, 0])
+    if ref_ok.any(axis=1).sum() < max(15, math.ceil(len(grid) * .2)):
+        raise ScoringError(BODY_NOT_CLEAR_MSG, 'too little visible reference movement', 'reference')
+    errors = np.full(ref_ok.shape, np.nan)
+    errors[ref_ok & ~player_ok] = math.radians(MAX_ERR_DEG)
+    both = ref_ok & player_ok
+    values = _angle_errors(ref, player)
+    errors[both] = values[both]
+    parts = {name: round(_err_to_score(float(errors[ref_ok[:, i], i].mean())), 1)
+             for i, name in enumerate(SEGMENT_NAMES) if ref_ok[:, i].any()}
+    groups = {g: round(float(np.mean(vals)), 1) if vals else None
+              for g in GROUPS for vals in [[v for name, v in parts.items() if SEGMENTS[name][2] == g]]}
+    weights, scores = [], []
+    for i, name in enumerate(SEGMENT_NAMES):
+        if name not in parts:
+            continue
+        vec = ref[ref_ok[:, i], i]
+        mean = vec.mean(axis=0)
+        norm = np.linalg.norm(mean)
+        spread = np.degrees(_angle_errors(vec, mean / norm).mean()) if norm > 1e-9 else MOTION_FULL_DEG
+        weights.append(float(np.clip(spread / MOTION_FULL_DEG, MIN_WEIGHT, 1)))
+        scores.append(parts[name])
+    frame_err = np.full(len(grid), np.nan)
+    supported = ref_ok.any(axis=1)
+    frame_err[supported] = np.nanmean(errors[supported], axis=1)
+    def moment(index: int) -> dict[str, int]:
+        return {'reference_ms': int(round(ref_start + grid[index])), 'attempt_ms': int(round(att_start + grid[index]))}
+    # Estimate timing from visible matching poses. The actual part scores above
+    # remain on the fixed clock, so alignment cannot skip missing-player penalties.
+    pair_angles = _angle_errors(ref[:, None, :, :], player[None, :, :, :])
+    pair_valid = ref_ok[:, None, :] & player_ok[None, :, :]
+    pair_errors = np.where(pair_valid, pair_angles, math.radians(MAX_ERR_DEG))
+    pair_cost = np.where(ref_ok[:, None, :], pair_errors, 0).sum(axis=2)
+    counts = ref_ok.sum(axis=1)
+    pair_cost = np.divide(pair_cost, counts[:, None], out=np.full_like(pair_cost, math.radians(MAX_ERR_DEG)), where=counts[:, None] > 0)
+    path = _dtw(pair_cost)
+    pi = np.asarray([i for i, _ in path])
+    pj = np.asarray([j for _, j in path])
+    supported_path = (ref_ok[pi] & player_ok[pj]).any(axis=1)
+    if supported_path.any():
+        lag = np.abs(grid[pi[supported_path]] - grid[pj[supported_path]]).mean()
+        timing = round(100 * max(0., 1 - lag / MAX_LAG_MS), 1)
+    else:
+        timing = 0.0
+    return {'total': round(float(np.average(scores, weights=weights)) * (1 - TIMING_SHARE + TIMING_SHARE * timing / 100), 1), **groups,
+            'timing': timing,
+            'worst_part': min(parts, key=parts.get), 'parts': parts,
+            'worst_moment': moment(int(np.nanargmax(frame_err))),
+            'best_moment': moment(int(np.nanargmin(frame_err)))}

@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ChallengeRecorder } from '../components/Camera/ChallengeRecorder';
+import { SoloCameraPreview } from '../components/Camera/SoloCameraPreview';
 import type { LiveFeedback, ReferenceClip } from '../types/challenge';
 import { prepareReference } from '../utils/referenceRecorder';
 import { checkBackend, importReference, scoreSoloAttempt, scoreRecovery } from './api';
@@ -8,7 +9,7 @@ import { ResultsReplay } from './ResultsReplay';
 import { turnReducer } from './turn';
 import './game.css';
 
-const SAMPLE_URL = 'https://www.youtube.com/watch?v=i-54NhTqlH8';
+const SAMPLE_URL = 'https://www.youtube.com/shorts/FILJpZiAFo0';
 
 export default function Game({ onBack }: { onBack?: () => void }) {
   const [clip, setClip] = useState<ReferenceClip | null>(null);
@@ -163,8 +164,8 @@ export default function Game({ onBack }: { onBack?: () => void }) {
                 <button type="submit" className="solo-primary" disabled={preparing}>Prepare clip</button>
                 <button type="button" disabled={preparing} onClick={() => {
                   setLink(SAMPLE_URL);
-                  setStart('5');
-                  setDuration('5');
+                  setStart('0');
+                  setDuration('15');
                 }}>Use sample link</button>
               </div>
             </form>
@@ -184,7 +185,13 @@ export default function Game({ onBack }: { onBack?: () => void }) {
         ) : turn.stage === 'ready' ? (
           <section aria-labelledby="solo-preview-title">
             <h2 id="solo-preview-title">Preview your dance</h2>
-            <video className="solo-preview" src={clip.videoUrl} controls playsInline />
+            <div className="challenge-recorder__videos">
+              <div>
+                <span>Reference</span>
+                <video className="challenge-recorder__reference" src={clip.videoUrl} controls playsInline />
+              </div>
+              <SoloCameraPreview />
+            </div>
             {checking && <p role="status">Checking backend…</p>}
             {message && <p role="alert">{message}</p>}
             <div className="solo-actions">
@@ -227,7 +234,7 @@ export default function Game({ onBack }: { onBack?: () => void }) {
             <dl className="solo-breakdown">
               {([['Arms', turn.score.arms], ['Legs', turn.score.legs], ['Torso', turn.score.torso],
                 ['Timing', turn.score.timing]] as const).map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{value ?? '—'}</dd></div>
+                <div key={label}><dt>{label}</dt><dd>{value ?? 'Not scored'}</dd></div>
               ))}
             </dl>
             {turn.score.worst_part && <p>Weakest part overall: <strong>{turn.score.worst_part}</strong></p>}

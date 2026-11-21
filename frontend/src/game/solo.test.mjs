@@ -13,7 +13,7 @@ test('score sends only pose data and classifies 422 by recording', async t => {
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     assert.ok(url.endsWith('/score'))
     assert.equal(options.signal, signal)
-    assert.deepEqual(JSON.parse(options.body), { reference, attempt: attempt.recording })
+    assert.deepEqual(JSON.parse(options.body), { reference, attempt: attempt.recording, mode: 'solo_partial' })
     return Response.json({ detail: 'Step back', recording: 'attempt' }, { status: 422 })
   })
   await assert.rejects(scoreSoloAttempt(reference, attempt.recording, signal), error => {

@@ -30,8 +30,15 @@ export function hasFullBody({ landmarks }: RecordingFrame) {
   });
 }
 
-export function referenceQuality(frames: RecordingFrame[], durationMs: number) {
-  const visible = frames.filter(hasFullBody);
+const SEGMENTS = [[11, 13], [13, 15], [12, 14], [14, 16], [23, 25], [25, 27], [24, 26], [26, 28], [11, 12], [23, 24]];
+export function hasVisibleSegment(frame: RecordingFrame) {
+  const points = frame.landmarks;
+  return !!points && SEGMENTS.some(([a, b]) => [points[a], points[b]].every(p =>
+    p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.visibility >= .5 && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1));
+}
+
+export function referenceQuality(frames: RecordingFrame[], durationMs: number, options: {allowPartial?: boolean} = {}) {
+  const visible = frames.filter(options.allowPartial ? hasVisibleSegment : hasFullBody);
   const firstMs = visible[0]?.t ?? Infinity;
   let previousMs = -REFERENCE_SAMPLE_MS;
   let longestGapMs = 0;
@@ -48,6 +55,6 @@ export function referenceQuality(frames: RecordingFrame[], durationMs: number) {
     adequateCoverage,
     sampleCoverage: frames.length / Math.max(1, sampleCount),
     longestGapMs,
-    usable: adequateCoverage && firstMs <= 250,
+    usable: options.allowPartial ? visible.length >= Math.max(15, Math.ceil(sampleCount * .2)) : adequateCoverage && firstMs <= 250,
   };
 }

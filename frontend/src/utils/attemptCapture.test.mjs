@@ -65,7 +65,7 @@ test('ratings use the agreed boundaries and the 200ms past-only window', () => {
   assert.equal(scorer(frame, 400).score, 100)
   assert.equal(scorer(frame, 401).label, 'Miss')
   assert.equal(scorer(frame, 402).label, 'Perfect')
-  assert.equal(scorer({ t: 900, landmarks: null }, 400).label, 'Step into frame')
+  assert.equal(scorer({ t: 900, landmarks: null }, 400).label, 'Miss')
 })
 
 test('replay timestamps round trip with recorder lead-in', () => {
@@ -84,4 +84,12 @@ test('a short opening visibility loss can recover within the attempt coverage li
 
 test('replay origin uses the playable duration and recorder stop, ignoring encoder startup time', () => {
   assert.equal(estimateAttemptPoseZero(3050, 8050, 7950), 2950)
+})
+
+test('solo partial capture completes when no pose is visible', () => {
+  const attempt = new AttemptCapture(1000, { allowPartial: true })
+  attempt.start(0)
+  for (let slot = 0; slot < 15; slot++) attempt.sample(1 + slot * 1000 / 15, null)
+  assert.equal(attempt.trackingLost(999), false)
+  assert.equal(attempt.finish()?.frames.length, 15)
 })

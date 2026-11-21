@@ -1,7 +1,7 @@
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { ReferenceClip } from '../types/challenge';
 import type { RecordingFrame } from '../types/pose';
-import { collectReferenceFrames, referenceQuality } from './referenceFrames';
+import { collectReferenceFrames, referenceQuality, hasVisibleSegment } from './referenceFrames';
 
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm';
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -10,7 +10,7 @@ export class ReferenceVisibilityError extends Error {
   readonly quality: ReturnType<typeof referenceQuality>;
 
   constructor(quality: ReturnType<typeof referenceQuality>) {
-    super('Choose a clip with one dancer whose full body stays visible.');
+    super('Some body parts could not be tracked reliably. Try a shorter section or a clip where the dancer faces the camera and their arms and legs stay visible.');
     this.name = 'ReferenceVisibilityError';
     this.quality = quality;
   }
@@ -130,20 +130,38 @@ export async function prepareReference(videoUrl: string, signal: AbortSignal): P
     activeSignal.throwIfAborted();
 
     const poseDetector = detector;
+    const imageCanvas = document.createElement('canvas');
+    const imageScale = Math.min(1, 240 / video.videoWidth, 160 / video.videoHeight);
+    imageCanvas.width = Math.max(1, Math.round(video.videoWidth * imageScale));
+    imageCanvas.height = Math.max(1, Math.round(video.videoHeight * imageScale));
+    const imageContext = imageCanvas.getContext('2d');
+    const cueImages: { t: number; dataUrl: string }[] = [];
+    let anchor = 0;
     const sampling = collectReferenceFrames(
       durationMs,
-      (target) => nextSample(video, poseDetector, target, activeSignal),
+      async (target) => {
+        const frame = await nextSample(video, poseDetector, target, activeSignal);
+        if (frame && imageContext) {
+          while (anchor + 200 < frame.t) anchor += 800;
+          if (Math.abs(frame.t - anchor) <= 200 && hasVisibleSegment(frame)) {
+            imageContext.drawImage(video, 0, 0, imageCanvas.width, imageCanvas.height);
+            cueImages.push({ t: frame.t, dataUrl: imageCanvas.toDataURL('image/jpeg', .7) });
+            anchor += 800;
+          }
+        }
+        return frame;
+      },
       activeSignal,
     );
     const [frames] = await Promise.all([sampling, video.play()]);
-    const quality = referenceQuality(frames, durationMs);
+    const quality = referenceQuality(frames, durationMs, { allowPartial: true });
     if (quality.sampleCoverage < 0.8) {
       throw new Error('Too few video frames could be processed. Try a higher-frame-rate MP4 and keep this tab open.');
     }
     if (!quality.usable) {
       throw new ReferenceVisibilityError(quality);
     }
-    return { id: crypto.randomUUID(), videoUrl, durationMs, recording: { frames } };
+    return { id: crypto.randomUUID(), videoUrl, durationMs, recording: { frames }, cueImages };
   } finally {
     extraction.abort();
     video.pause();
