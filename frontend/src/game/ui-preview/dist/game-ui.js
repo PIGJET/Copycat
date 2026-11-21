@@ -51,9 +51,15 @@ function TempoScreen(){
 /* Dashboard presentation adapter. Capture and scores still use the existing preview state. */
 function dashboardPortrait(player){return portrait(player)}
 function DashboardPose(){return `<svg class="dashboard-pose" viewBox="0 0 340 320" aria-hidden="true"><g class="pose-ghost" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="168" cy="51" r="25"/><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g class="pose-joints" fill="currentColor">${[[147,98],[122,163],[94,193],[205,105],[267,78],[136,207],[195,211],[110,254],[217,256],[86,298],[247,298]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="6"/>`).join('')}</g></svg>`}
+function turnInstruction() {
+  if (preview.screen === 'creator') return 'Create a dance for everyone to copy.';
+  if (preview.solo) return 'Get in frame and dance after the countdown.';
+  return `Watch ${getCreator().name}’s dance, then copy it after the countdown.`;
+}
+
 function DashboardScores(active){
   const rows=demoRankings(preview.crew,preview.results);
-  return `<aside class="dashboard-scores" aria-label="Round standings"><div class="dashboard-panel-title"><h3>Leaderboard</h3><span>Average /100</span></div><ol>${rows.map(row=>{const current=row.player.id===active.id,leader=row.player.id===getCreator().id;return `<li class="dashboard-score-row ${current?'is-current':''}" ${current?'aria-current="true"':''}><span class="dashboard-avatar">${dashboardPortrait(row.player)}</span><span class="dashboard-score-player"><strong>${escapeUI(row.player.name)}</strong>${leader?'<span class="dashboard-leader" role="img" aria-label="Dance leader"><svg viewBox="0 0 28 24" aria-hidden="true"><path d="M3 7l6 5 5-10 5 10 6-5-3 14H6z" fill="currentColor"/></svg></span>':''}</span><strong class="dashboard-score-value ${row.average===null?'is-unavailable':''}">${scoreNumber(row.average)}</strong></li>`}).join('')}</ol></aside>`;
+  return `<aside class="dashboard-scores" aria-label="Round standings"><div class="dashboard-panel-title"><h3>Leaderboard</h3><span>Average /100</span></div><ol>${rows.map(row=>{const current=row.player.id===active.id,leader=row.player.id===getCreator().id;return `<li class="dashboard-score-row ${current?'is-current':''}" ${current?'aria-current="true"':''}><span class="dashboard-avatar">${dashboardPortrait(row.player)}</span><span class="dashboard-score-player"><strong>${escapeUI(row.player.name)}</strong>${leader?'<span class="dashboard-leader" role="img" aria-label="Dance leader"><svg viewBox="0 0 28 24" aria-hidden="true"><path d="M3 7l6 5 5-10 5 10 6-5-3 14H6z" fill="currentColor"/></svg></span>':''}${current?'<span class="dashboard-current-badge">Up now</span>':''}</span><strong class="dashboard-score-value ${row.average===null?'is-unavailable':''}">${scoreNumber(row.average)}</strong></li>`}).join('')}</ol></aside>`;
 }
 function DashboardBeatGuide(){return `<section class="beat-guide dashboard-beat" aria-label="Visual metronome"><div class="dashboard-beat-meta"><div class="beat-time"><strong id="capture-time">10s</strong><span id="capture-phase">Ready</span></div><span class="dashboard-tempo"><strong>${preview.bpm}</strong> BPM</span><button class="ui-secondary" data-action="beat-toggle" aria-label="${preview.beatPlaying?'Pause':'Start'} beat guide" aria-pressed="${preview.beatPlaying}">${preview.beatPlaying?'Pause':'Play'}</button></div><div class="beat-visual"><ol class="beat-count dashboard-timeline" aria-label="Four-count beat">${[1,2,3,4].map(n=>`<li data-beat="${n}" ${n===1?'class="active-beat"':''}><span class="dashboard-beat-dot" aria-hidden="true"></span><span>${n}</span></li>`).join('')}</ol></div><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress></section>`}
 let announcedTurn = null;
@@ -62,21 +68,23 @@ function turnAnnouncement(player) {
   if (announcedTurn === key || preview.phase !== 'idle') return '';
   announcedTurn = key;
   playCue('turn');
-  const cue = preview.screen === 'creator' ? 'Lead the dance'
-    : preview.solo ? 'Your turn to dance' : 'Copy ' + getCreator().name;
-  return `<div class="turn-callout"><span class="turn-avatar" aria-hidden="true">${portrait(player)}</span><div><span class="turn-cue">${escapeUI(cue)}</span><strong>${escapeUI(player.name)}</strong></div></div>`;
+  return `<div class="turn-callout"><span class="turn-avatar" aria-hidden="true">${portrait(player)}</span><div><span class="turn-cue">Up now</span><strong>${escapeUI(player.name)}</strong><p>${escapeUI(turnInstruction())}</p></div></div>`;
 }
 
 function DanceDashboard(){
   const isLeader=preview.screen==='creator',active=isLeader?getCreator():getChallenger(),status=trackingStates[preview.tracking],ready=preview.tracking==='ready';
-  return `<header class="dashboard-header"><div class="dashboard-brand"><button class="ui-secondary dashboard-menu" data-action="exit">Menu</button><span>COPY<span>CAT</span></span></div><div class="dashboard-round" role="status">Round <strong>${preview.round+1} / ${totalRounds()}</strong></div></header><div class="dashboard-arena"><div class="dashboard-stage" id="screen-title" tabindex="-1" role="region" aria-label="${escapeUI(active.name)}’s camera"><div class="dashboard-camera-scene">${DashboardPose()}<span class="dashboard-camera-note">Camera preview not connected</span></div><div id="capture-overlay" class="capture-overlay" aria-live="polite">${turnAnnouncement(active)}</div></div>${DashboardScores(active)}</div><div class="dashboard-controls"><div class="tracking-status tracking-warning" ${ready?'hidden':''}><strong id="tracking-label">${status.label.replace(' (demo)','')}</strong><span>${status.help}</span></div><div class="dashboard-primary-actions">${ArcadeButton('Start preview','record',false,!ready||preview.phase!=='idle')}${ArcadeButton('Skip turn','skip',true)}</div><details class="dashboard-review-settings"><summary aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 1-2h4l1 2 2 1 3-1 2 4-2 2v3l2 2-2 4-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-4 2-2V9L2 7l2-4 3 1z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="11" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="sr-only">Settings</span></summary><div class="dashboard-settings-panel"><label class="preview-state">Tracking state<select id="tracking-state" aria-label="Tracking state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label><p>UI demo: camera is not connected. Scores use demonstration data; no video is recorded.</p></div></details></div>${DashboardBeatGuide()}`;
+  return `<header class="dashboard-header"><div class="dashboard-brand"><button class="ui-secondary dashboard-menu" data-action="exit">Menu</button><span>COPY<span>CAT</span></span></div><div class="dashboard-round" role="status">Round <strong>${preview.round+1} / ${totalRounds()}</strong></div></header><div class="dashboard-current-turn"><h2 id="screen-title" tabindex="-1">${escapeUI(active.name)}’s turn</h2><p>${escapeUI(turnInstruction())}</p></div><div class="dashboard-arena"><div class="dashboard-stage" role="region" aria-label="${escapeUI(active.name)}’s camera"><div class="dashboard-camera-scene">${DashboardPose()}<span class="dashboard-camera-note">Camera preview not connected</span></div><div id="capture-overlay" class="capture-overlay" aria-live="polite">${turnAnnouncement(active)}</div><div id="stage-timer" class="dashboard-stage-timer" role="timer" aria-label="Recording time remaining" hidden><span>Time left</span><strong id="stage-time">10s</strong></div></div>${DashboardScores(active)}</div><div class="dashboard-controls"><div class="tracking-status tracking-warning" ${ready?'hidden':''}><strong id="tracking-label">${status.label.replace(' (demo)','')}</strong><span>${status.help}</span></div><div class="dashboard-primary-actions">${ArcadeButton('Start preview','record',false,!ready||preview.phase!=='idle')}${ArcadeButton('Skip turn','skip',true)}</div><details class="dashboard-review-settings"><summary aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 1-2h4l1 2 2 1 3-1 2 4-2 2v3l2 2-2 4-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-4 2-2V9L2 7l2-4 3 1z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="11" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="sr-only">Settings</span></summary><div class="dashboard-settings-panel"><label class="preview-state">Tracking state<select id="tracking-state" aria-label="Tracking state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label><p>UI demo: camera is not connected. Scores use demonstration data; no video is recorded.</p></div></details></div>${DashboardBeatGuide()}`;
 }
 
 function creatorScreen(){return DanceDashboard()}
 function challengeScreen(){return DanceDashboard()}
 function ScoreDisplay(score){return `<div class="score-display" aria-label="${score} out of 100"><span>${score}</span><span class="score-denominator">/100</span></div>`}
 function ScoreBreakdown(score,weak){return `<dl class="score-breakdown">${['arms','legs','torso','timing'].map(part=>`<div class="score-part ${part===weak?'weakest':''}"><dt>${part}<span>${part===weak?'LOWEST':''}</span></dt><dd>${score[part]??"—"}<span>/100</span></dd><div class="score-track" aria-hidden="true"><span style="width:${score[part]}%"></span></div></div>`).join('')}</dl>`}
-function scoreScreen(){if(preview.live && !preview.latest)return `${GameHeader(getChallenger().name,'TURN COMPLETE')}<p>Unscored turn</p>${ArcadeButton('CONTINUE','score-next')}`;const result=preview.latest,p=getChallenger(),weak=weakestPart(result.score);return `${GameHeader(p.name,'SCORE REVEAL')}<div class="score-stage"><div class="result-player">${portrait(p)}</div><div id="evaluating" class="evaluating" role="status">Evaluating preview<span class="evaluating-dots" aria-hidden="true">...</span></div><div id="score-result" hidden><div class="fixture-label">${preview.live?"SCORE":"DEMO SCORE"}</div>${ScoreDisplay(result.score.total)}</div></div><div id="score-details" hidden>${ScoreBreakdown(result.score,weak)}<div class="result-footer"><p>${escapeUI(CopycatDemoData.feedback[weak])}</p>${ArcadeButton('CONTINUE','score-next')}</div></div>`}
+function scoreContinueButton() {
+  const nextPlayer = getChallengers()[preview.challenger + 1];
+  return ArcadeButton(nextPlayer ? `Next turn · ${escapeUI(nextPlayer.name)}` : 'See leaderboard', 'score-next');
+}
+function scoreScreen(){if(preview.live && !preview.latest)return `${GameHeader(getChallenger().name,'TURN COMPLETE')}<p>Unscored turn</p>${scoreContinueButton()}`;const result=preview.latest,p=getChallenger(),weak=weakestPart(result.score);return `${GameHeader(p.name,'SCORE REVEAL')}<div class="score-stage"><div class="result-player">${portrait(p)}</div><div id="evaluating" class="evaluating" role="status">Evaluating preview<span class="evaluating-dots" aria-hidden="true">...</span></div><div id="score-result" hidden><div class="fixture-label">${preview.live?"SCORE":"DEMO SCORE"}</div>${ScoreDisplay(result.score.total)}</div></div><div id="score-details" hidden>${ScoreBreakdown(result.score,weak)}<div class="result-footer"><p>${escapeUI(CopycatDemoData.feedback[weak])}</p>${scoreContinueButton()}</div></div>`}
 function Leaderboard(rows,compact=false,animated=false){let rank=0;const shown=animated?demoRankings(preview.crew,preview.roundBaselineResults):rows;const scored=shown.filter(r=>r.average!==null);const loser=scored.at(-1);return `<div class="leaderboard ${compact?'compact-board':''} ${animated?'animated-board':''}"><ol aria-label="Player rankings">${shown.map(row=>`<li data-player-id="${escapeUI(row.player.id)}" style="--player-color:${crewColors[Math.max(0,preview.crew.findIndex(player=>player.id===row.player.id))%crewColors.length]}" class="rank-row ${row===scored[0]?'first-place':''} ${row===loser&&scored.length>1?'last-place':''}"><span class="rank-number">${row.average===null?'—':++rank}</span><span class="rank-avatar">${portrait(row.player)}</span><div class="rank-name"><strong>${escapeUI(row.player.name)}</strong><span class="rank-attempts">${row.average===null?(animated?'No previous score':'Creator (not scored)'):`${row.attempts.length} ${row.attempts.length===1?'performance':'performances'}`}</span></div>${animated?'<span class="rank-change" aria-label="Rank unchanged"></span>':''}<strong class="rank-score"><span class="rank-value">${scoreNumber(row.average)}</span><small ${row.average===null?'hidden':''}>/100</small></strong></li>`).join('')}</ol>${animated?'<p id="rank-announcement" class="sr-only" role="status"></p>':''}</div>`}
 function leaderboardScreen(){const hasNext=preview.mode==='full'&&preview.round+1<preview.crew.length;return `${GameHeader('LEADERBOARD','')}<div class="leaderboard-layout">${Leaderboard(demoRankings(preview.crew,preview.results),false,true)}<aside class="next-round">${hasNext?PlayerIdentity(preview.crew[preview.round+1],'NEXT CREATOR'):'<div class="round-complete">FINAL ROUND<br>COMPLETE</div>'}<p class="data-note">${preview.live?"":"Demo scores. "}Ranked by average.${hasNext?'':' Unscored creators are excluded.'}</p>${ArcadeButton(hasNext?'NEXT ROUND':'VIEW FINALE',hasNext?'round-next':'finale')}</aside></div>`}
 function NewsOverlay(loser,worst){const weak=weakestPart(worst.score);return `<div class="news-top"><span class="channel-brand">CCN</span><span class="news-banner">Breaking news</span></div><div class="news-video"><video id="finale-video" controls autoplay muted playsinline hidden aria-label="${escapeUI(loser.player.name)}’s replay"></video><div id="finale-empty" class="finale-empty"><span class="finale-player-portrait">${portrait(loser.player)}</span><p>Replay not available</p><span>No dance recording is available for this player.</span></div><span class="news-player-name">${escapeUI(loser.player.name)}</span></div><div class="news-headline"><h3>${escapeUI(CopycatDemoData.headlines[weak][0]+CopycatDemoData.headlines[weak].slice(1).toLowerCase())}</h3></div>`}
@@ -93,7 +101,7 @@ function mountLiveDance() {
   stage.replaceChildren();
   gameRoot.querySelector('.dashboard-review-settings').remove();
   if (!globalThis.CopycatTracking) {
-    stage.textContent = 'Live tracking requires the built frontend. Open the app or use Continue demo.';
+    stage.textContent = 'Live tracking requires the built frontend. Open the game through the app.';
     return;
   }
   const creatorTurn = preview.screen === 'creator';
@@ -133,7 +141,10 @@ function mountLiveDance() {
       if (phase === 'recording' && changed) preview.run++;
       if (changed) syncGameplayMusic();
       if (phase === 'recording' || phase === 'countdown') updateCaptureUI();
-      else gameRoot.querySelector('#capture-overlay').replaceChildren();
+      else {
+        gameRoot.querySelector('#stage-timer').hidden = true;
+        gameRoot.querySelector('#capture-overlay').replaceChildren();
+      }
     },
     onRecord(sequence, clip) {
       try {
@@ -145,6 +156,7 @@ function mountLiveDance() {
       } catch (error) {
         message.textContent = error.message;
         preview.phase = 'idle';
+        gameRoot.querySelector('#stage-timer').hidden = true;
         gameRoot.querySelector('#capture-overlay').replaceChildren();
         syncGameplayMusic();
       }
@@ -205,7 +217,11 @@ function updateCaptureUI(){
     if (countdown || recording) playCue(countdown ? 'count' : 'go');
   }
   gameRoot.querySelector('#capture-phase').textContent=countdown?'Get ready':recording?'Dancing':'Complete';
-  gameRoot.querySelector('#capture-time').textContent=countdown?String(preview.count):`${preview.seconds}s`;
+  const remaining = `${preview.seconds}s`;
+  const stageTimer = gameRoot.querySelector('#stage-timer');
+  stageTimer.hidden = !recording;
+  gameRoot.querySelector('#stage-time').textContent = remaining;
+  gameRoot.querySelector('#capture-time').textContent=countdown?String(preview.count):remaining;
   gameRoot.querySelector('#capture-progress').value=countdown?0:10-preview.seconds;
   const button=gameRoot.querySelector('[data-action="record"]');if(button)button.textContent=countdown?'Get ready…':recording?'Preview running…':'Start preview';
 }

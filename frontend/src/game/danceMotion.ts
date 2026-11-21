@@ -11,7 +11,7 @@ export function danceMotion(previous: PoseLandmark[], current: PoseLandmark[]) {
     const after = current[index];
     if (!before || !after || before.visibility < 0.6 || after.visibility < 0.6) continue;
     visibleJoints++;
-    if (Math.hypot(after.x - before.x, after.y - before.y) >= 0.027) movingJoints++;
+    if (Math.hypot(after.x - before.x, after.y - before.y) >= 0.022) movingJoints++;
   }
 
   return visibleJoints >= 4 && movingJoints >= 2;

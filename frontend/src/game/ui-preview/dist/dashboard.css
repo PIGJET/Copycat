@@ -207,21 +207,22 @@
   display:flex; align-items:center; gap:16px; max-width:90%; box-sizing:border-box;
   padding:14px 24px 14px 16px; background:#17172a; color:#fff8e8;
   border:3px solid #ffd246; box-shadow:5px 5px 0 #151427;
-  animation:turn-notice 2.8s both; pointer-events:none;
+  animation:turn-notice 4.5s both; pointer-events:none;
 }
 .turn-avatar { flex:0 0 44px }
 .turn-avatar svg { width:44px; display:block }
 .turn-callout>div { min-width:0 }
 .turn-cue { display:block; color:#ffd246; font:600 16px/1.5 var(--body) }
-.turn-callout strong { display:block; overflow-wrap:anywhere; font:400 clamp(20px,3vw,36px)/1.15 var(--display) }
+.turn-callout strong { display:block; overflow-wrap:anywhere; font:400 clamp(24px,5vw,50px)/1.15 var(--display) }
 @keyframes turn-notice {
-  0% { opacity:0; transform:translateY(8px) }
-  10%,88% { opacity:1; transform:translateY(0) }
+  0% { opacity:0; transform:translateY(8px) scale(.94) }
+  8% { opacity:1; transform:translateY(0) scale(1.02) }
+  13%,92% { opacity:1; transform:translateY(0) scale(1) }
   100% { opacity:0; visibility:hidden; transform:translateY(-4px) }
 }
 @media (prefers-reduced-motion:reduce) {
   .floor-arrival .dashboard-arena { animation:none }
-  .turn-callout { animation:hide-turn-notice 2.8s step-end both }
+  .turn-callout { animation:hide-turn-notice 4.5s step-end both }
   @keyframes hide-turn-notice { to { visibility:hidden } }
 }
 
@@ -229,3 +230,86 @@
 .dashboard-camera-feed { width:100%; height:100%; min-height:0 }
 .dashboard-camera-feed>div,.dashboard-camera-feed>div>div { width:100%; height:100%; max-width:none!important }
 .dashboard-camera-feed video,.dashboard-camera-feed canvas { object-fit:contain; height:100% }
+
+.dashboard-current-turn {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border-left: 3px solid #ffd246;
+  background: #17172a;
+}
+.dashboard-current-turn h2 {
+  margin: 0;
+  color: #fff8e8;
+  font: 400 clamp(18px, 3vw, 28px)/1.2 var(--display);
+  overflow-wrap: anywhere;
+}
+.dashboard-current-turn p, .turn-callout p {
+  margin: 0.4rem 0 0;
+  color: #d5cce3;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.dashboard-score-row.is-current .dashboard-score-player { flex-wrap: wrap; }
+.dashboard-current-badge {
+  color: #ffd246;
+  font: 700 12px/1.2 var(--body);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dashboard-stage-timer:not([hidden]) {
+  position: absolute;
+  top: clamp(12px, 2vw, 24px);
+  right: clamp(12px, 2vw, 24px);
+  z-index: 2;
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #ffd246;
+  background: #17172a;
+  color: #fff8e8;
+  pointer-events: none;
+}
+.dashboard-stage-timer span {
+  font: 600 14px/1.2 var(--body);
+}
+.dashboard-stage-timer strong {
+  color: #ffd246;
+  font: 400 clamp(22px, 4vw, 42px)/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 851px) and (min-height: 600px) {
+  .game-screen.dance-dashboard:not([hidden]) {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    gap: clamp(8px, 1.5svh, 16px);
+    height: 100svh;
+    padding-block: clamp(10px, 2svh, 20px);
+  }
+  .dance-dashboard .dashboard-header,
+  .dance-dashboard .dashboard-current-turn,
+  .dance-dashboard .dashboard-controls {
+    margin-block: 0;
+  }
+  .dance-dashboard .dashboard-stage,
+  .dance-dashboard .dashboard-arena {
+    min-height: 0;
+  }
+  .dance-dashboard .dashboard-camera-scene {
+    height: 100%;
+    min-height: 0;
+  }
+  .dance-dashboard .dashboard-scores {
+    max-height: 100%;
+    overflow-y: auto;
+  }
+  .dance-dashboard .dashboard-beat {
+    width: 100%;
+    padding-block: 8px;
+  }
+  .dance-dashboard .dashboard-beat > progress {
+    margin-top: 5px;
+  }
+}

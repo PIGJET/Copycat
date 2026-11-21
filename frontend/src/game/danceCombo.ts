@@ -5,9 +5,10 @@ import { danceMotion } from "./danceMotion.ts";
 
 export const HYPE_PER_MOVE = 10;
 export const MOTION_CALLOUTS = ["Nice move!", "Great flow!", "On a roll!", "Feel the beat!"];
+const CREATOR_CALLOUTS = ["Set the groove!", "Nice move!", "Lead the beat!", "Make it yours!"];
 const MIN_GAP_MS = 150; // compare poses at most this often
-const MAX_GAP_MS = 350; // poses further apart than this aren't compared
-const MOVE_COOLDOWN_MS = 550; // at most one hit per this long
+const MAX_GAP_MS = 500; // poses further apart than this aren't compared
+const MOVE_COOLDOWN_MS = 420; // at most one hit per this long
 const STREAK_WINDOW_MS = 1900; // hits closer than this build the combo
 
 export interface DanceCue {
@@ -19,8 +20,9 @@ export interface DanceCue {
   hits: number;
 }
 
-export function cueText(cue: DanceCue): string {
-  return cue.streak % 5 === 0 ? "Dance frenzy!" : MOTION_CALLOUTS[(cue.hits - 1) % MOTION_CALLOUTS.length];
+export function cueText(cue: DanceCue, role: "creator" | "copier" = "copier"): string {
+  const callouts = role === "creator" ? CREATOR_CALLOUTS : MOTION_CALLOUTS;
+  return cue.streak % 5 === 0 ? "Dance frenzy!" : callouts[(cue.hits - 1) % callouts.length];
 }
 
 /** Feed it pose samples during a take; it returns a new cue when the dancer hits a move. */
@@ -43,8 +45,14 @@ export class DanceCombo {
     }
     const before = this.previous;
     if (before && now - before.at < MIN_GAP_MS) return null;
+    if (!before || now - before.at > MAX_GAP_MS) {
+      this.previous = { at: now, landmarks };
+      return null;
+    }
+
+    // Keep the anchor through smaller steps so steady movements can build up to a hit.
+    if (!danceMotion(before.landmarks, landmarks)) return null;
     this.previous = { at: now, landmarks };
-    if (!before || now - before.at > MAX_GAP_MS || !danceMotion(before.landmarks, landmarks)) return null;
 
     const lastMove = this.lastMoveAt;
     if (lastMove !== null && now - lastMove < MOVE_COOLDOWN_MS) return null;

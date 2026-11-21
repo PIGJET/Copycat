@@ -11,11 +11,10 @@ import "./DashboardCountdown.css";
 import "./DashboardMetronome.css";
 import "./DashboardTurnPrompt.css";
 import "./DashboardDanceFeedback.css";
-import { danceMotion } from "../../game/danceMotion";
+import { DanceCombo, HYPE_PER_MOVE, cueText } from "../../game/danceCombo";
+import type { DanceCue } from "../../game/danceCombo";
+
 const recordingSeconds = 10;
-const motionCallouts = ["Nice move!", "Great flow!", "On a roll!", "Feel the beat!"];
-const moveCooldownMs = 550;
-const hypePerMove = 10;
 
 export type ArcadeTurn = {
   controls: HTMLElement;
@@ -37,9 +36,8 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
   const recordingDeadline = useRef<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const recording = secondsLeft !== null;
-  const previousPose = useRef<{ at: number; landmarks: PoseLandmark[] } | null>(null);
-  const lastMoveAt = useRef<number | null>(null);
-  const [danceCue, setDanceCue] = useState<{ at: number; streak: number; hits: number } | null>(null);
+  const combo = useRef(new DanceCombo());
+  const [danceCue, setDanceCue] = useState<DanceCue | null>(null);
   const [captureError, setCaptureError] = useState("");
   const isCreator = player.id === creator.id;
   const ready = trackingStatus === "ready" && cameraReady;
@@ -68,35 +66,16 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
       } catch { /* Pose scoring remains available when video encoding fails. */ }
     }
     recordingDeadline.current = performance.now() + recordingSeconds * 1000;
-    previousPose.current = null;
-    lastMoveAt.current = null;
+    combo.current.reset();
     setDanceCue(null);
     setSecondsLeft(recordingSeconds);
     onRecordingChange?.(true);
   }, [arcade, isCreator, onRecordingChange]);
 
-  const handleDancePose = useCallback((landmarks: PoseLandmark[] | null) => {
+  const handleDancePose = useCallback((timestamp: number, landmarks: PoseLandmark[] | null) => {
     if (recordingDeadline.current === null) return;
-    if (!landmarks) {
-      previousPose.current = null;
-      lastMoveAt.current = null;
-      return;
-    }
-
-    const now = performance.now();
-    const before = previousPose.current;
-    if (before && now - before.at < 150) return;
-    previousPose.current = { at: now, landmarks };
-    if (!before || now - before.at > 350 || !danceMotion(before.landmarks, landmarks)) return;
-
-    const lastMove = lastMoveAt.current;
-    if (lastMove !== null && now - lastMove < moveCooldownMs) return;
-    lastMoveAt.current = now;
-    setDanceCue(previous => ({
-      at: now,
-      hits: (previous?.hits ?? 0) + 1,
-      streak: previous && lastMove !== null && now - lastMove < 1900 ? previous.streak + 1 : 1,
-    }));
+    const cue = combo.current.track(timestamp, landmarks);
+    if (cue) setDanceCue(cue);
   }, []);
 
   function startTurn() {
@@ -191,17 +170,20 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
         </div>
       )}
       {replaying && reference && <PoseReplay frames={reference.frames} durationMs={reference.duration} creator={creator.name} />}
+      {recording && !danceCue && (
+        <div className="dashboard-dance-feedback"><strong>Go!</strong></div>
+      )}
       {recording && danceCue && (
         <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
-          <span className="dashboard-dance-hype">+{hypePerMove} Hype</span>
-          <strong>{danceCue.streak % 5 === 0 ? "Dance frenzy!" : motionCallouts[(danceCue.hits - 1) % motionCallouts.length]}</strong>
+          <span className="dashboard-dance-hype">+{HYPE_PER_MOVE} Hype</span>
+          <strong>{cueText(danceCue, isCreator ? "creator" : "copier")}</strong>
           {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
         </div>
       )}
       {recording && (
         <div className="dashboard-hype-total">
           <span>Hype</span>
-          <strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * hypePerMove}</strong>
+          <strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * HYPE_PER_MOVE}</strong>
         </div>
       )}
       {!arcade && secondsLeft !== null && (

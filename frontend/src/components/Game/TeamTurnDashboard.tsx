@@ -393,10 +393,13 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
       tracking={tracking}
       turnPrompt={phase === "idle"}
       overlay={isRecording && <>
+        {!danceCue && (
+          <div className="dashboard-dance-feedback"><strong>Go!</strong></div>
+        )}
         {danceCue && (
           <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
             <span className="dashboard-dance-hype">+{HYPE_PER_MOVE} Hype</span>
-            <strong>{cueText(danceCue)}</strong>
+            <strong>{cueText(danceCue, role)}</strong>
             {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
           </div>
         )}

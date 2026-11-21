@@ -66,7 +66,7 @@ function cameraHarness(getMedia){
   return {sandbox,elements,element,camera:sandbox.camera};
 }
 test('camera access excludes audio and releases tracks on exit',async()=>{
-  let requests=0,stops=0;const track={stop(){stops++}},stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
+  let requests=0,stops=0;const track={readyState:'live',enabled:true,stop(){stops++}},stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
   const harness=cameraHarness(async constraints=>{requests++;assert.equal(constraints.audio,false);return stream});
   assert.equal(requests,0);
   await harness.camera.enableCameraCheck();
@@ -75,7 +75,7 @@ test('camera access excludes audio and releases tracks on exit',async()=>{
   harness.camera.stopCameraCheck();assert.equal(stops,1);assert.equal(harness.element('#check-video').srcObject,null);
 });
 test('a late camera permission result is discarded after navigation',async()=>{
-  let resolveMedia,stops=0;const track={stop(){stops++}},stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
+  let resolveMedia,stops=0;const track={readyState:'live',enabled:true,stop(){stops++}},stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
   const harness=cameraHarness(()=>new Promise(resolve=>{resolveMedia=resolve}));
   const pending=harness.camera.enableCameraCheck();
   harness.camera.stopCameraCheck();harness.sandbox.preview.screen='creator';resolveMedia(stream);await pending;
@@ -87,4 +87,15 @@ test('camera permission denial exposes retry without enabling continuation',asyn
   assert.equal(harness.element('#camera-status').textContent,'Camera access denied');
   assert.equal(harness.element('[data-action="camera-enable"]').disabled,false);
   assert.equal(harness.element('[data-action="camera-continue"]').disabled,true);
+});
+
+test('a disconnected camera disables Continue again',async()=>{
+  const track={readyState:'live',enabled:true,stop(){}};
+  const stream={active:true,getTracks:()=>[track],getVideoTracks:()=>[track]};
+  const harness=cameraHarness(async()=>stream);
+  await harness.camera.enableCameraCheck();
+  track.readyState='ended';
+  track.onended();
+  assert.equal(harness.element('[data-action="camera-continue"]').disabled,true);
+  assert.equal(harness.element('#camera-status').textContent,'Camera disconnected');
 });
