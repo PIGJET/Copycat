@@ -93,7 +93,6 @@ export function GameFlow() {
 
   if (screen === "camera") {
     return <CameraCheckPage player={mode === "solo" ? soloPlayer : creator} onMenu={returnHome}
-      status="Camera preview is not connected" detail="Continue to BPM setup. Recorder integration is still needed."
       onContinue={() => setScreen("tempo")} />;
   }
 
