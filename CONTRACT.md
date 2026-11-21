@@ -50,7 +50,7 @@ Shared frontend files (`App.tsx`, `main.tsx`, config) need a heads-up to the tea
 
 ## `POST /score`
 
-Request: `{"reference": <creator's Recording>, "attempt": <copier's Recording>}`
+Request: `{"reference": <creator's Recording>, "attempt": <copier's Recording>}`. Solo may add `"mode": "solo_partial"`; omitted mode preserves existing Team scoring. In Solo, segments absent from the reference are excluded, and segments visible in the reference but absent from the player score zero. Unavailable body groups are null. In this mode, timestamps are milliseconds relative to the beginning of each clip/turn; zero is playback start, even if initial samples are missing.
 
 200 response (scores 0-100):
 

@@ -1,6 +1,6 @@
 """Copycat backend: scores dance copies and roasts the worst one."""
 
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 
 import logging
 from pathlib import Path
@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 import reference_video
 
 from roast import RoastInputError, decode_image, make_roast
-from scoring import BROKEN_RECORDING_MSG, ScoringError, score_dance
+from scoring import BROKEN_RECORDING_MSG, ScoringError, score_dance, score_solo_partial
 
 log = logging.getLogger("copycat")
 
@@ -35,6 +35,7 @@ app.add_middleware(
 class ScoreRequest(BaseModel):
     reference: Any
     attempt: Any
+    mode: Literal["legacy", "solo_partial"] = "legacy"
 
 
 class ReferenceVideoRequest(BaseModel):
@@ -82,7 +83,7 @@ def health() -> dict[str, str]:
 @app.post("/score")
 def score(req: ScoreRequest):
     try:
-        return score_dance(req.reference, req.attempt)
+        return score_solo_partial(req.reference, req.attempt) if req.mode == "solo_partial" else score_dance(req.reference, req.attempt)
     except ScoringError as e:
         return score_error(e.message, e.reason, e.recording)
     except (KeyError, TypeError, ValueError, IndexError) as e:

@@ -8,9 +8,11 @@ export class AttemptCapture {
   private closed = false;
   private frames: RecordingFrame[] = [];
   private durationMs: number;
+  private allowPartial: boolean;
 
-  constructor(durationMs: number) {
+  constructor(durationMs: number, options: { allowPartial?: boolean } = {}) {
     this.durationMs = durationMs;
+    this.allowPartial = options.allowPartial ?? false;
   }
 
   start(origin: number): boolean {
@@ -32,6 +34,7 @@ export class AttemptCapture {
   }
 
   trackingLost(now: number): boolean {
+    if (this.allowPartial) return false;
     const last = this.lastUsable ?? this.origin;
     // A usable sample covers its 15 Hz slot.
     const allowance = this.lastUsable === null ? 1000 : 1000 + REFERENCE_SAMPLE_MS;
@@ -41,7 +44,8 @@ export class AttemptCapture {
   finish(): PoseRecording | null {
     if (this.closed || this.origin === null) return null;
     this.closed = true;
-    return referenceQuality(this.frames, this.durationMs).adequateCoverage ? { frames: this.frames } : null;
+    return this.allowPartial ? (this.frames.length ? { frames: this.frames } : null) :
+      (referenceQuality(this.frames, this.durationMs).adequateCoverage ? { frames: this.frames } : null);
   }
 
   cancel() {
