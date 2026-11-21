@@ -78,3 +78,6 @@ Lobby hierarchy: the larger Player Lobby heading leads, followed by compact Quic
 
 
 Dashboard polish retains the three columns and pixel wordmark. Only the camera frame glows. Compact borderless score rows, a muted leader crown, leader-named reference and one turn instruction establish hierarchy. Background floor opacity is 0.165 (70% below the previous 0.55). The bottom timeline has four clock-driven markers, BPM, remaining time and one playback control; reduced motion retains active-beat color without scaling transitions.
+
+
+Character customization uses head portraits only. Retain hats, eyewear, and face accessories with three independent arrow pairs. Body artwork, outfits, and lower-body choices are removed. Selected head accessories persist across species changes and gameplay portraits.
