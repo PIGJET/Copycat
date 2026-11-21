@@ -1,0 +1,60 @@
+@font-face {
+  font-family: Silkscreen;
+  src: url('./ui-preview/dist/fonts/Silkscreen-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Barlow;
+  src: url('./ui-preview/dist/fonts/Barlow-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+.solo-game {
+  --solo-accent: #b6ff00;
+  --solo-muted: #b7a9cd;
+  --solo-line: #62477c;
+  --solo-surface: #1b122b;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: clamp(20px, 5vw, 56px);
+  background: #100b1d;
+  color: #fff;
+  font: 500 18px/1.45 Barlow, system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+.solo-game__stage { max-width: 1080px; margin-inline: auto; }
+.solo-game__header { display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid var(--solo-line); padding-bottom: .75rem; margin-bottom: 2rem; }
+.solo-game__header h1 { color: var(--solo-accent); font-size: clamp(26px, 5vw, 48px); }
+.solo-game__header span { color: var(--solo-muted); }
+.solo-game h1, .solo-game h2, .solo-score strong { font-family: Silkscreen, monospace; }
+.solo-game h2 { margin-block: 0 1rem; font-size: clamp(20px, 3vw, 32px); }
+.solo-game p { margin-block: .75rem; }
+.solo-source { max-width: 620px; display: grid; gap: 1rem; }
+.solo-source label, .solo-file { display: grid; gap: .4rem; }
+.solo-source__range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.solo-file { max-width: 620px; margin-top: 1.5rem; }
+.solo-game input { min-width: 0; box-sizing: border-box; border: 1px solid var(--solo-line); padding: .65rem .8rem; background: var(--solo-surface); color: #fff; font: inherit; }
+.solo-actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-block: 1rem; }
+.solo-game button { box-sizing: border-box; border: 1px solid var(--solo-line); border-bottom-width: 3px; padding: .55rem .85rem; background: var(--solo-surface); color: #fff; font: inherit; cursor: pointer; }
+.solo-game button:disabled { cursor: default; opacity: .48; }
+.solo-game button:focus-visible, .solo-game input:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.solo-game .solo-primary, .solo-game .challenge-recorder button { background: var(--solo-accent); color: #100b1d; border-color: #719e00; }
+.solo-game [role='alert'] { color: #ffaecf; }
+.solo-preview { width: min(100%, 720px); display: block; background: #0b0812; }
+.solo-rating { min-height: 2.5rem; font: 22px/1.4 Silkscreen, monospace; color: var(--solo-accent); }
+.solo-score strong { color: var(--solo-accent); font-size: clamp(40px, 9vw, 96px); }
+.solo-breakdown { display: flex; flex-wrap: wrap; gap: 1.25rem; padding: 0; }
+.solo-breakdown dt, .solo-replay__pane figcaption { color: var(--solo-muted); }
+.solo-breakdown dd { font-size: 1.5rem; }
+.solo-replay__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.solo-replay__pane { margin: 0; }
+.solo-replay__media { position: relative; background: #0b0812; }
+.solo-replay__media video { display: block; width: 100%; }
+.solo-replay__media canvas { pointer-events: none; position: absolute; inset: 0; width: 100%; height: 100%; }
+.solo-replay__media--mirrored { transform: scaleX(-1); }
+
+@media (max-width: 600px) {
+  .solo-replay__grid, .solo-game .challenge-recorder__videos { grid-template-columns: 1fr; }
+}
