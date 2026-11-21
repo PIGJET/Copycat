@@ -2,14 +2,14 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 function setup(){
-  const events={},elements=new Map(),classes=new Set();let timer=null;
+  const events={},elements=new Map(),classes=new Set();let timer=null,now=0;
   const element=selector=>{if(!elements.has(selector))elements.set(selector,{value:'120',disabled:false,hidden:false,textContent:'',innerHTML:'',srcObject:null,parentElement:{hidden:true},classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},focus(){}});return elements.get(selector)};
   const root={hidden:false,innerHTML:'',classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name),remove(){}},addEventListener:(type,fn)=>(events[type]??=[]).push(fn),replaceChildren(){this.innerHTML=''},querySelector:selector=>selector==='.beat-guide'?null:element(selector)};
-  const context=vm.createContext({document:{hidden:false,querySelector:selector=>selector==='#game-screen'?root:selector==='.animated-board'?null:selector==='#sound'?{addEventListener(){}}:element(selector),addEventListener(){}},window:{scrollTo(){}},location:{search:''},URLSearchParams,homeScreen:{hidden:false},lobby:{hidden:true},soundOn:false,crewColors:['lime','pink','cyan','purple'],portrait:()=>'<svg></svg>',goHome(){},blip(){},matchMedia:()=>({matches:true}),cancelAnimationFrame(){},setInterval:fn=>{timer=fn;return 1},clearInterval:()=>{timer=null},setTimeout:()=>1,clearTimeout(){}});
+  const context=vm.createContext({document:{hidden:false,querySelector:selector=>selector==='#game-screen'?root:selector==='.animated-board'?null:selector==='#sound'?{addEventListener(){}}:element(selector),addEventListener(){}},window:{scrollTo(){}},location:{search:''},performance:{now:()=>now},URLSearchParams,homeScreen:{hidden:false},lobby:{hidden:true},soundOn:false,crewColors:['lime','pink','cyan','purple'],portrait:()=>'<svg></svg>',goHome(){},blip(){},matchMedia:()=>({matches:true}),cancelAnimationFrame(){},setInterval:fn=>{timer=fn;return 1},clearInterval:()=>{timer=null},setTimeout:()=>1,clearTimeout(){}});
   const read=f=>fs.readFileSync(path.join(__dirname,'../dist',f),'utf8');
   vm.runInContext(read('demo-data.js')+'\n'+read('round-ui.js')+'\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,renderPreview,leavePreview,getCreator,getChallenger};',context);
   const click=action=>(events.click||[]).forEach(fn=>fn({target:{closest:()=>({disabled:false,dataset:{action}})}}));
-  return {ui:context.ui,root,element,classes,click,tick:()=>{assert(timer,'Capture timer must be running');timer()},changeTracking:value=>(events.change||[]).forEach(fn=>fn({target:{id:'tracking-state',value}}))};
+  return {ui:context.ui,root,element,classes,click,tick:(ms=1000)=>{assert(timer,'Capture timer must be running');now+=ms;timer()},changeTracking:value=>(events.change||[]).forEach(fn=>fn({target:{id:'tracking-state',value}}))};
 }
 const crew=[{id:1,name:'Alex',avatar:'cat'},{id:2,name:'Jamie',avatar:'rabbit'},{id:3,name:'Riley',avatar:'frog'},{id:4,name:'Taylor',avatar:'fox'}];
 test('dashboard countdown completes a leader turn without awarding the leader a score',()=>{
@@ -43,5 +43,7 @@ test('tracking failures disable preview capture, and leaving removes dashboard s
 test('standings use completed scores, preserve unscored dashes, and escape player names',()=>{
   const h=setup();h.ui.enterPreview([{...crew[0],name:'<img onerror=bad>'},crew[1]],'quick',false,'creator');
   assert(!h.root.innerHTML.includes('<img onerror=bad>'));assert(h.root.innerHTML.includes('&lt;img onerror=bad&gt;'));assert(!h.root.innerHTML.includes('dashboard-score-value">0'));
-  h.ui.preview.results=[{playerId:2,creatorId:1,score:{total:84,timing:80}}];h.ui.renderPreview();assert.match(h.root.innerHTML,/dashboard-score-value">84</);assert.match(h.root.innerHTML,/Demo averages/);
+  h.ui.preview.results=[{playerId:2,creatorId:1,score:{total:84,timing:80}}];h.ui.renderPreview();assert.match(h.root.innerHTML,/dashboard-score-value[^>]*>84</);assert.match(h.root.innerHTML,/Average \/100/);
 });
+
+test('a delayed capture callback follows elapsed game time instead of adding timer drift',()=>{const h=setup();h.ui.enterPreview(crew,'quick',false,'creator');h.click('record');h.tick(7500);assert.equal(h.ui.preview.phase,'recording');assert.equal(h.ui.preview.seconds,6);h.tick(5500);assert.equal(h.ui.preview.screen,'challenge')});

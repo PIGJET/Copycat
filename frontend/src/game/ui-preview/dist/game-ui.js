@@ -26,13 +26,14 @@ function TempoScreen(){return `${GameHeader('SELECT BPM','SETUP')}<div class="te
 function dashboardPortrait(player){return portrait(player.avatar)}
 function DashboardPose(){return `<svg class="dashboard-pose" viewBox="0 0 340 320" aria-hidden="true"><g class="pose-ghost" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="168" cy="51" r="25"/><path d="M147 98L122 163L94 193M147 98L205 105L267 78M147 98L136 207L195 211L205 105M136 207L110 254L86 298M195 211L217 256L247 298"/></g><g class="pose-joints" fill="currentColor">${[[147,98],[122,163],[94,193],[205,105],[267,78],[136,207],[195,211],[110,254],[217,256],[86,298],[247,298]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="6"/>`).join('')}</g></svg>`}
 function DashboardScores(active){
-  const rows=demoRankings(preview.crew,preview.results),hasScores=rows.some(row=>row.average!==null);let rank=0;
-  return `<aside class="dashboard-scores" aria-label="Round standings"><div class="dashboard-panel-title"><svg viewBox="0 0 28 24" aria-hidden="true"><path d="M3 7l6 5 5-10 5 10 6-5-3 14H6z" fill="currentColor"/></svg><h3>Scores</h3></div><p class="dashboard-score-caption">${hasScores?'Demo averages · /100':'Average · /100'}</p><ol>${rows.map(row=>{const current=row.player.id===active.id,leader=row.player.id===getCreator().id;return `<li class="dashboard-score-row ${current?'is-current':''}" ${current?'aria-current="true"':''}><span class="dashboard-rank">${row.average===null?'—':++rank}</span><span class="dashboard-avatar">${dashboardPortrait(row.player)}</span><span class="dashboard-score-player"><strong>${escapeUI(row.player.name)}</strong><small>${current?'Your turn':leader?'Dance leader':row.average===null?'Up next':'Round average'}</small></span><strong class="dashboard-score-value">${scoreNumber(row.average)}</strong></li>`}).join('')}</ol><p class="dashboard-score-note">${hasScores?'Completed turns only.':'Scores appear after each turn.'}</p></aside>`;
+  const rows=demoRankings(preview.crew,preview.results);
+  return `<aside class="dashboard-scores" aria-label="Round standings"><div class="dashboard-panel-title"><h3>Scores</h3><span>Average /100</span></div><ol>${rows.map(row=>{const current=row.player.id===active.id,leader=row.player.id===getCreator().id;return `<li class="dashboard-score-row ${current?'is-current':''}" ${current?'aria-current="true"':''}><span class="dashboard-avatar">${dashboardPortrait(row.player)}</span><span class="dashboard-score-player"><strong>${escapeUI(row.player.name)}</strong>${leader?'<span class="dashboard-leader" role="img" aria-label="Dance leader"><svg viewBox="0 0 28 24" aria-hidden="true"><path d="M3 7l6 5 5-10 5 10 6-5-3 14H6z" fill="currentColor"/></svg></span>':''}</span><strong class="dashboard-score-value ${row.average===null?'is-unavailable':''}">${scoreNumber(row.average)}</strong></li>`}).join('')}</ol></aside>`;
 }
-function DashboardBeatGuide(){return `<section class="beat-guide dashboard-beat" aria-label="Visual metronome" style="--beat-duration:${60/preview.bpm}s"><div class="dashboard-beat-heading"><span class="dashboard-music-note" aria-hidden="true">♪</span><h3>BEAT METRONOME</h3><span class="dashboard-tempo"><strong>${preview.bpm}</strong> BPM</span><button class="ui-secondary" data-action="beat-toggle" aria-label="${preview.beatPlaying?'Pause':'Start'} beat guide" aria-pressed="${preview.beatPlaying}">${preview.beatPlaying?'PAUSE':'PLAY'}</button></div><div class="dashboard-rhythm"><div class="beat-time"><strong id="capture-time">10s</strong><span id="capture-phase">Your turn</span></div><div class="beat-visual"><div class="dashboard-wave" aria-hidden="true">${[8,12,18,24,40,62,82,54,34,20,12,8,14,26,42,66,90,64,38,20,12,8,18,30,50,74,94,72,48,28,16,10,18,32,46,66,84,54,34,18,12].map(height=>`<i style="--bar-height:${height}%"></i>`).join('')}</div><div class="beat-lane" aria-hidden="true"><div class="beat-flow"></div><div class="beat-hit-line"></div><div class="beat-hit-square"></div></div></div><div class="beat-count" aria-label="Four-count beat">${[1,2,3,4].map(n=>`<span data-beat="${n}" ${n===1?'class="active-beat"':''}>${n}</span>`).join('')}</div></div><div class="dashboard-beat-footer"><span><i aria-hidden="true"></i> Beat <em>— move on time</em></span><span>Demo metronome</span></div><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress></section>`}
+function DashboardBeatGuide(){return `<section class="beat-guide dashboard-beat" aria-label="Visual metronome"><div class="dashboard-beat-meta"><div class="beat-time"><strong id="capture-time">10s</strong><span id="capture-phase">Ready</span></div><span class="dashboard-tempo"><strong>${preview.bpm}</strong> BPM</span><button class="ui-secondary" data-action="beat-toggle" aria-label="${preview.beatPlaying?'Pause':'Start'} beat guide" aria-pressed="${preview.beatPlaying}">${preview.beatPlaying?'Pause':'Play'}</button></div><div class="beat-visual"><ol class="beat-count dashboard-timeline" aria-label="Four-count beat">${[1,2,3,4].map(n=>`<li data-beat="${n}" ${n===1?'class="active-beat"':''}><span class="dashboard-beat-dot" aria-hidden="true"></span><span>${n}</span></li>`).join('')}</ol></div><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress></section>`}
+function dashboardTurnInstruction(){const leader=getCreator();return preview.phase==='countdown'?'Get ready to dance.':preview.screen==='creator'?'Create a dance for everyone to copy.':`Copy ${leader.name}’s dance moves.`}
 function DanceDashboard(){
-  const isLeader=preview.screen==='creator',active=isLeader?getCreator():getChallenger(),status=trackingStates[preview.tracking];
-  return `<header class="dashboard-header"><div class="dashboard-brand"><button class="ui-secondary dashboard-menu" data-action="exit">MENU</button><span>COPY<span>CAT</span><small>DANCE BATTLE</small></span></div><div class="dashboard-round" role="status"><span>Round <strong>${preview.round+1} / ${totalRounds()}</strong></span><div aria-hidden="true">${Array.from({length:totalRounds()},(_,i)=>`<i class="${i<=preview.round?'is-complete':''}"></i>`).join('')}</div></div><span class="dashboard-preview-label">UI PREVIEW</span></header><div class="dashboard-turn"><span>${isLeader?'DANCE LEADER':'YOUR TURN'}</span><h2 id="screen-title" tabindex="-1">${escapeUI(active.name)}<span>, ${isLeader?'set the move.':'make your move.'}</span></h2></div><div class="dashboard-arena">${DashboardScores(active)}<div class="dashboard-stage"><div class="dashboard-camera-tag"><svg viewBox="0 0 24 18" aria-hidden="true"><path d="M2 2h13v14H2zm13 6 7-5v12l-7-5" fill="currentColor"/></svg><strong>${escapeUI(active.name)}</strong><span>${isLeader?'LEADER':'YOU'}</span></div><span class="dashboard-camera-corner top-left"></span><span class="dashboard-camera-corner top-right"></span><span class="dashboard-camera-corner bottom-left"></span><span class="dashboard-camera-corner bottom-right"></span><div class="dashboard-camera-scene">${DashboardPose()}<div class="dashboard-stage-shadow"></div><span class="dashboard-camera-note">Camera preview not connected</span></div><div id="capture-overlay" class="capture-overlay" aria-live="polite"></div></div><aside class="dashboard-cue"><div class="dashboard-move-card"><span class="dashboard-cue-eyebrow">${isLeader?'EVERYONE COPIES YOU':`FOLLOW ${escapeUI(getCreator().name)}`}</span>${DashboardPose()}<h3 id="dashboard-cue">${isLeader?'SET THE<br> MOVE!':'COPY THE<br> MOVE!'}</h3><p>${isLeader?'Make it a good one.':'Match the leader’s dance.'}</p>${!isLeader?'<small>Reference clip not connected</small>':''}</div><div class="dashboard-mascot" aria-hidden="true">${dashboardPortrait(active)}<span>LET’S GO!</span></div></aside></div><div class="dashboard-controls"><div class="tracking-status ${preview.tracking==='ready'?'tracking-ready':'tracking-warning'}"><strong id="tracking-label">${status.label}</strong><span>${status.help}</span></div>${ArcadeButton('START PREVIEW','record',false,preview.tracking!=='ready'||preview.phase!=='idle')}${ArcadeButton('SKIP TURN','skip',true)}<details class="dashboard-review-settings"><summary>Preview settings</summary><label class="preview-state">Tracking state<select id="tracking-state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label><p>No video is recorded in this UI preview.</p></details></div>${DashboardBeatGuide()}`;
+  const isLeader=preview.screen==='creator',active=isLeader?getCreator():getChallenger(),status=trackingStates[preview.tracking],ready=preview.tracking==='ready';
+  return `<header class="dashboard-header"><div class="dashboard-brand"><button class="ui-secondary dashboard-menu" data-action="exit">Menu</button><span>COPY<span>CAT</span></span></div><div class="dashboard-round" role="status">Round <strong>${preview.round+1} / ${totalRounds()}</strong></div></header><div class="dashboard-turn"><h2 id="screen-title" tabindex="-1">${escapeUI(active.name)}’s turn</h2><p id="dashboard-instruction">${escapeUI(dashboardTurnInstruction())}</p></div><div class="dashboard-arena">${DashboardScores(active)}<div class="dashboard-stage"><div class="dashboard-camera-scene">${DashboardPose()}<span class="dashboard-camera-note">Camera preview not connected</span></div><div id="capture-overlay" class="capture-overlay" aria-live="polite"></div></div><aside class="dashboard-cue" aria-label="Dance reference"><h3>${escapeUI(getCreator().name)}’s move</h3><div class="dashboard-reference">${DashboardPose()}</div><p class="dashboard-reference-status">Reference clip unavailable</p></aside></div><div class="dashboard-controls"><div class="tracking-status tracking-warning" ${ready?'hidden':''}><strong id="tracking-label">${status.label.replace(' (demo)','')}</strong><span>${status.help}</span></div><div class="dashboard-primary-actions">${ArcadeButton('Start preview','record',false,!ready||preview.phase!=='idle')}${ArcadeButton('Skip turn','skip',true)}</div><details class="dashboard-review-settings"><summary aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 1-2h4l1 2 2 1 3-1 2 4-2 2v3l2 2-2 4-3-1-2 1-1 3h-4l-1-3-2-1-3 1-2-4 2-2V9L2 7l2-4 3 1z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="11" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="sr-only">Settings</span></summary><div class="dashboard-settings-panel"><label class="preview-state">Tracking state<select id="tracking-state" aria-label="Tracking state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label><p>UI demo: camera and reference clips are not connected. Scores use demonstration data; no video is recorded.</p></div></details></div>${DashboardBeatGuide()}`;
 }
 
 function creatorScreen(){return DanceDashboard()}
@@ -66,12 +67,12 @@ function renderPreview(){
   if(preview.screen==='score'){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;blip(660)};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
 function enterPreview(crew,mode,solo=false,initialScreen='camera'){
-  clearPreviewTimers();Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:initialScreen,afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
+  clearPreviewTimers();beatClock=null;Object.assign(preview,{crew:crew.map(p=>({...p})),results:[],roundBaselineResults:[],mode,solo,round:0,challenger:0,screen:initialScreen,afterCamera:solo?'challenge':'creator',tracking:'ready',phase:'idle',seconds:10,count:3,latest:null,private:true,bpm:120,beatPlaying:true});
   homeScreen.hidden=true;lobby.hidden=true;gameRoot.hidden=false;document.querySelector('.arcade').classList.add('in-game');document.querySelector('.arcade').classList.remove('in-lobby');renderPreview();
 }
 function startTeamPreview(){enterPreview(players,document.querySelector('input[name="game-length"]:checked').value)}
 function startSoloPreview(){enterPreview([{id:'solo',name:'You',avatar:'cat'}],'quick',true)}
-function leavePreview(){clearPreviewTimers();preview.run++;gameRoot.hidden=true;gameRoot.replaceChildren();document.querySelector('.arcade').classList.remove('in-game','news-active','team-capture-active','dashboard-active');goHome()}
+function leavePreview(){clearPreviewTimers();beatClock=null;preview.run++;gameRoot.hidden=true;gameRoot.replaceChildren();document.querySelector('.arcade').classList.remove('in-game','news-active','team-capture-active','dashboard-active');goHome()}
 function finishCapture(){
   clearPreviewTimers();preview.run++;preview.phase='idle';
   if(preview.screen==='creator'){preview.screen='challenge';preview.challenger=0;renderPreview();return}
@@ -79,12 +80,27 @@ function finishCapture(){
   preview.latest={playerId:p.id,creatorId:getCreator().id,round:preview.round+1,score:{...fixture},videoUrl:null,source:'demo'};
   preview.results.push(preview.latest);preview.screen='score';renderPreview();
 }
-function updateCaptureUI(){const countdown=preview.phase==='countdown',recording=preview.phase==='recording';const overlay=gameRoot.querySelector('#capture-overlay');if(!overlay)return;overlay.innerHTML=countdown?`<span class="countdown-number">${preview.count}</span>`:recording?'<span class="recording-label">RECORDING PREVIEW</span>':'';gameRoot.querySelector('#capture-phase').textContent=countdown?'Get ready':recording?'Recording preview':'Complete';gameRoot.querySelector('#capture-time').textContent=countdown?String(preview.count):`${preview.seconds}s`;gameRoot.querySelector('#capture-progress').value=countdown?0:10-preview.seconds;}
+function updateCaptureUI(){
+  const countdown=preview.phase==='countdown',recording=preview.phase==='recording',overlay=gameRoot.querySelector('#capture-overlay');if(!overlay)return;
+  overlay.innerHTML=countdown?`<span class="countdown-number">${preview.count}</span>`:recording?'<span class="recording-label">Recording preview</span>':'';
+  gameRoot.querySelector('#capture-phase').textContent=countdown?'Get ready':recording?'Dancing':'Complete';
+  gameRoot.querySelector('#capture-time').textContent=countdown?String(preview.count):`${preview.seconds}s`;
+  gameRoot.querySelector('#capture-progress').value=countdown?0:10-preview.seconds;
+  const instruction=gameRoot.querySelector('#dashboard-instruction');if(instruction)instruction.textContent=dashboardTurnInstruction();
+  const button=gameRoot.querySelector('[data-action="record"]');if(button)button.textContent=countdown?'Get ready…':recording?'Preview running…':'Start preview';
+}
 function startCapturePreview(){
   if(preview.tracking!=='ready'||preview.phase!=='idle')return;
-  preview.phase='countdown';preview.count=3;preview.seconds=10;const run=++preview.run;
+  preview.phase='countdown';preview.count=3;preview.seconds=10;const run=++preview.run,started=performance.now();
+  beatClock={key:beatTurnKey(),bpm:preview.bpm,started,lastStep:-1};
   gameRoot.querySelector('[data-action="record"]').disabled=true;gameRoot.querySelector('#tracking-state').disabled=true;updateCaptureUI();
-  previewTimer=setInterval(()=>{if(run!==preview.run)return clearPreviewTimers();if(preview.phase==='countdown'){preview.count--;blip(330);if(preview.count<=0)preview.phase='recording'}else preview.seconds--;updateCaptureUI();if(preview.phase==='recording'&&preview.seconds<=0)finishCapture()},1000);
+  if(preview.beatPlaying)startBeatGuide();
+  previewTimer=setInterval(()=>{
+    if(run!==preview.run)return clearPreviewTimers();
+    const elapsed=(performance.now()-started)/1000;
+    if(elapsed<3){preview.phase='countdown';preview.count=Math.ceil(3-elapsed)}else{preview.phase='recording';preview.seconds=Math.max(0,Math.ceil(13-elapsed))}
+    updateCaptureUI();if(elapsed>=13)finishCapture();
+  },100);
 }
 function normaliseBPM(value,fallback=120){const n=String(value).trim()===''?NaN:Number(value);const safeFallback=Number.isFinite(Number(fallback))?Number(fallback):120;return Math.max(60,Math.min(180,Math.round((Number.isFinite(n)?n:safeFallback)/5)*5))}
 function setBeatTempo(value,syncInput=true){const bpm=normaliseBPM(value,preview.bpm);preview.bpm=bpm;gameRoot.querySelector('.tempo-setup')?.style.setProperty('--beat-duration',`${60/bpm}s`);const slider=gameRoot.querySelector('#tempo-slider');if(slider)slider.value=String(bpm);const input=gameRoot.querySelector('#tempo-bpm');if(input&&syncInput)input.value=String(bpm)}
@@ -107,10 +123,46 @@ gameRoot.addEventListener('click',e=>{
     case'private':gameRoot.querySelector('#privacy-note').textContent='Kept private. This demo has no sharing or upload function.';break;
   }
 });
-let beatTimer=null;
-function stopBeatGuide(){clearTimeout(beatTimer);beatTimer=null;gameRoot.querySelector('.beat-guide')?.classList.remove('beat-playing')}
-function beatClick(downbeat){if(!soundOn)return;audio??=new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=downbeat?1000:700;g.gain.setValueAtTime(.05,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.035);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.04)}
-function startBeatGuide(){stopBeatGuide();const guide=gameRoot.querySelector('.beat-guide');if(!guide||!preview.beatPlaying||document.hidden)return;const beatMs=60000/preview.bpm;let step=-1;const started=performance.now();void guide.offsetWidth;guide.classList.add('beat-playing');function tick(){if(!guide.isConnected||!preview.beatPlaying||document.hidden)return;const current=Math.floor((performance.now()-started)/beatMs);if(step!==current){step=current;guide.querySelectorAll('[data-beat]').forEach(el=>el.classList.toggle('active-beat',Number(el.dataset.beat)===step%4+1));beatClick(step%4===0)}const untilNext=started+(step+1)*beatMs-performance.now();beatTimer=setTimeout(tick,Math.max(1,untilNext))}tick()}
+let beatTimer=null,beatSoundEpoch=0,beatClock=null;
+function beatTurnKey(){return [preview.round,preview.screen,preview.challenger].join(':')}
+function stopBeatGuide(){beatSoundEpoch++;clearTimeout(beatTimer);beatTimer=null;gameRoot.querySelector('.beat-guide')?.classList.remove('beat-playing')}
+function beatClick(downbeat){
+  if(!soundOn||document.hidden)return;
+  const AudioEngine=window.AudioContext||window.webkitAudioContext;
+  if(!AudioEngine)return;
+  audio??=new AudioEngine();
+  const epoch=beatSoundEpoch;
+  const play=()=>{
+    if(epoch!==beatSoundEpoch||!soundOn||document.hidden||!preview.beatPlaying)return;
+    const at=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();
+    // A short, percussive tick. Beat one has a slightly higher pitch.
+    o.type='square';
+    o.frequency.setValueAtTime(downbeat?1800:1400,at);
+    o.frequency.exponentialRampToValueAtTime(600,at+.025);
+    g.gain.setValueAtTime(.001,at);
+    g.gain.exponentialRampToValueAtTime(.12,at+.001);
+    g.gain.exponentialRampToValueAtTime(.001,at+.03);
+    o.connect(g);g.connect(audio.destination);
+    o.onended=()=>{o.disconnect();g.disconnect()};
+    o.start(at);o.stop(at+.035);
+  };
+  if(audio.state==='suspended')audio.resume().then(play).catch(()=>{});
+  else if(audio.state==='running')play();
+}
+function startBeatGuide(){
+  stopBeatGuide();const guide=gameRoot.querySelector('.beat-guide');if(!guide||!preview.beatPlaying||document.hidden)return;
+  const key=beatTurnKey(),beatMs=60000/preview.bpm;
+  if(!beatClock||beatClock.key!==key||beatClock.bpm!==preview.bpm)beatClock={key,bpm:preview.bpm,started:performance.now(),lastStep:-1};
+  const clock=beatClock;guide.classList.add('beat-playing');
+  function tick(){
+    if(!guide.isConnected||!preview.beatPlaying||document.hidden)return;
+    const now=performance.now(),step=Math.floor((now-clock.started)/beatMs);
+    guide.querySelectorAll('[data-beat]').forEach(el=>{const active=Number(el.dataset.beat)===step%4+1;el.classList.toggle('active-beat',active);el.setAttribute('aria-current',active?'step':'false')});
+    if(clock.lastStep!==step){clock.lastStep=step;beatClick(step%4===0)}
+    beatTimer=setTimeout(tick,Math.max(1,clock.started+(step+1)*beatMs-performance.now()));
+  }
+  tick();
+}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBeatGuide();else if(['creator','challenge'].includes(preview.screen)&&preview.beatPlaying)startBeatGuide()});
 // Optional, explicit presentation harness. Does not run on the normal entry path.
 // Example: index.html?demo=score or ?demo=finale. All results remain demo fixtures.

@@ -75,3 +75,6 @@ BPM setup uses the established pixel heading, large lime tempo value, a slider a
 
 
 Lobby hierarchy: the larger Player Lobby heading leads, followed by compact Quick/Full options, a left-aligned player count above the roster, and one prominent Start action below. Round format has an accessible group name without a visible Game length label.
+
+
+Dashboard polish retains the three columns and pixel wordmark. Only the camera frame glows. Compact borderless score rows, a muted leader crown, leader-named reference and one turn instruction establish hierarchy. Background floor opacity is 0.165 (70% below the previous 0.55). The bottom timeline has four clock-driven markers, BPM, remaining time and one playback control; reduced motion retains active-beat color without scaling transitions.
