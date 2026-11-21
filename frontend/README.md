@@ -73,3 +73,16 @@ export default defineConfig([
 ])
 
 ```
+
+## Finale replay delivery
+
+Play a live camera game to record silent dance clips. The breaking-news screen plays the lowest-scoring available recording from the last-place player. Device sharing and download work locally.
+
+To enable the **Send replay** form, set the following server variables for the channels you use in `frontend/.env.local` and restart Vite.
+
+| Channel | Variables |
+| --- | --- |
+| Email attachment | `RESEND_API_KEY`, `REPLAY_FROM_EMAIL` (verified sender) |
+| SMS download link | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (SMS-capable number), `REPLAY_PUBLIC_ORIGIN` (your public HTTPS origin) |
+
+Run the game on localhost. For SMS, configure your public HTTPS reverse proxy to forward only GET and HEAD requests under `/replays/` to the running game server. Text recipients can download their clip for one hour while that server remains running. Email attachments work from localhost without a public endpoint. Setup references: [Resend](https://resend.com/docs/api-reference/emails/send-email) and [Twilio](https://www.twilio.com/docs/messaging/api/message-resource).

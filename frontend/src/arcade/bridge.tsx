@@ -135,11 +135,6 @@ async function finaleScene(loser: ArcadeRanking): Promise<string> {
   });
 }
 
-/** The loser's worst clip, for his finale replay and "Send my video". */
-function loserVideo(loser: ArcadeRanking): Blob | null {
-  return worstAttempt(loser)?.recording?.videoBlob ?? null;
-}
-
 /** Justin's solo mode (game/Game.tsx), shown in place of the arcade until Back to menu. */
 async function openSolo(onExit: () => void) {
   const { default: Game } = await import("../game/Game");
@@ -164,5 +159,5 @@ function release(results: ArcadeResult[], extra: (Recording | null | undefined)[
 }
 
 Object.assign(globalThis, {
-  CopycatTracking: Object.freeze({ mock: MOCK, mount, unmount, score, roast, finaleScene, loserVideo, openSolo, release, checkHealth }),
+  CopycatTracking: Object.freeze({ mock: MOCK, mount, unmount, score, roast, finaleScene, openSolo, release, checkHealth }),
 });

@@ -62,3 +62,6 @@
 
 .finale-replay-controls[hidden] { display:none }
 .finale-send>p { margin:14px 0 0; font-size:14px; line-height:1.5 }
+
+#replay-delivery { display:grid; gap:10px }
+#replay-recipient { min-width:0; padding:12px; font:inherit; background:#171022; color:white; border:1px solid #806690 }

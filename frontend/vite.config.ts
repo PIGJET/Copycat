@@ -2,6 +2,7 @@ import { cpSync, createReadStream, existsSync, readFileSync, statSync } from 'no
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
+import { replayDelivery } from './replayDelivery.ts'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 
@@ -52,6 +53,7 @@ export default defineConfig({
   publicDir: 'src/game/ui-preview/dist',
   plugins: [
     react(),
+    replayDelivery(), // Liangray's finale "Send replay" (email/SMS, needs keys in .env.local)
     extraPublicDir(),
     { name: 'copycat-arcade-entry', transformIndexHtml: { order: 'pre', handler() {
       return readFileSync(arcade, 'utf8').replace('</body>', '<script type="module" src="/src/main.tsx"></script></body>')
