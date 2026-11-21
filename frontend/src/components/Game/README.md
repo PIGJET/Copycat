@@ -2,9 +2,9 @@
 
 These presentational React components adapt the screens from `frontend/src/game/ui-preview/dist`. They are exported from this folder's `index.ts`; `App.tsx` mounts `GameFlow`, which selects the active page and supplies state and callbacks.
 
-`GameFlow.tsx` is the navigation shell mounted by `App.tsx`. It links Home → Lobby (team only) → Camera setup → BPM setup → turn dashboard → score reveal → leaderboard → finale. Quick games and solo mode skip extra creator rounds; Full team games rotate the creator. Buttons navigate through the whole presentation flow.
+`GameFlow.tsx` is the navigation shell mounted by `App.tsx`. Solo opens the working dance challenge in `frontend/src/game/Game.tsx`, including reference import, recording, scoring and replay. Team mode links Home → Lobby → Camera setup → BPM setup → turn dashboard → score reveal → leaderboard → finale. Full team games rotate the creator.
 
-The current flow is UI-only: Camera setup does not start the recorder, gameplay does not record video, and score values remain unscored. Connect the recorder and `/score` response before treating score or finale content as game results.
+Team play is wired to the real game logic: `GameFlow` drives every team screen from `useGame()` (`frontend/src/game/README.md`): players and validation, rotation, real `/score` results, the 422 redo buttons, rankings, and the `/roast` headline in the finale. Team turns record from the real camera in `TeamTurnDashboard.tsx` (3-2-1 countdown, 10 s of pose frames and video; copiers see the creator's video beside their camera), built on the recorder lane's `usePoseDetection`, `AttemptCapture` and `recordCameraVideo`. `CameraCheckPage` shows the camera with a skeleton and only continues with shoulders, hips, knees and ankles in frame. `?mock=1` in the URL skips the camera and uses mock recordings.
 
 ```tsx
 import { HomePage, LobbyPage, DashboardPage } from "./components/Game";

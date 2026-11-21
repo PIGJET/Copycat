@@ -1,4 +1,4 @@
-import type { PoseLandmark } from "../types/pose";
+import type { PoseLandmark } from "../types/pose.ts";
 
 const joints = [13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
 

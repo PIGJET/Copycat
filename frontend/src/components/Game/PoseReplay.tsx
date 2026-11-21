@@ -1,9 +1,19 @@
 import { useEffect, useRef } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
-import type { PoseSequence } from "../../types/pose";
+import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
+import type { ScoreFrame } from "../../game/types";
 import "./PoseReplay.css";
 
-export function PoseReplay({ sequence, creator }: { sequence: PoseSequence; creator: string }) {
+/** Landmarks from either frame format ({t, landmarks} or contract {t, lm: [x, y, visibility]}). */
+function landmarksOf(frame: ScoreFrame): NormalizedLandmark[] | null {
+  if (!frame) return null;
+  if ("landmarks" in frame && frame.landmarks) return frame.landmarks;
+  if ("lm" in frame && frame.lm) return frame.lm.map(([x, y, visibility]) => ({ x, y, z: 0, visibility }));
+  return null;
+}
+
+/** Replays a recorded dance as a skeleton (used when the creator's take has no video). */
+export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame[]; durationMs: number; creator: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -12,6 +22,7 @@ export function PoseReplay({ sequence, creator }: { sequence: PoseSequence; crea
     if (!canvas || !context) return;
 
     const drawing = new DrawingUtils(context);
+    const timed = frames.filter((f): f is NonNullable<ScoreFrame> => f !== null);
     const start = performance.now();
     let request = 0;
     let frameIndex = -1;
@@ -19,21 +30,23 @@ export function PoseReplay({ sequence, creator }: { sequence: PoseSequence; crea
     const draw = (now: number) => {
       const elapsed = now - start;
       const previousIndex = frameIndex;
-      while (sequence.frames[frameIndex + 1]?.t <= elapsed) frameIndex++;
+      while (timed[frameIndex + 1] && timed[frameIndex + 1].t - (timed[0]?.t ?? 0) <= elapsed) frameIndex++;
 
-      const frame = sequence.frames[frameIndex];
-      if (frame && frameIndex !== previousIndex) {
+      const landmarks = timed[frameIndex] ? landmarksOf(timed[frameIndex]) : null;
+      if (frameIndex !== previousIndex) {
         context.clearRect(0, 0, canvas.width, canvas.height);
-        drawing.drawConnectors(frame.landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "#73d9e9", lineWidth: 4 });
-        drawing.drawLandmarks(frame.landmarks, { color: "#ffcb65", radius: 3 });
+        if (landmarks) {
+          drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "#73d9e9", lineWidth: 4 });
+          drawing.drawLandmarks(landmarks, { color: "#ffcb65", radius: 3 });
+        }
       }
 
-      if (elapsed < sequence.duration) request = requestAnimationFrame(draw);
+      if (elapsed < durationMs) request = requestAnimationFrame(draw);
     };
 
     request = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(request);
-  }, [sequence]);
+  }, [frames, durationMs]);
 
   return (
     <>

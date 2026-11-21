@@ -1,5 +1,5 @@
 import { createRoot, type Root } from "react-dom/client";
-import { DashboardPage, type ArcadeTurn } from "./components/Game/DashboardPage";
+import { DashboardPage, type ArcadeTurn } from "./components/Game/ArcadeDashboardPage";
 import type { Player } from "./components/Game/uiTypes";
 import { scoreAttempt } from "./game/scoreAttempt";
 import type { PoseSequence } from "./types/pose";
