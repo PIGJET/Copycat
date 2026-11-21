@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<!-- avoid-ai-design-ignore-file: I3, K7 -->
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#100b1d">
+  <meta name="description" content="Copy your friends. Get judged. Get exposed. Choose your mode in Copycat, the dance party game.">
+  <title>COPYCAT: Pick your play</title>
+  <link rel="preload" href="fonts/Silkscreen-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="fonts/Barlow-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="lobby.css">
+  <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="team.css">
+  <link rel="stylesheet" href="round-ui.css">
+  <link rel="stylesheet" href="art-direction.css">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+<main class="arcade">
+  <header class="topbar"><button class="sound" id="sound" aria-pressed="true" aria-label="Turn sound off"><span id="sound-icon">♪</span> SOUND ON</button></header>
+  <div class="stars" aria-hidden="true"></div>
+  <section class="title-screen" aria-labelledby="game-title">
+    <h1 id="game-title"><span class="sr-only">COPYCAT</span><svg id="wordmark" viewBox="0 0 480 78" aria-hidden="true"></svg></h1>
+    <div class="stage" aria-hidden="true">
+      <span class="spark spark-one">✦</span><span class="spark spark-two">✦</span>
+      <div class="dancer dancer-left" id="dancer-left"></div>
+      <div class="dancer dancer-right" id="dancer-right"></div>
+      <span class="motion-lines left-lines">&gt;&gt;</span><span class="motion-lines right-lines">&lt;&lt;</span>
+    </div>
+    <div class="modes" role="group" aria-label="Choose play mode">
+      <button class="mode solo" data-mode="Solo"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 2h6v6H9zM6 10h12v4h3v6h-5v-4h-1v6H9v-6H8v4H3v-6h3z"/></svg></span><span class="mode-copy"><span class="mode-title">SOLO PLAY</span></span><span class="key">1</span></button>
+      <button class="mode team" data-mode="Team"><span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 24"><path d="M5 2h6v6H5zm16 0h6v6h-6zM2 10h12v4h4v-4h12v12h-6v-6h-2v6h-6v-4h-4v4H6v-6H4v6H0V12h2z"/></svg></span><span class="mode-copy"><span class="mode-title">TEAM PLAY</span></span><span class="key">2</span></button>
+    </div>
+    <audio id="home-music" src="audio/night-shade.mp3" loop preload="metadata" aria-hidden="true"></audio>
+    <p id="home-music-status" class="sr-only" role="status"></p>
+  </section>
+  <section class="lobby-screen" aria-labelledby="lobby-title" hidden>
+    <div class="lobby-nav"><button class="text-button" id="home">BACK TO MENU</button></div>
+    <h2 id="lobby-title" tabindex="-1">PLAYER LOBBY</h2>
+    <fieldset class="game-length" aria-label="Round format"><label><input type="radio" name="game-length" value="quick" checked><strong>Quick</strong><span>One creator</span></label><label><input type="radio" name="game-length" value="full"><strong>Full</strong><span>Everyone creates</span></label></fieldset>
+    <div class="roster-frame"><div class="roster-heading"><span id="player-count" aria-live="polite">PLAYERS (2 / 4)</span></div><div id="player-grid" class="player-grid"></div></div>
+    <div class="lobby-bottom"><p id="lobby-status" role="status">Enter player names.</p><button class="start-button" id="start-team" disabled>START</button></div>
+  </section>
+  <section id="game-screen" class="game-screen" aria-label="Game preview" hidden></section>
+  <div class="floor" aria-hidden="true"></div>
+</main>
+<dialog id="mode-dialog" aria-labelledby="dialog-title"><div class="dialog-inner"><h2 id="dialog-title">Solo Play</h2><p id="dialog-copy"></p><p class="preview-note">Gameplay is not connected yet.</p><button id="back" class="back">BACK TO MENU</button></div></dialog>
+<dialog id="avatar-dialog" aria-labelledby="avatar-title"><div class="avatar-dialog-inner"><div class="picker-top"><span class="dialog-label">AVATAR</span><button class="close-picker" aria-label="Close avatar picker">×</button></div><h2 id="avatar-title">Choose an avatar.</h2><div class="avatar-options" id="avatar-options"></div></div></dialog>
+<script src="app.js"></script>
+<script src="lobby.js"></script>
+<script src="demo-data.js"></script>
+<script src="round-ui.js"></script>
+<script src="game-ui.js"></script>
+<script src="home-music.js"></script>
+</body></html>
+
+
+
