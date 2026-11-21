@@ -1,16 +1,24 @@
-import { useRef, useState } from "react";
-import { CameraCheckPage, DashboardPage, FinalePage, HomePage, LeaderboardPage, LobbyPage, ScorePage, TempoPage } from "./index";
+import { useState } from "react";
+import { ArcadeButton, CameraCheckPage, DashboardPage, GameHeader, HomePage, LeaderboardPage, LobbyPage, PageFrame, ScorePage, TempoPage } from "./index";
 import type { PoseSequence } from "../../types/pose";
-import type { Player, Ranking, Score } from "./uiTypes";
+import { ScoreInputError, scoreAttempt } from "../../game/scoreAttempt";
+import type { AttemptScore } from "../../game/scoreAttempt";
+import { WinnerPage } from "./ResultsPages";
+import type { Player, Ranking } from "./uiTypes";
 
-type Screen = "home" | "lobby" | "camera" | "tempo" | "dashboard" | "score" | "leaderboard" | "finale";
+type Screen = "home" | "lobby" | "camera" | "tempo" | "dashboard" | "judging" | "leaderboard" | "finale";
 type Mode = "solo" | "team";
-const emptyScore: Score = { total: null, arms: null, legs: null, torso: null, timing: null };
+type Judging =
+  | { status: "scored"; score: AttemptScore }
+  | { status: "unscored" }
+  | { status: "error"; message: string; recording: "reference" | "attempt" };
 const soloPlayer: Player = { id: "solo-player", name: "You", avatar: "cat" };
 const referencePlayer: Player = { id: "reference", name: "Reference", avatar: "robot" };
 
 export function GameFlow() {
-  const recordingsByRound = useRef(new Map<number, Map<string, PoseSequence>>());
+  const [recordingsByRound, setRecordingsByRound] = useState<Map<number, Map<string, PoseSequence>>>(() => new Map());
+  const [scoresByRound, setScoresByRound] = useState<Map<number, Map<string, AttemptScore>>>(() => new Map());
+  const [judging, setJudging] = useState<Judging>({ status: "unscored" });
   const [screen, setScreen] = useState<Screen>("home");
   const [mode, setMode] = useState<Mode>("team");
   const [players, setPlayers] = useState<Player[]>([soloPlayer]);
@@ -19,17 +27,31 @@ export function GameFlow() {
   const [turnIndex, setTurnIndex] = useState(0);
   const [bpm, setBpm] = useState(120);
   const [soundOn, setSoundOn] = useState(true);
-  const [lastScoredPlayer, setLastScoredPlayer] = useState<Player>(soloPlayer);
 
   const creator = mode === "solo" ? referencePlayer : players[round] ?? players[0] ?? soloPlayer;
   const challengers = mode === "solo" ? players : players.filter(player => player.id !== creator.id);
   const creatorTurn = mode === "team" && turnIndex === 0;
   const activePlayer = creatorTurn ? creator : challengers[Math.max(0, turnIndex - (mode === "team" ? 1 : 0))] ?? challengers[0] ?? soloPlayer;
+  const reference = creatorTurn ? undefined : recordingsByRound.get(round)?.get(String(creator.id));
   const totalRounds = mode === "team" && format === "full" ? players.length : 1;
-  const rankings: Ranking[] = players.map(player => ({ player, average: null, attempts: 0 }));
+  const rankings: Ranking[] = players.map(player => {
+    const scores = [...scoresByRound.values()].flatMap(scores => {
+      const score = scores.get(String(player.id));
+      return score ? [score.total] : [];
+    });
+    const average = scores.length
+      ? Math.round(10 * scores.reduce((sum, total) => sum + total, 0) / scores.length) / 10
+      : null;
+    return { player, average, attempts: scores.length };
+  }).sort((a, b) => (b.average ?? -1) - (a.average ?? -1));
+
+  function resetResults() {
+    setRecordingsByRound(new Map());
+    setScoresByRound(new Map());
+  }
 
   function returnHome() {
-    recordingsByRound.current.clear();
+    resetResults();
     setScreen("home");
     setRound(0);
     setTurnIndex(0);
@@ -37,7 +59,8 @@ export function GameFlow() {
 
   function openNextTurn() {
     if (creatorTurn) {
-      setTurnIndex(1);
+      if (challengers.length) setTurnIndex(1);
+      else setScreen("leaderboard");
       return;
     }
     const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
@@ -49,26 +72,50 @@ export function GameFlow() {
   }
 
   function completeTurn(recording: PoseSequence) {
-    const recordings = recordingsByRound.current.get(round) ?? new Map<string, PoseSequence>();
-    recordings.set(recording.playerId, recording);
-    recordingsByRound.current.set(round, recordings);
-
+    setRecordingsByRound(previous => {
+      const recordings = new Map(previous.get(round));
+      recordings.set(recording.playerId, recording);
+      return new Map(previous).set(round, recordings);
+    });
     if (creatorTurn) {
       openNextTurn();
-      return;
+    } else if (reference) {
+      judgeAttempt(reference, recording);
+    } else {
+      setJudging({ status: "unscored" });
+      setScreen("judging");
     }
-    setLastScoredPlayer(activePlayer);
-    setScreen("score");
   }
 
-  function continueAfterScore() {
-    const challengerIndex = turnIndex - (mode === "team" ? 1 : 0);
-    if (challengerIndex + 1 < challengers.length) {
-      setTurnIndex(turnIndex + 1);
-      setScreen("dashboard");
-    } else {
-      setScreen("leaderboard");
+  function judgeAttempt(reference: PoseSequence, attempt: PoseSequence) {
+    setScreen("judging");
+    try {
+      const score = scoreAttempt(reference, attempt);
+      setScoresByRound(previous => {
+        const scores = new Map(previous.get(round));
+        scores.set(attempt.playerId, score);
+        return new Map(previous).set(round, scores);
+      });
+      setJudging({ status: "scored", score });
+    } catch (error) {
+      if (!(error instanceof ScoreInputError)) throw error;
+      setJudging({ status: "error", message: error.message, recording: error.recording });
     }
+  }
+
+  function rerecordReference() {
+    setRecordingsByRound(previous => {
+      const next = new Map(previous);
+      next.delete(round);
+      return next;
+    });
+    setScoresByRound(previous => {
+      const next = new Map(previous);
+      next.delete(round);
+      return next;
+    });
+    setTurnIndex(0);
+    setScreen("dashboard");
   }
 
   function advanceFromLeaderboard() {
@@ -82,7 +129,7 @@ export function GameFlow() {
   }
 
   function replay() {
-    recordingsByRound.current.clear();
+    resetResults();
     setRound(0);
     setTurnIndex(0);
     setScreen("camera");
@@ -112,21 +159,44 @@ export function GameFlow() {
   }
 
   if (screen === "dashboard") {
-    return <DashboardPage player={activePlayer} creator={creator} players={rankings} round={round + 1} rounds={totalRounds} bpm={bpm}
-      onMenu={returnHome} onRecord={completeTurn} onSkip={openNextTurn} />;
+    return <DashboardPage key={`${round}-${turnIndex}`} reference={reference} player={activePlayer} creator={creator} players={rankings} round={round + 1} rounds={totalRounds} bpm={bpm}
+      onMenu={returnHome} onRecord={completeTurn} onSkip={creatorTurn ? undefined : openNextTurn} />;
   }
 
-  if (screen === "score") {
-    return <ScorePage player={lastScoredPlayer} score={emptyScore} onMenu={returnHome} onContinue={continueAfterScore} />;
+  if (screen === "judging") {
+    if (judging.status === "scored") {
+      return <ScorePage player={activePlayer} score={judging.score} onContinue={openNextTurn} onMenu={returnHome} />;
+    }
+
+    return (
+      <PageFrame>
+        <GameHeader title={activePlayer.name} label="SCORE REVEAL" onMenu={returnHome} />
+        <div className="result-footer" role="status">
+          {judging.status === "unscored" && <p>Dance captured. You need a reference dance to get a score.</p>}
+          {judging.status === "error" && <p>{judging.message}</p>}
+        </div>
+        <div className="result-footer">
+          {judging.status === "unscored" && <ArcadeButton onClick={openNextTurn}>SEE RESULTS</ArcadeButton>}
+          {judging.status === "error" && <>
+            {judging.recording === "reference"
+              ? <ArcadeButton onClick={rerecordReference}>REDO ROUND</ArcadeButton>
+              : <>
+                <ArcadeButton onClick={() => setScreen("dashboard")}>RECORD AGAIN</ArcadeButton>
+                <ArcadeButton secondary onClick={openNextTurn}>SKIP SCORE</ArcadeButton>
+              </>}
+          </>}
+        </div>
+      </PageFrame>
+    );
   }
 
   if (screen === "leaderboard") {
-    return <LeaderboardPage players={rankings} onMenu={returnHome} onNext={advanceFromLeaderboard} />;
+    return <LeaderboardPage players={rankings} onMenu={returnHome} onNext={advanceFromLeaderboard}
+      nextLabel={round + 1 < totalRounds ? "NEXT ROUND" : "REVEAL WINNER"} />;
   }
 
   if (screen === "finale") {
-    const loser = players[players.length - 1] ?? soloPlayer;
-    return <FinalePage loser={loser} worstScore={emptyScore} headline="Results are waiting for gameplay scoring" roastLine="Connect recording and scoring to see the final report." players={rankings} onReplay={replay} onMenu={returnHome} />;
+    return <WinnerPage players={rankings} onReplay={replay} onMenu={returnHome} />;
   }
 
   return <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn(value => !value)}
