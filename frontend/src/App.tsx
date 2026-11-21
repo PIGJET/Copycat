@@ -1,12 +1,8 @@
 
-import Camera from "./components/Camera/Camera";
+import { GameFlow } from "./components/Game/GameFlow";
 
 function App() {
-  return (
-    <div>
-      <Camera />
-    </div>
-  );
+  return <GameFlow />;
 }
 
 export default App;
