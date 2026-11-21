@@ -84,3 +84,7 @@ Character customization uses head portraits only. Retain hats, eyewear, and face
 
 
 Dancing-screen focus: remove the right-hand reference panel. The landscape camera expands across the available space beside a compact score rail; turn heading and actions align with the camera. At narrow widths the camera leads and scores follow. Beat timing and turn progression are unchanged.
+
+
+## Finale cleanup
+Inside the existing arcade system, the finale hierarchy is a single player headline, the large red-and-white replay frame, and quieter standings. Silkscreen is reserved for the page heading; Barlow carries the news headline, scores, and controls. The duplicated broadcast labels, scrolling stat ticker, repeated score statistics, and cosmetic privacy toggle are removed. The yellow Send my video action matches the dance page. Sharing uses the native device sheet or a local download; the demo explicitly indicates missing footage.

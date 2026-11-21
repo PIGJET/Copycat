@@ -7,14 +7,16 @@ const source=fs.readFileSync(path.join(__dirname,'../dist/home-music.js'),'utf8'
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function setup({initialSound=true,play=()=>Promise.resolve()}={}){
   let screen='home';
-  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'||name==='tempo-setup-screen'&&screen==='tempo'}},status={textContent:''},calls={plays:0,pauses:0};
+  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'||name==='tempo-setup-screen'&&screen==='tempo'||name==='results-leaderboard'&&screen==='leaderboard'}},status={textContent:''},calls={plays:0,pauses:0};
   const soundEvents={},documentEvents={},windowEvents={};let observer;
   const music={volume:1,play(){calls.plays++;return play();},pause(){calls.pauses++;}};
+  const lobby={get hidden(){return screen!=='lobby'}};
+  const idle={paused:true,volume:1,async play(){this.paused=false},pause(){this.paused=true}};
   const document={hidden:false,addEventListener:(type,fn)=>documentEvents[type]=fn,
-    querySelector:s=>({'#game-screen':game,'#home-music':music,'#home-music-status':status,'#sound':{addEventListener:(type,fn)=>soundEvents[type]=fn}}[s])};
+    querySelector:s=>({'#game-screen':game,'.lobby-screen':lobby,'#idle-music':idle,'#home-music':music,'#home-music-status':status,'#sound':{addEventListener:(type,fn)=>soundEvents[type]=fn}}[s])};
   const context=vm.createContext({document,window:{addEventListener:(type,fn)=>windowEvents[type]=fn},MutationObserver:class{constructor(fn){observer=fn;}observe(){}}});
   vm.runInContext('let soundOn='+initialSound+';\n'+source,context);
-  return {game,music,status,calls,
+  return {game,music,idle,status,calls,
     interact:type=>documentEvents[type](),
     toggle:async on=>{vm.runInContext('soundOn='+on,context);await soundEvents.click();},
     navigate:async next=>{screen=next;game.hidden=['home','lobby'].includes(next);await observer();},
@@ -48,10 +50,15 @@ test('a delayed play result cannot continue audio after gameplay starts',async()
   let finish;const h=setup({play:()=>new Promise(resolve=>finish=resolve)});
   await h.navigate('challenge');finish();await settle();assert.equal(h.calls.plays,1);assert.equal(h.calls.pauses,2);
 });
-test('music continues through lobby and camera setup until gameplay',async()=>{
+test('the idle loop covers the lobby and results, and yields to setup and dance music',async()=>{
   const h=setup();await settle();
-  await h.navigate('lobby');await h.navigate('camera');await h.navigate('tempo');assert.equal(h.calls.pauses,0);
-  await h.navigate('challenge');assert.equal(h.calls.pauses,1);
-  await h.navigate('leaderboard');assert.equal(h.calls.pauses,2);
-  await h.navigate('lobby');assert.equal(h.calls.plays,5);
+  await h.navigate('lobby');assert.equal(h.idle.paused,false);
+  await h.navigate('camera');assert.equal(h.idle.paused,true);
+  await h.navigate('tempo');await h.navigate('challenge');assert.equal(h.idle.paused,true);
+  await h.navigate('score');assert.equal(h.idle.paused,true);
+  await h.navigate('leaderboard');assert.equal(h.idle.paused,false);
+  await h.toggle(false);assert.equal(h.idle.paused,true);
+  await h.toggle(true);await h.visibility(true);assert.equal(h.idle.paused,true);
+  await h.visibility(false);assert.equal(h.idle.paused,false);
+  await h.navigate('creator');assert.equal(h.idle.paused,true);
 });

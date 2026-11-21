@@ -4,12 +4,50 @@ let checkStream=null,checkEpoch=0,checkReady=false;
 
 function stopRankSounds(){rankVoices.forEach(node=>{try{node.stop()}catch{}});rankVoices=[]}
 function stopRankAnimation(){rankEpoch++;cancelAnimationFrame(rankFrame);clearTimeout(rankDelay);rankAnimations.forEach(a=>a.cancel());rankAnimations=[];rankFrame=null;rankDelay=null;stopRankSounds()}
-function playRankSound(direction,delay=0){
-  if(!soundOn)return;
-  const AudioEngine=window.AudioContext||window.webkitAudioContext;if(!AudioEngine)return;
-  audio??=new AudioEngine();if(audio.state==='suspended')audio.resume().catch(()=>{});
-  const notes=direction==='up'?[440,554,740]:[440,349,262];
-  notes.forEach((frequency,i)=>{const at=audio.currentTime+delay+i*.065;const oscillator=audio.createOscillator(),gain=audio.createGain();oscillator.type='triangle';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(.035,at);gain.gain.exponentialRampToValueAtTime(.001,at+.09);oscillator.connect(gain);gain.connect(audio.destination);oscillator.start(at);oscillator.stop(at+.1);rankVoices.push(oscillator)});
+const arcadeCues = {
+  floor: [220, 330, 440, 660],
+  turn: [660, 880],
+  count: [392],
+  go: [784, 1047],
+  tally: [494],
+  up: [440, 554, 740],
+  down: [440, 349, 262],
+  score: [523, 659, 784],
+  finale: [330, 440, 554, 880]
+};
+
+function playCue(name, delay = 0) {
+  if (!soundOn || document.hidden) return;
+  const Engine = window.AudioContext || window.webkitAudioContext;
+  if (!Engine) return;
+  audio ??= new Engine();
+  const epoch = rankEpoch;
+  const schedule = () => {
+    if (epoch !== rankEpoch || !soundOn || document.hidden) return;
+    arcadeCues[name].forEach((pitch, index) => {
+      const start = audio.currentTime + delay + index * 0.065;
+      const duration = name === 'tally' ? 0.035 : 0.1;
+      const voice = audio.createOscillator();
+      const envelope = audio.createGain();
+      voice.type = name === 'count' || name === 'tally' ? 'square' : 'triangle';
+      voice.frequency.value = pitch;
+      envelope.gain.setValueAtTime(0.001, start);
+      envelope.gain.exponentialRampToValueAtTime(name === 'tally' ? 0.012 : 0.045, start + 0.005);
+      envelope.gain.exponentialRampToValueAtTime(0.001, start + duration);
+      voice.connect(envelope);
+      envelope.connect(audio.destination);
+      rankVoices.push(voice);
+      voice.onended = () => {
+        voice.disconnect();
+        envelope.disconnect();
+        rankVoices = rankVoices.filter(node => node !== voice);
+      };
+      voice.start(start);
+      voice.stop(start + duration);
+    });
+  };
+  if (audio.state === 'running') schedule();
+  else audio.resume().then(schedule).catch(() => {});
 }
 document.querySelector('#sound').addEventListener('click',()=>{if(!soundOn)stopRankSounds()});
 function movementIcon(delta){return `<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${delta>0?'M9 15V3M3 9l6-6 6 6':'M9 3v12M3 9l6 6 6-6'}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/></svg>`}
@@ -39,19 +77,24 @@ function animateRankings(){
       el.classList.toggle('first-place',row===scored[0]);el.classList.toggle('last-place',row===last&&scored.length>1);
       badge.className='rank-change';badge.removeAttribute('role');badge.innerHTML='';
       if(movement.delta){const up=movement.delta>0;badge.classList.add(up?'rank-up':'rank-down');badge.setAttribute('role','img');badge.setAttribute('aria-label',`Moved ${up?'up':'down'} ${Math.abs(movement.delta)} ${Math.abs(movement.delta)===1?'place':'places'}`);badge.innerHTML=movementIcon(movement.delta)+`<span>${Math.abs(movement.delta)}</span>`}
-      else if(movement.isNew){badge.classList.add('rank-new');badge.setAttribute('aria-label','New entry');badge.textContent='NEW'}
+      else if(movement.isNew)badge.setAttribute('aria-label','New entry');
       else badge.setAttribute('aria-label','Rank unchanged');
     }
     const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(reduced){finish();return}
     for(const [id,el] of elements){const delta=positions.get(id)-el.getBoundingClientRect().top;if(delta){el.style.zIndex=delta>0?'2':'1';const animation=el.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}],{duration:700,easing:'cubic-bezier(.22,.8,.3,1)'});rankAnimations.push(animation)}}
     const directions=[...transition.changes.values()];const hasUp=directions.some(change=>change.delta>0),hasDown=directions.some(change=>change.delta<0);
-    if(hasUp)playRankSound('up');if(hasDown)playRankSound('down',hasUp?.22:0);
+    if(hasUp)playCue('up');if(hasDown)playCue('down',hasUp?.22:0);
     rankDelay=setTimeout(finish,720);
   };
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){setValues(1);reorder();return}
+  const changesScore = transition.after.some(row => row.average !== null &&
+    row.average !== previous.get(String(row.player.id))?.average);
+  let lastTick = -1;
   const start=performance.now();
-  const frame=now=>{if(epoch!==rankEpoch||!board.isConnected)return;const t=Math.min(1,(now-start)/900);setValues(1-Math.pow(1-t,3));if(t<1)rankFrame=requestAnimationFrame(frame);else{setValues(1);board.dataset.animationPhase='scores-complete';rankDelay=setTimeout(reorder,120)}};
+  const frame=now=>{if(epoch!==rankEpoch||!board.isConnected)return;const t=Math.min(1,(now-start)/900);const tick = Math.min(6, Math.floor(t * 7));
+    if (changesScore && tick !== lastTick) { playCue('tally'); lastTick = tick; }
+    setValues(1-Math.pow(1-t,3));if(t<1)rankFrame=requestAnimationFrame(frame);else{setValues(1);board.dataset.animationPhase='scores-complete';rankDelay=setTimeout(reorder,120)}};
   setValues(0);rankFrame=requestAnimationFrame(frame);
 }
 
@@ -91,5 +134,5 @@ async function enableCameraCheck(){
 document.querySelector('#game-screen').addEventListener('click',e=>{
   const button=e.target.closest('[data-action]');if(!button||button.disabled)return;
   if(button.dataset.action==='camera-enable')enableCameraCheck();
-  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.screen='tempo';renderPreview()}
+  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.live=button.dataset.action==='camera-continue';preview.screen='tempo';renderPreview()}
 });
