@@ -143,12 +143,12 @@ It does not attempt to bypass unavailable/private/blocked sources.
 ```bash
 curl --fail-with-body http://localhost:8000/reference-video \
   -H 'Content-Type: application/json' \
-  --data '{"url":"https://www.youtube.com/watch?v=BaW_jenozKc","start_seconds":0,"duration_seconds":5}' \
+  --data '{"url":"https://www.youtube.com/watch?v=5bEjC8ufJ44","start_seconds":0,"duration_seconds":10}' \
   --output /tmp/copycat-reference.mp4
 ```
 
-The URL above is an example/test-video ID, not a guarantee of continued availability. Use an
-authorized video. Error bodies are JSON; check the status/content type before playing output.
+The URL above is the sample used for the live import check. Error bodies are JSON. Check the
+status and content type before playing the output.
 
 The endpoint returns a completed `video/mp4` response. It retrieves a bounded full source,
 accurately trims the selected section via transcoding, then verifies H.264/yuv420p, dimensions,
@@ -185,6 +185,5 @@ existing FastAPI stack and returns a completed clip in one response instead of a
 persistent video-serving route. [yt-dlp options](https://github.com/yt-dlp/yt-dlp),
 [FFmpeg documentation](https://ffmpeg.org/ffmpeg.html).
 
-Live retrieval check: yt-dlp returned “video unavailable” for the public test ID used during
-development. Native conversion is verified, but a successful live YouTube import still needs
-to be checked with a working authorized source on the demo network.
+Live import check: the sample above returned HTTP 200 with a 10.005-second, 1280×720 MP4
+containing H.264 video and AAC audio. FFmpeg decoded the entire video stream without errors.
