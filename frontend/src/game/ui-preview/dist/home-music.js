@@ -1,12 +1,13 @@
 // Local MP3 background audio; the existing sound button is the only control.
 (() => {
-  const home = document.querySelector('.title-screen');
+  const game = document.querySelector('#game-screen');
   const music = document.querySelector('#home-music');
   const status = document.querySelector('#home-music-status');
   let blocked = false;
   let request = 0;
   music.volume = 0.25;
-  const shouldPlay = () => soundOn && !home.hidden && !document.hidden;
+  const shouldPlay = () => soundOn && !document.hidden
+    && (game.hidden || game.classList.contains('camera-check-screen'));
 
   async function syncMusic() {
     const current = ++request;
@@ -37,7 +38,7 @@
   };
   document.addEventListener('click', retryPlayback);
   document.addEventListener('keydown', retryPlayback);
-  new MutationObserver(syncMusic).observe(home, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(syncMusic).observe(game, { attributes: true, attributeFilter: ['hidden', 'class'] });
   document.addEventListener('visibilitychange', syncMusic);
   window.addEventListener('pagehide', () => music.pause());
   syncMusic();
