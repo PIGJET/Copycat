@@ -4,15 +4,15 @@ import type { CSSProperties } from "react";
 import Camera from "../Camera/Camera";
 import type { CameraHandle } from "../Camera/Camera";
 import type { PoseLandmark, PoseSequence } from "../../types/pose";
+import { DanceFeedback } from "./DanceFeedback";
 import { PoseReplay } from "./PoseReplay";
 import type { Player, Ranking } from "./uiTypes";
 import { ArcadeButton, PageFrame, PlayerAvatar } from "./primitives";
 import "./DashboardCountdown.css";
 import "./DashboardMetronome.css";
 import "./DashboardTurnPrompt.css";
-import "./DashboardDanceFeedback.css";
-import { DanceCombo, HYPE_PER_MOVE, cueText } from "../../game/danceCombo";
-import type { DanceCue } from "../../game/danceCombo";
+import { DanceCueTracker } from "../../game/danceCue";
+import type { DanceCue } from "../../game/danceCue";
 
 const recordingSeconds = 10;
 
@@ -36,7 +36,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
   const recordingDeadline = useRef<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const recording = secondsLeft !== null;
-  const combo = useRef(new DanceCombo());
+  const cueTracker = useRef(new DanceCueTracker());
   const [danceCue, setDanceCue] = useState<DanceCue | null>(null);
   const [captureError, setCaptureError] = useState("");
   const isCreator = player.id === creator.id;
@@ -66,7 +66,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
       } catch { /* Pose scoring remains available when video encoding fails. */ }
     }
     recordingDeadline.current = performance.now() + recordingSeconds * 1000;
-    combo.current.reset();
+    cueTracker.current.reset();
     setDanceCue(null);
     setSecondsLeft(recordingSeconds);
     onRecordingChange?.(true);
@@ -74,7 +74,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
 
   const handleDancePose = useCallback((timestamp: number, landmarks: PoseLandmark[] | null) => {
     if (recordingDeadline.current === null) return;
-    const cue = combo.current.track(timestamp, landmarks);
+    const cue = cueTracker.current.track(timestamp, landmarks);
     if (cue) setDanceCue(cue);
   }, []);
 
@@ -170,22 +170,7 @@ export function DashboardPage({ arcade, player, creator, players, round, rounds,
         </div>
       )}
       {replaying && reference && <PoseReplay frames={reference.frames} durationMs={reference.duration} creator={creator.name} />}
-      {recording && !danceCue && (
-        <div className="dashboard-dance-feedback"><strong>Go!</strong></div>
-      )}
-      {recording && danceCue && (
-        <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
-          <span className="dashboard-dance-hype">+{HYPE_PER_MOVE} Hype</span>
-          <strong>{cueText(danceCue, isCreator ? "creator" : "copier")}</strong>
-          {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
-        </div>
-      )}
-      {recording && (
-        <div className="dashboard-hype-total">
-          <span>Hype</span>
-          <strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * HYPE_PER_MOVE}</strong>
-        </div>
-      )}
+      {recording && <DanceFeedback cue={danceCue} role={isCreator ? "creator" : "copier"} />}
       {!arcade && secondsLeft !== null && (
         <div className="dashboard-recording-timer" role="timer" aria-label="Recording time remaining">
           <span>Recording</span>

@@ -130,7 +130,9 @@
 .dashboard-arena { align-items:stretch }
 .dashboard-stage { grid-column:1; grid-row:1; border:3px solid #bcb5ee; border-radius:0; box-shadow:6px 6px 0 #24265c; background:#10111e }
 .dashboard-camera-scene { height:clamp(460px,calc(55vh + 80px),800px); background:#10111e }
-.dashboard-camera-scene::after { content:''; position:absolute; inset:14px; pointer-events:none; background:linear-gradient(#ffd246,#ffd246) left top/24px 3px no-repeat,linear-gradient(#ffd246,#ffd246) left top/3px 24px no-repeat,linear-gradient(#ffd246,#ffd246) right top/24px 3px no-repeat,linear-gradient(#ffd246,#ffd246) right top/3px 24px no-repeat,linear-gradient(#ffd246,#ffd246) left bottom/24px 3px no-repeat,linear-gradient(#ffd246,#ffd246) left bottom/3px 24px no-repeat,linear-gradient(#ffd246,#ffd246) right bottom/24px 3px no-repeat,linear-gradient(#ffd246,#ffd246) right bottom/3px 24px no-repeat }
+.dashboard-stage {
+  --camera-hud-inset: clamp(12px, 2vw, 20px);
+}
 .dashboard-camera-scene>.dashboard-pose { color:#8d91b6; opacity:.6; max-width:380px }
 .dashboard-pose .pose-joints { color:#d4cfef }
 .dashboard-camera-note { color:#c2bfd6; font-size:14px; bottom:22px }
@@ -257,10 +259,20 @@
   white-space: nowrap;
 }
 
+.dashboard-stage .recording-label,
+.dashboard-stage .dashboard-recording-timer {
+  top: var(--camera-hud-inset);
+}
+.dashboard-stage .recording-label {
+  left: var(--camera-hud-inset);
+}
+.dashboard-stage .dashboard-recording-timer {
+  right: var(--camera-hud-inset);
+}
 .dashboard-stage-timer:not([hidden]) {
   position: absolute;
-  top: clamp(12px, 2vw, 24px);
-  right: clamp(12px, 2vw, 24px);
+  top: var(--camera-hud-inset);
+  right: var(--camera-hud-inset);
   z-index: 2;
   display: grid;
   justify-items: end;
