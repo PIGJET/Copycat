@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from dance_fixtures import recording
 from main import app
+from scoring import BODY_NOT_CLEAR_MSG, BROKEN_RECORDING_MSG, NOT_ENOUGH_FRAMES_MSG, TOO_SHORT_MSG
 
 client = TestClient(app)
 
@@ -21,13 +22,54 @@ def test_score_returns_all_fields():
     assert set(body["worst_moment"]) == {"reference_ms", "attempt_ms"}
 
 
-def test_score_bad_input_is_422():
-    assert client.post("/score", json={"reference": recording()}).status_code == 422
-    assert client.post("/score", json={"reference": recording(), "attempt": {"frames": []}}).status_code == 422
-    bad = {"frames": [{"landmarks": f["landmarks"]} for f in recording()["frames"]]}  # no timestamps
-    r = client.post("/score", json={"reference": recording(), "attempt": bad})
+FRIENDLY = {NOT_ENOUGH_FRAMES_MSG, BODY_NOT_CLEAR_MSG, TOO_SHORT_MSG, BROKEN_RECORDING_MSG}
+
+
+def post_score(reference, attempt=...):
+    body = {"reference": reference} if attempt is ... else {"reference": reference, "attempt": attempt}
+    return client.post("/score", json=body)
+
+
+def assert_friendly_422(r, message=None, recording=None):
     assert r.status_code == 422
-    assert "timestamp" in r.json()["detail"]
+    body = r.json()
+    assert isinstance(body["detail"], str) and body["detail"] in FRIENDLY
+    if message:
+        assert body["detail"] == message
+    assert body["reason"]  # technical cause kept for developers
+    assert body["recording"] == recording
+
+
+def test_every_score_422_is_player_friendly():
+    ref = recording()
+    # Request body missing a field (FastAPI validation)
+    assert_friendly_422(post_score(ref), BROKEN_RECORDING_MSG)
+    # Frames with no timestamp
+    no_t = {"frames": [{"landmarks": f["landmarks"]} for f in ref["frames"]]}
+    r = post_score(ref, no_t)
+    assert_friendly_422(r, BROKEN_RECORDING_MSG, "attempt")
+    assert "timestamp" in r.json()["reason"]
+    # Frame that isn't an object
+    assert_friendly_422(post_score(["nope"] * 10, ref), BROKEN_RECORDING_MSG, "reference")
+    # Landmarks of the wrong shape
+    junk = {"frames": [{"t": i, "lm": ["x"] * 33} for i in range(10)]}
+    assert_friendly_422(post_score(ref, junk), BROKEN_RECORDING_MSG)
+    # No frames at all
+    assert_friendly_422(post_score(ref, {"frames": []}), NOT_ENOUGH_FRAMES_MSG, "attempt")
+    # 5 frames squeezed into a few ms
+    squeezed = {"frames": [{"t": i * 0.01, "lm": f["landmarks"]} for i, f in enumerate(ref["frames"][:5])]}
+    assert_friendly_422(post_score(ref, squeezed), TOO_SHORT_MSG, "attempt")
+
+
+def test_blurry_or_hidden_body_gets_friendly_message():
+    # Body in frame but every landmark low-confidence (blurry / half hidden)
+    blurry = recording()
+    for f in blurry["frames"]:
+        for lm in f["landmarks"]:
+            lm[3] = 0.2
+    r = post_score(recording(), blurry)
+    assert_friendly_422(r, BODY_NOT_CLEAR_MSG)
+    assert "visible" in r.json()["reason"]
 
 
 def test_score_contract_format_and_step_back_422():

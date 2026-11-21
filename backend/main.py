@@ -2,12 +2,19 @@
 
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+import logging
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from roast import RoastInputError, decode_image, make_roast
-from scoring import ScoringError, score_dance
+from scoring import BROKEN_RECORDING_MSG, ScoringError, score_dance
+
+log = logging.getLogger("copycat")
 
 app = FastAPI(title="Copycat backend")
 
@@ -37,19 +44,34 @@ class RoastRequest(BaseModel):
     attempt_image: Optional[str] = None
 
 
+def score_error(message: str, reason: str, recording: Optional[str] = None) -> JSONResponse:
+    """/score 422: `detail` is shown to players; `reason` and `recording` are for developers."""
+    log.warning("/score 422 (%s): %s", recording or "both", reason)
+    return JSONResponse(status_code=422,
+                        content={"detail": message, "reason": reason, "recording": recording})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    # Keep /score's 422s player-friendly; other endpoints get FastAPI's default.
+    if request.url.path == "/score":
+        return score_error(BROKEN_RECORDING_MSG, f"invalid request body: {exc.errors()}")
+    return await request_validation_exception_handler(request, exc)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/score")
-def score(req: ScoreRequest) -> dict[str, Any]:
+def score(req: ScoreRequest):
     try:
         return score_dance(req.reference, req.attempt)
     except ScoringError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        return score_error(e.message, e.reason, e.recording)
     except (KeyError, TypeError, ValueError, IndexError) as e:
-        raise HTTPException(status_code=422, detail=f"bad recording format: {e}")
+        return score_error(BROKEN_RECORDING_MSG, f"bad recording format: {type(e).__name__}: {e}")
 
 
 @app.post("/roast")

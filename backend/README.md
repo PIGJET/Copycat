@@ -38,9 +38,25 @@ and frame rates can differ. Also accepted: `"landmarks"` instead of `"lm"`, 4-va
 `[x, y, z, visibility]` lists, and `{"x", "y", "z", "visibility"}` dicts.
 Landmarks with visibility below 0.5 are ignored.
 
-Frames that are `null` (no pose detected), or whose `lm` is `null`, are skipped. If fewer than
-5 usable frames remain, you get a 422 whose `detail` tells the player to step back so their
-whole body is in frame. You can show that `detail` text directly.
+Frames that are `null` (no pose detected), or whose `lm` is `null`, are skipped.
+
+**Errors.** Every `/score` 422 has a player-friendly `detail` you can show on screen as is:
+
+```json
+{"detail": "We couldn't see enough of you. Step back so your whole body is in frame, then try again.",
+ "reason": "only 3 usable frames, need 5",
+ "recording": "attempt"}
+```
+
+| When | `detail` says |
+|---|---|
+| Fewer than 5 usable frames | step back so your whole body is in frame |
+| Body in frame but blurry / half hidden (no limb visible in both recordings) | step back into good light, whole body in frame |
+| Frames span less than ~67 ms | keep dancing for the whole 10 seconds |
+| Malformed request or frames (a frontend bug) | something went wrong, record it again |
+
+`reason` is the technical cause (also logged by the server) and `recording` is `"reference"`,
+`"attempt"` or `null`. Use it to tell the creator vs. the copier to redo their recording.
 
 ```json
 {
@@ -62,7 +78,7 @@ Response (scores 0-100; `arms`/`legs`/`torso` are `null` if that group was never
 ```
 
 `worst_moment`/`best_moment` are timestamps in each recording's own timeline: use them to
-grab the frames for `/roast`. Other unscoreable input (no visible pose, a frame missing `t`) is also a 422.
+grab the frames for `/roast`.
 
 How the score works: limb directions -> resample to 15 fps -> dynamic time warping
 (up to 1 s of drift) -> per-limb angle error (10° is free, 60° or worse is 0). Limbs that

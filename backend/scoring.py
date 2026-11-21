@@ -69,13 +69,31 @@ MOMENT_WINDOW = 7
 
 
 MIN_USABLE_FRAMES = 5
+
+# Player-facing messages. Every ScoringError carries one of these; the
+# technical cause goes in `reason` for developers.
 NOT_ENOUGH_FRAMES_MSG = (
     "We couldn't see enough of you. Step back so your whole body is in frame, then try again."
 )
+BODY_NOT_CLEAR_MSG = (
+    "We couldn't see your arms, legs or body clearly. Step back into good light so your "
+    "whole body is in frame, then try again."
+)
+TOO_SHORT_MSG = "That dance was over too fast. Keep dancing for the whole 10 seconds, then try again."
+BROKEN_RECORDING_MSG = "Something went wrong with that recording. Please record it again."
 
 
 class ScoringError(ValueError):
-    """Input can't be scored (e.g. no usable pose)."""
+    """Input can't be scored. str(e) is safe to show players; e.reason is for developers.
+
+    e.recording is "reference", "attempt" or None (both / unknown).
+    """
+
+    def __init__(self, message: str, reason: str | None = None, recording: str | None = None):
+        super().__init__(message)
+        self.message = message
+        self.reason = reason or message
+        self.recording = recording
 
 
 # ---------------------------------------------------------------------------
@@ -138,17 +156,17 @@ def _parse(recording: Any) -> tuple[np.ndarray, np.ndarray]:
         if f is None:
             continue  # no pose detected this frame
         if not isinstance(f, dict):
-            raise ScoringError("each frame must be an object like {\"t\": ms, \"lm\": [...]}")
+            raise ScoringError(BROKEN_RECORDING_MSG, "each frame must be an object like {\"t\": ms, \"lm\": [...]}")
         lm = f["lm"] if "lm" in f else f.get("landmarks")
         if lm is None or len(lm) < 29:
             continue
         t = f.get("t")
         if t is None:
-            raise ScoringError("every frame needs a timestamp 't' in ms")
+            raise ScoringError(BROKEN_RECORDING_MSG, "every frame needs a timestamp 't' in ms")
         times.append(float(t))
         vecs.append(_frame_vectors(lm))
     if len(times) < MIN_USABLE_FRAMES:
-        raise ScoringError(NOT_ENOUGH_FRAMES_MSG)
+        raise ScoringError(NOT_ENOUGH_FRAMES_MSG, f"only {len(times)} usable frames, need {MIN_USABLE_FRAMES}")
     order = np.argsort(times, kind="stable")
     return np.asarray(times)[order], np.asarray(vecs)[order]
 
@@ -165,7 +183,7 @@ def _resample(times: np.ndarray, vecs: np.ndarray) -> tuple[np.ndarray, np.ndarr
     Segments never visible stay NaN.
     """
     if times[-1] - times[0] < STEP_MS:
-        raise ScoringError("recording is too short to score")
+        raise ScoringError(TOO_SHORT_MSG, "recording spans less than one 15 fps frame")
     grid = np.arange(times[0], times[-1] + 1e-6, STEP_MS)
     out = np.full((len(grid), vecs.shape[1], 2), np.nan)
     for s in range(vecs.shape[1]):
@@ -246,13 +264,21 @@ def score_dance(reference: Any, attempt: Any) -> dict[str, Any]:
     normalised image coordinates. Fewer than MIN_USABLE_FRAMES usable frames
     raises ScoringError asking the player to step back.
     """
-    ref_t, ref_v = _resample(*_parse(reference))
-    att_t, att_v = _resample(*_parse(attempt))
+    try:
+        ref_t, ref_v = _resample(*_parse(reference))
+    except ScoringError as e:
+        e.recording = "reference"
+        raise
+    try:
+        att_t, att_v = _resample(*_parse(attempt))
+    except ScoringError as e:
+        e.recording = "attempt"
+        raise
 
     # Segments usable in both recordings
     valid = ~np.isnan(ref_v[:, :, 0]).all(axis=0) & ~np.isnan(att_v[:, :, 0]).all(axis=0)
     if not valid.any():
-        raise ScoringError("no body parts were visible in both recordings")
+        raise ScoringError(BODY_NOT_CLEAR_MSG, "no body parts were visible in both recordings")
     seg_idx = np.flatnonzero(valid)
 
     # Per-frame-pair cost: mean angle error over usable segments
