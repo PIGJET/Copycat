@@ -137,7 +137,7 @@ This uses Node's built-in runner, like `src/utils/referenceFrames.test.mjs`, so 
 
 Start the FastAPI backend on port 8000 from `backend/` and run `npm run dev`
 from `frontend/`. Open the Vite server's normal root URL to play Solo.
-To use a different backend URL, set `VITE_API_BASE_URL` before starting Vite.
+To use a different backend URL, set `VITE_API_URL` before starting Vite. The previous solo setting `VITE_API_BASE_URL` remains supported.
 The default React entry point mounts `Game.tsx`. The development route
 `/src/game/solo.html` remains available for the isolated Game lane.
 

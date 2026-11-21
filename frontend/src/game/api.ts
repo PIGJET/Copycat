@@ -4,7 +4,7 @@ import type { GameError, Recording, RoastRequest, RoastResult, ScoreResult } fro
 const DEFAULT_API_URL = "http://localhost:8000";
 
 export function apiUrl(): string {
-  const fromEnv = import.meta.env?.VITE_API_URL as string | undefined;
+  const fromEnv = (import.meta.env?.VITE_API_URL || import.meta.env?.VITE_API_BASE_URL) as string | undefined;
   return (fromEnv || DEFAULT_API_URL).replace(/\/+$/, "");
 }
 
@@ -93,8 +93,6 @@ export type { ScoreResult } from './types.ts';
 
 import type { PoseRecording } from '../types/pose';
 
-const BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? 'http://localhost:8000';
-
 class GameApiError extends Error {
   status: number;
   recording: unknown;
@@ -116,7 +114,7 @@ export function scoreRecovery(error: unknown): 'reference' | 'attempt' | 'retry'
 async function post(path: string, body: unknown, signal: AbortSignal, fallback: string) {
   let response: Response;
   try {
-    response = await fetch(BASE_URL + path, {
+    response = await fetch(apiUrl() + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -136,7 +134,7 @@ async function post(path: string, body: unknown, signal: AbortSignal, fallback: 
 
 export async function checkBackend(signal: AbortSignal) {
   try {
-    const response = await fetch(BASE_URL + '/health', { signal });
+    const response = await fetch(apiUrl() + '/health', { signal });
     if (response.ok && (await response.json()).status === 'ok') return;
   } catch {
     signal.throwIfAborted();
