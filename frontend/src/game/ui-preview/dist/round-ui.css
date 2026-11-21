@@ -1,0 +1,63 @@
+:root { --rank-down:#ff5c74 }
+.animated-board .rank-row { position:relative; will-change:transform }
+.animated-board .rank-score { min-width:105px; text-align:right; font-variant-numeric:tabular-nums }
+.animated-board .rank-score small { margin-left:4px }
+.rank-change { width:44px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; gap:3px; font-size:13px; font-weight:800 }
+.rank-change svg { width:18px; height:18px }
+.rank-up { color:var(--lime) }
+.rank-down { color:var(--rank-down) }
+.rank-new { color:var(--cyan); font-size:10px; letter-spacing:.5px }
+.animated-board ol { isolation:isolate }
+.camera-check-layout { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(280px,1fr); gap:36px; align-items:start }
+.camera-check-stage { border:2px solid var(--line); background:var(--surface-deep); overflow:hidden }
+.camera-check-stage .camera-local-label { color:#bba8ce; font-size:10px; font-weight:600 }
+.camera-check-viewport { position:relative; height:clamp(330px,46vh,540px); background:#100c18 }
+.camera-check-viewport video { width:100%; height:100%; object-fit:contain; transform:scaleX(-1); display:block }
+.camera-check-placeholder { height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:15px; text-align:center; padding:24px }
+.camera-check-placeholder .pose-outline { width:120px; height:160px; color:#655077 }
+.camera-check-placeholder strong { font-size:19px; color:#dbcae9 }
+.camera-check-placeholder>span { color:#ac95bf; font-size:14px; line-height:1.5 }
+.camera-frame-guide { position:absolute; inset:7% 14%; pointer-events:none; border:2px dashed #c3a7d55c }
+.camera-check-settings { padding:3px 0 0 }
+.camera-check-settings #camera-demo-state { margin-bottom:14px; display:inline-block }
+.camera-check-status,.camera-feed-info { display:flex; flex-direction:column; gap:9px; padding-bottom:22px; border-bottom:1px solid var(--line); margin-bottom:22px }
+.camera-check-status>span:first-child,.camera-feed-info>span,.camera-framing>span { color:#aa92bf; font-size:11px; font-weight:700; letter-spacing:1px }
+.camera-check-status strong { color:var(--lime); font-size:22px }
+.camera-check-status strong.camera-status-error { color:var(--rank-down) }
+.camera-check-status>span:last-child { color:#cab7d9; font-size:14px; line-height:1.5 }
+.camera-feed-info>strong { font-size:16px }
+.camera-framing>p { color:#dfd1ea; font-size:16px; line-height:1.5; margin:9px 0 0 }
+.camera-framing .data-note { font-size:12px; color:#a88fbc; margin-top:8px; max-width:none }
+.camera-check-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:25px }
+.camera-check-actions .ui-primary { flex:1 }
+.camera-check-actions [data-action=camera-demo] { width:100%; border-color:transparent; color:#b8a0cb; font-size:12px }
+.camera-check-actions [data-action=camera-demo]:hover { border-color:var(--line) }
+.camera-privacy { color:#a88fbc; font-size:12px; line-height:1.6; margin:15px 0 0 }
+@media(max-height:800px) and (min-width:1000px) {
+  .camera-check-viewport { height:370px }
+  .camera-check-status,.camera-feed-info { margin-bottom:18px; padding-bottom:18px }
+  .camera-check-actions { margin-top:20px }
+}
+@media(max-width:1000px) {
+  .camera-check-layout { grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr); gap:24px }
+  .animated-board .rank-row { gap:9px }
+  .animated-board .rank-score { min-width:92px; font-size:25px }
+  .rank-change { width:36px; font-size:12px }
+}
+@media(max-width:700px) {
+  .camera-check-layout { grid-template-columns:1fr; gap:25px }
+  .camera-check-viewport { height:330px }
+  .camera-check-settings { padding:0 }
+  .camera-check-status,.camera-feed-info { margin-bottom:18px; padding-bottom:18px }
+  .animated-board .rank-row { padding-left:9px; padding-right:9px; gap:7px }
+  .animated-board .rank-avatar { width:35px; height:35px }
+  .animated-board .rank-number { width:20px; font-size:20px }
+  .animated-board .rank-name strong { font-size:15px }
+  .animated-board .rank-name>span { font-size:10px }
+  .animated-board .rank-score { min-width:74px; font-size:22px }
+  .animated-board .rank-score small { font-size:10px }
+  .rank-change { width:29px; font-size:10px; gap:1px }
+  .rank-change svg { width:14px; height:14px }
+  .rank-new { font-size:8px }
+}
+@media(prefers-reduced-motion:reduce) { .animated-board .rank-row { will-change:auto } }
