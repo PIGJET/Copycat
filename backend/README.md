@@ -118,3 +118,67 @@ Response:
   any image over 2 MB -> 413, missing `total` -> 422.
 - `total` is required; the other scores and `worst_part` are optional, so you can pass
   `/score`'s output straight through.
+
+## Dance-video import: `POST /reference-video`
+
+Backend support for a local YouTube-reference workflow. The frontend game/reference processor
+is separate lane work; the current Camera screen does not call this endpoint yet.
+
+Install native tools on the Mac running uvicorn:
+
+```bash
+brew install yt-dlp ffmpeg node
+which yt-dlp ffmpeg ffprobe node
+yt-dlp --version
+node --version
+```
+
+Restart uvicorn after changing PATH. yt-dlp uses the explicitly selected Node runtime and
+its EJS components; see [runtime setup](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+Homebrew's native yt-dlp is invoked directly; no Python yt-dlp/ffmpeg package is required.
+The importer ignores personal yt-dlp configuration, disables disk cache, and uses no cookies.
+It does not attempt to bypass unavailable/private/blocked sources.
+
+```bash
+curl --fail-with-body http://localhost:8000/reference-video \
+  -H 'Content-Type: application/json' \
+  --data '{"url":"https://www.youtube.com/watch?v=BaW_jenozKc","start_seconds":0,"duration_seconds":5}' \
+  --output /tmp/copycat-reference.mp4
+```
+
+The URL above is an example/test-video ID, not a guarantee of continued availability. Use an
+authorized video. Error bodies are JSON; check the status/content type before playing output.
+
+The endpoint returns a completed `video/mp4` response. It retrieves a bounded full source,
+accurately trims the selected section via transcoding, then verifies H.264/yuv420p, dimensions,
+duration (within 250 ms of requested) and near-zero start time using ffprobe. The final clip
+is its own timeline; do not add the original YouTube start offset to score timestamps.
+Reference frames are extracted in the browser with MediaPipe, not by FFmpeg or this endpoint.
+Game should fetch a Blob, create an object URL and revoke it when no longer used.
+
+Limits: section 5–60 seconds; one import per process; 180-second total deadline; approximately
+250 MiB temporary data, sampled every 100 ms; final output <=100 MiB; metadata <=1 MiB.
+Native subprocess groups are terminated on timeout, size excess or request disconnect.
+Temporary files are always cleaned before the bounded response bytes are sent. A bounded
+100 MiB response can occupy memory until sent; do not run this local demo with multiple workers.
+Full-source retrieval can exceed the budget even for a short selected section. Use a shorter
+source or permitted local MP4 if that happens. No persistent video library or job queue is created.
+
+Errors: 400 input/source; 502 retrieval/conversion/size/storage; 503 tools missing/busy;
+504 timeout. `detail` is safe to display; `reason` is a stable developer category. Client
+cancellation terminates processing; the internal disconnected category uses 499.
+
+Tests never download YouTube. `test_reference_video.py` mocks retrieval/API failures and
+runs real native process supervision; its FFmpeg normalization smoke test runs only when
+ffmpeg/ffprobe are available. Existing scoring/roast tests remain unchanged.
+
+Synthetic scoring profile on the development Mac (15 fps, current unmodified scorer):
+10 s: ~0.010 s; 30 s: ~0.045 s; 60 s: ~0.182 s. Process high-water memory reached ~315 MiB
+by the 60-second case. This is synthetic evidence, not a webcam accuracy benchmark. The
+scorer allocates all frame-pair costs before banded DTW, so longer durations are not enabled.
+
+Reference architecture: [Jigglewiggle](https://github.com/cindyzli/jigglewiggle) documents local
+MP4 download followed by browser MediaPipe extraction. This implementation uses Copycat's
+existing FastAPI stack and returns a completed clip in one response instead of adding a
+persistent video-serving route. [yt-dlp options](https://github.com/yt-dlp/yt-dlp),
+[FFmpeg documentation](https://ffmpeg.org/ffmpeg.html).

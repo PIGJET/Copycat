@@ -3,13 +3,17 @@
 from typing import Any, Optional
 
 import logging
+from pathlib import Path
+import tempfile
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, Field
+
+import reference_video
 
 from roast import RoastInputError, decode_image, make_roast
 from scoring import BROKEN_RECORDING_MSG, ScoringError, score_dance
@@ -30,6 +34,12 @@ app.add_middleware(
 class ScoreRequest(BaseModel):
     reference: Any
     attempt: Any
+
+
+class ReferenceVideoRequest(BaseModel):
+    url: str
+    start_seconds: float = Field(default=0, ge=0, allow_inf_nan=False)
+    duration_seconds: float = Field(default=10, ge=5, le=60, allow_inf_nan=False)
 
 
 class RoastRequest(BaseModel):
@@ -56,6 +66,10 @@ async def validation_error(request: Request, exc: RequestValidationError):
     # Keep /score's 422s player-friendly; other endpoints get FastAPI's default.
     if request.url.path == "/score":
         return score_error(BROKEN_RECORDING_MSG, f"invalid request body: {exc.errors()}")
+    if request.url.path == "/reference-video":
+        return JSONResponse(status_code=400, content={
+            "detail": "Provide a YouTube link, a nonnegative start and a duration between 5 and 60 seconds.",
+            "reason": "invalid_request"})
     return await request_validation_exception_handler(request, exc)
 
 
@@ -86,3 +100,26 @@ async def roast(req: RoastRequest) -> dict[str, str]:
     stats = {"total": req.total, "arms": req.arms, "legs": req.legs,
              "torso": req.torso, "timing": req.timing}
     return await make_roast(req.player_name, stats, req.worst_part, ref_img, att_img)
+
+
+@app.post("/reference-video", response_class=Response)
+async def reference_video_import(req: ReferenceVideoRequest, request: Request):
+    # One local import at a time; a thread lock works across request event loops.
+    if not reference_video.IMPORT_LOCK.acquire(blocking=False):
+        return JSONResponse(status_code=503, content={
+            "detail": "Another dance is being prepared. Try again shortly.", "reason": "busy"})
+    try:
+        with tempfile.TemporaryDirectory(prefix="copycat-reference-") as directory:
+            output = await reference_video.prepare_reference(
+                req.url, req.start_seconds, req.duration_seconds, Path(directory), request.is_disconnected)
+            # Bounded bytes outlive the temporary file, including response disconnects.
+            data = output.read_bytes()
+        return Response(content=data, media_type="video/mp4")
+    except reference_video.ImportFailure as exc:
+        return JSONResponse(status_code=exc.status, content={"detail": exc.detail, "reason": exc.reason})
+    except OSError:
+        return JSONResponse(status_code=502, content={
+            "detail": "Video storage is unavailable. Try again or choose a local MP4.",
+            "reason": "storage_error"})
+    finally:
+        reference_video.IMPORT_LOCK.release()
