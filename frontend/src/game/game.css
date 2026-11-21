@@ -42,17 +42,17 @@
 .solo-game button:focus-visible, .solo-game input:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .solo-game .solo-primary, .solo-game .challenge-recorder button { background: var(--solo-accent); color: #100b1d; border-color: #719e00; }
 .solo-game [role='alert'] { color: #ffaecf; }
-.solo-preview { width: min(100%, 720px); display: block; background: #0b0812; }
+.solo-preview { width: min(100%, 640px); aspect-ratio: 16 / 9; object-fit: contain; display: block; background: #0b0812; }
 .solo-rating { min-height: 2.5rem; font: 22px/1.4 Silkscreen, monospace; color: var(--solo-accent); }
 .solo-score strong { color: var(--solo-accent); font-size: clamp(40px, 9vw, 96px); }
 .solo-breakdown { display: flex; flex-wrap: wrap; gap: 1.25rem; padding: 0; }
 .solo-breakdown dt, .solo-replay__pane figcaption { color: var(--solo-muted); }
 .solo-breakdown dd { font-size: 1.5rem; }
-.solo-replay__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.solo-replay__pane { margin: 0; }
-.solo-replay__media { position: relative; background: #0b0812; }
-.solo-replay__media video { display: block; width: 100%; }
-.solo-replay__media canvas { pointer-events: none; position: absolute; inset: 0; width: 100%; height: 100%; }
+.solo-replay__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; width: min(100%, 1296px); margin-inline: auto; }
+.solo-replay__pane { margin: 0; min-width: 0; }
+.solo-replay__media { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #0b0812; }
+.solo-replay__media video { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.solo-replay__media canvas { pointer-events: none; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .solo-replay__media--mirrored { transform: scaleX(-1); }
 
 @media (max-width: 600px) {

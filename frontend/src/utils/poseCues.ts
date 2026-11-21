@@ -60,7 +60,7 @@ export function selectPoseCues(recording: PoseRecording, durationMs: number, sou
 export function cuePosition(cueMs: number, playbackMs: number, width: number) {
   const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
   return {
-    x: safeWidth * .2 + (cueMs - playbackMs) * safeWidth * .8 / 2000,
+    x: safeWidth * .2 + (cueMs - playbackMs) * safeWidth * .8 / 4000,
     highlighted: playbackMs >= cueMs && playbackMs < cueMs + 140,
   };
 }
@@ -95,4 +95,20 @@ export function cueGeometry(cues: PoseCue[], source: SourceSize): CueGeometry {
   }
   if (!cues.length) return { ...geometry, minX: 0, maxX: 1, minY: 0, maxY: 1 };
   return geometry;
+}
+
+/** Fixed pages; highlight the next target without translating any card. */
+export function cuePage(times: number[], playbackMs: number, pageSize = 4) {
+  const next = times.findIndex(t => t >= playbackMs);
+  const active = next < 0 ? Math.max(0, times.length - 1) : next;
+  return { start: Math.floor(active / pageSize) * pageSize, active };
+}
+
+/** Keep three future cards ahead of the highlighted target before the row ends. */
+export function cueWindow(times: number[], playbackMs: number, size = 10) {
+  const next = times.findIndex(t => t >= playbackMs);
+  const active = next < 0 ? Math.max(0, times.length - 1) : next;
+  const ahead = Math.min(3, Math.max(1, size - 2));
+  const start = Math.max(0, Math.min(active - (size - ahead - 1), times.length - size));
+  return { start, active };
 }

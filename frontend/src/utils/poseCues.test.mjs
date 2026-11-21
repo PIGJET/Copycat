@@ -25,7 +25,7 @@ test('missing, faint, or nonfinite poses leave a gap without mutating frames', (
 
 test('cue position follows media time and reaches marker at its timestamp', () => {
   assert.deepEqual(cuePosition(800, 800, 1000), { x: 200, highlighted: true })
-  assert.equal(cuePosition(2800, 800, 1000).x, 1000)
+  assert.equal(cuePosition(4800, 800, 1000).x, 1000)
   assert.equal(cuePosition(800, 940, 1000).highlighted, false)
 })
 
@@ -69,3 +69,21 @@ test('shared geometry contains a fallback head when face landmarks are absent', 
   assert.ok(Number.isFinite(head.x) && Number.isFinite(head.y) && head.radius > 0);
   assert.ok(geometry.minY <= head.y - head.radius);
 });
+
+test('stationary cue pages keep card slots fixed until the next page', async () => {
+  const { cuePage } = await import('./poseCues.ts')
+  const times = [0, 800, 1600, 2400, 3200, 4000]
+  assert.deepEqual(cuePage(times, 0, 4), { start: 0, active: 0 })
+  assert.deepEqual(cuePage(times, 900, 4), { start: 0, active: 2 })
+  assert.deepEqual(cuePage(times, 2500, 4), { start: 4, active: 4 })
+  assert.deepEqual(cuePage(times, 9999, 4), { start: 4, active: 5 })
+})
+
+test('cue window shifts early and retains upcoming targets', async () => {
+  const { cueWindow } = await import('./poseCues.ts')
+  const times = Array.from({length: 20}, (_, i) => i * 800)
+  assert.deepEqual(cueWindow(times, 0, 10), {start: 0, active: 0})
+  assert.deepEqual(cueWindow(times, 5600, 10), {start: 1, active: 7})
+  assert.deepEqual(cueWindow(times, 6400, 10), {start: 2, active: 8})
+  assert.deepEqual(cueWindow(times, 99999, 10), {start: 10, active: 19})
+})
