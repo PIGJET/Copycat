@@ -1,0 +1,131 @@
+/* Arena styling adapted from the UI branch's starfield and arcade floor. */
+.arcade.dashboard-active {
+  --dashboard-columns: minmax(0, 1fr) clamp(12rem, 24vw, 17.5rem);
+  --dashboard-ink: #fff8e8;
+  --dashboard-muted: #c2bfd6;
+  background: #070810;
+}
+
+.arcade.dashboard-active > .stars {
+  display: block;
+  opacity: 0.8;
+  background-image:
+    radial-gradient(circle, #fff8e8 1px, transparent 1.5px),
+    radial-gradient(circle, #afbbdf 1px, transparent 1.5px),
+    radial-gradient(circle, #b5a6dc 1px, transparent 1.5px);
+  background-size: 137px 173px, 89px 127px, 283px 229px;
+  background-position: 18px 37px, 52px 14px, 110px 93px;
+  mask-image: linear-gradient(#000 65%, transparent);
+}
+
+.arcade.dashboard-active > .floor {
+  left: -50%;
+  bottom: -280px;
+  width: 200%;
+  height: 520px;
+  opacity: 0.72;
+  background-image:
+    linear-gradient(#080912 5px, transparent 5px),
+    linear-gradient(90deg, #080912 5px, transparent 5px),
+    conic-gradient(#6335b8 25%, #24277e 0 50%, #6335b8 0 75%, #24277e 0);
+  background-size: 120px 100px, 120px 100px, 240px 200px;
+  transform: perspective(440px) rotateX(54deg);
+  transform-origin: center top;
+  mask-image: linear-gradient(transparent, #000 20%);
+}
+
+.dance-dashboard .dashboard-header {
+  padding-right: 0;
+  padding-top: 0;
+}
+
+.dance-dashboard .dashboard-turn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #ffd246;
+  background: #17172a;
+}
+
+.dashboard-turn-avatar {
+  flex: 0 0 2.75rem;
+}
+
+.dashboard-turn-avatar svg {
+  display: block;
+  width: 100%;
+}
+
+.dance-dashboard .dashboard-stage,
+.dance-dashboard .dashboard-scores {
+  grid-row: 1;
+  border: 2px solid #766eaa;
+  border-radius: 4px;
+  background: #10111e;
+  box-shadow: 5px 5px #24265c;
+}
+
+.dance-dashboard .dashboard-stage { grid-column: 1; }
+.dance-dashboard .dashboard-scores { grid-column: 2; }
+
+.dashboard-camera-scene .dashboard-camera-feed {
+  width: min(100%, 640px);
+}
+
+.dashboard-camera-scene video,
+.dashboard-camera-scene canvas {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.dance-dashboard .dashboard-panel-title h3,
+.dance-dashboard .dashboard-brand > span {
+  color: #ffd246;
+}
+
+.dance-dashboard .dashboard-score-row.is-current {
+  background: #26223f;
+  box-shadow: inset 3px 0 #ffd246;
+}
+
+.dance-dashboard .dashboard-primary-actions {
+  grid-column: 1;
+  flex-wrap: wrap;
+  padding-right: 0;
+}
+
+.dance-dashboard .dashboard-controls .tracking-status { grid-column: 2; }
+
+.dance-dashboard .dashboard-primary-actions > .ui-primary:not(:disabled) {
+  background: #ffd246;
+  color: #241a08;
+  box-shadow: 0 3px #a7751e;
+}
+
+.dance-dashboard .dashboard-primary-actions > .ui-primary:hover:not(:disabled) {
+  background: #ffe385;
+}
+
+.results-leaderboard .rank-row,
+.winner-standings .rank-row {
+  border-left: 4px solid var(--player-color, #c99aeb);
+  background: color-mix(in srgb, var(--player-color, #c99aeb) 8%, #100b1d);
+}
+
+.results-leaderboard .rank-row.first-place {
+  background: color-mix(in srgb, var(--player-color, #c99aeb) 16%, #100b1d);
+}
+
+.results-leaderboard .rank-number,
+.winner-standings .rank-number,
+.results-leaderboard .first-place .rank-score {
+  color: var(--player-color, #ffd246);
+}
+
+@media (max-width: 850px) {
+  .arcade.dashboard-active { --dashboard-columns: minmax(0, 1fr); }
+  .dance-dashboard .dashboard-scores { grid-column: 1; grid-row: 2; }
+  .dance-dashboard .dashboard-controls { grid-template-columns: minmax(0, 1fr); }
+  .dance-dashboard .dashboard-controls .tracking-status { grid-column: 1; }
+}

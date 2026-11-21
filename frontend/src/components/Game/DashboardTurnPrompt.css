@@ -1,0 +1,83 @@
+.dashboard-turn-prompt {
+  position: absolute;
+  inset: 1rem 1rem auto;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.65rem, 2vw, 1rem);
+  width: min(36rem, calc(100% - 2rem));
+  max-width: calc(100% - 2rem);
+  box-sizing: border-box;
+  margin-inline: auto;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  border: 2px solid #ffd246;
+  border-radius: 6px;
+  background: #17172a;
+  box-shadow: 5px 5px #24265c, 0 0 1.5rem rgb(255 210 70 / 28%);
+  text-align: left;
+  pointer-events: none;
+  animation: dashboard-turn-prompt 5s both;
+}
+
+.dashboard-turn-prompt-avatar {
+  flex: 0 0 clamp(2.25rem, 9vw, 5rem);
+}
+
+.dashboard-turn-prompt-avatar svg {
+  display: block;
+  width: 100%;
+}
+
+.dashboard-turn-prompt strong {
+  display: block;
+  color: #ffd246;
+  font: 400 clamp(1.5rem, 5vw, 3rem)/1.12 Silkscreen, monospace;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-turn-prompt-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #73d9e9;
+  font: 400 0.8rem/1 Silkscreen, monospace;
+  text-transform: uppercase;
+}
+
+.dashboard-score-row.is-current .dashboard-score-player {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.dashboard-score-row.is-current .dashboard-score-player strong {
+  max-width: 100%;
+}
+
+.dashboard-up-now {
+  color: #ffd246;
+  font: 400 0.7rem/1.2 Silkscreen, monospace;
+  text-transform: uppercase;
+}
+
+.dashboard-turn-prompt p {
+  margin: 0.35rem 0 0;
+  color: #fff8e8;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@keyframes dashboard-turn-prompt {
+  from { opacity: 0; transform: translateY(-0.85rem) scale(0.92); }
+  6% { opacity: 1; transform: translateY(0) scale(1.025); }
+  10%, 94% { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-turn-prompt { animation-name: dashboard-turn-prompt-hide; animation-timing-function: step-end; }
+
+  @keyframes dashboard-turn-prompt-hide {
+    to { visibility: hidden; }
+  }
+}

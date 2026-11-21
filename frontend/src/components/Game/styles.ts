@@ -5,3 +5,4 @@ import "../../game/ui-preview/dist/team.css";
 import "../../game/ui-preview/dist/round-ui.css";
 import "../../game/ui-preview/dist/art-direction.css";
 import "../../game/ui-preview/dist/dashboard.css";
+import "./ArcadeArena.css";

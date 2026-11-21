@@ -37,3 +37,26 @@
 @media (prefers-reduced-motion: reduce) {
   .dashboard-countdown-number { animation: none; }
 }
+
+.dashboard-recording-timer {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #ffcb65;
+  border-radius: 8px;
+  background: #171020;
+  color: #f9e9f6;
+  font: 600 0.875rem/1.2 Silkscreen, monospace;
+  pointer-events: none;
+}
+
+.dashboard-recording-timer strong {
+  min-width: 3ch;
+  color: #ffcb65;
+  font-size: 1.15rem;
+  text-align: right;
+}
