@@ -34,6 +34,12 @@ export function GameFlow() {
   const activePlayer = creatorTurn ? creator : challengers[Math.max(0, turnIndex - (mode === "team" ? 1 : 0))] ?? challengers[0] ?? soloPlayer;
   const reference = creatorTurn ? undefined : recordingsByRound.get(round)?.get(String(creator.id));
   const totalRounds = mode === "team" && format === "full" ? players.length : 1;
+  const nextCreator = round + 1 < totalRounds ? players[round + 1] : undefined;
+  const roundInfo = {
+    round: round + 1,
+    rounds: totalRounds,
+    mode: mode === "solo" ? "SOLO" : format === "full" ? "FULL GAME" : "QUICK GAME",
+  };
   const rankings: Ranking[] = players.map(player => {
     const scores = [...scoresByRound.values()].flatMap(scores => {
       const score = scores.get(String(player.id));
@@ -119,7 +125,7 @@ export function GameFlow() {
   }
 
   function advanceFromLeaderboard() {
-    if (round + 1 < totalRounds) {
+    if (nextCreator) {
       setRound(round + 1);
       setTurnIndex(0);
       setScreen("dashboard");
@@ -165,12 +171,12 @@ export function GameFlow() {
 
   if (screen === "judging") {
     if (judging.status === "scored") {
-      return <ScorePage player={activePlayer} score={judging.score} onContinue={openNextTurn} onMenu={returnHome} />;
+      return <ScorePage player={activePlayer} score={judging.score} onContinue={openNextTurn} onMenu={returnHome} roundInfo={roundInfo} />;
     }
 
     return (
       <PageFrame>
-        <GameHeader title={activePlayer.name} label="SCORE REVEAL" onMenu={returnHome} />
+        <GameHeader title={activePlayer.name} label="SCORE REVEAL" onMenu={returnHome} {...roundInfo} />
         <div className="result-footer" role="status">
           {judging.status === "unscored" && <p>Dance captured. You need a reference dance to get a score.</p>}
           {judging.status === "error" && <p>{judging.message}</p>}
@@ -192,11 +198,11 @@ export function GameFlow() {
 
   if (screen === "leaderboard") {
     return <LeaderboardPage players={rankings} onMenu={returnHome} onNext={advanceFromLeaderboard}
-      nextLabel={round + 1 < totalRounds ? "NEXT ROUND" : "REVEAL WINNER"} />;
+      roundInfo={roundInfo} nextCreator={nextCreator?.name} nextLabel={nextCreator ? "NEXT ROUND" : "REVEAL WINNER"} />;
   }
 
   if (screen === "finale") {
-    return <WinnerPage players={rankings} onReplay={replay} onMenu={returnHome} />;
+    return <WinnerPage players={rankings} onReplay={replay} onMenu={returnHome} roundInfo={roundInfo} />;
   }
 
   return <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn(value => !value)}
