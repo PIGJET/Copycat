@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import type { PoseSequence } from "../../types/pose";
+import "./PoseReplay.css";
 
 export function PoseReplay({ sequence, creator }: { sequence: PoseSequence; creator: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,13 +36,19 @@ export function PoseReplay({ sequence, creator }: { sequence: PoseSequence; crea
   }, [sequence]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={640}
-      height={480}
-      role="img"
-      aria-label={`${creator}’s dance pose replay`}
-      style={{ display: "block", width: "100%", maxWidth: 640, background: "#251b31", transform: "scaleX(-1)" }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        width={640}
+        height={480}
+        role="img"
+        aria-label={`${creator}’s dance pose replay`}
+        style={{ display: "block", width: "100%", maxWidth: 640, background: "#251b31", transform: "scaleX(-1)" }}
+      />
+      <p className="pose-replay-caption" role="status">
+        <span aria-hidden="true" className="pose-replay-icon" />
+        <span>Watch <strong>{creator}’s move</strong></span>
+      </p>
+    </>
   );
 }
