@@ -11,6 +11,8 @@ import { AttemptCapture } from "../../utils/attemptCapture";
 import { REFERENCE_SAMPLE_MS } from "../../utils/referenceFrames";
 import { attemptToVideoMs } from "../../utils/replayTiming";
 import { cameraRecordingType, recordCameraVideo } from "../../utils/videoRecording";
+import { DanceCombo, HYPE_PER_MOVE, cueText } from "../../game/danceCombo";
+import type { DanceCue } from "../../game/danceCombo";
 import { COUNTDOWN_SECONDS, TURN_MESSAGES, TURN_MS, bodyInFrame, framingHint, toGameRecording } from "../../game/teamTurn";
 import type { Recording } from "../../game/types";
 import { DashboardPage } from "./DashboardPage";
@@ -29,8 +31,10 @@ interface Turn {
   startedAt?: number;
 }
 
-export type TeamTurnDashboardProps = Omit<DashboardPageProps, "onRecord" | "stage" | "countdown" | "recording" | "onStop" | "startLabel" | "startDisabled" | "statusMessage" | "tracking" | "phase"> & {
+export type TeamTurnDashboardProps = Omit<DashboardPageProps, "onRecord" | "stage" | "countdown" | "recording" | "onStop" | "startLabel" | "startDisabled" | "statusMessage" | "tracking" | "phase" | "overlay" | "turnPrompt"> & {
   role: "creator" | "copier";
+  /** True while the 10 s take is recording (GameFlow plays the gameplay music then). */
+  onRecordingChange?: (recording: boolean) => void;
   /** The creator's recording (copiers): its video plays beside the camera. */
   reference: Recording | null;
   onComplete: (recording: Recording) => void;
@@ -59,7 +63,7 @@ function abortTurn(turn: Turn) {
   turn.controller.abort();
 }
 
-export function TeamTurnDashboard({ role, reference, onComplete, ...page }: TeamTurnDashboardProps) {
+export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChange, ...page }: TeamTurnDashboardProps) {
   const camera = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const referenceVideo = useRef<HTMLVideoElement>(null);
@@ -72,6 +76,10 @@ export function TeamTurnDashboard({ role, reference, onComplete, ...page }: Team
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  // Live hype/combo feedback: visual only, the score comes from POST /score.
+  const combo = useRef(new DanceCombo());
+  const [danceCue, setDanceCue] = useState<DanceCue | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const referenceUrl = role === "copier" ? reference?.videoUrl ?? null : null;
   const referenceOffsetSec = (reference?.videoOffsetMs ?? 0) / 1000;
@@ -95,6 +103,8 @@ export function TeamTurnDashboard({ role, reference, onComplete, ...page }: Team
       return;
     }
     turn.poses.sample(timestamp, landmarks);
+    const cue = combo.current.track(timestamp, landmarks);
+    if (cue) setDanceCue(cue);
   }
 
   // One frame per 15 Hz slot, sampled at twice that rate (same as ChallengeRecorder).
@@ -180,10 +190,34 @@ export function TeamTurnDashboard({ role, reference, onComplete, ...page }: Team
     };
   }, [busy]);
 
+  // ---- recording state for GameFlow's music, and the seconds-left badge ----
+  const isRecording = phase === "recording";
+  const onRecordingChangeRef = useRef(onRecordingChange);
+  useEffect(() => {
+    onRecordingChangeRef.current = onRecordingChange;
+  });
+  useEffect(() => {
+    onRecordingChangeRef.current?.(isRecording);
+    if (!isRecording) return;
+    const update = () => {
+      const started = turnRef.current?.startedAt;
+      if (started !== undefined) setSecondsLeft(Math.max(0, Math.ceil((started + TURN_MS - performance.now()) / 1000)));
+    };
+    update();
+    const interval = window.setInterval(update, 200);
+    return () => {
+      window.clearInterval(interval);
+      setSecondsLeft(null);
+      onRecordingChangeRef.current?.(false);
+    };
+  }, [isRecording]);
+
   // ---- turn steps ----
   function beginCapture(turn: Turn) {
     turn.startedAt = now();
     turn.poses.start(turn.startedAt);
+    combo.current.reset();
+    setDanceCue(null);
     turn.phase = "recording";
     setPhase("recording");
     setMessage("");
@@ -357,6 +391,18 @@ export function TeamTurnDashboard({ role, reference, onComplete, ...page }: Team
       startDisabled={!canStart}
       statusMessage={issue || message}
       tracking={tracking}
+      turnPrompt={phase === "idle"}
+      overlay={isRecording && <>
+        {danceCue && (
+          <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
+            <span className="dashboard-dance-hype">+{HYPE_PER_MOVE} Hype</span>
+            <strong>{cueText(danceCue)}</strong>
+            {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
+          </div>
+        )}
+        <div className="dashboard-hype-total"><span>Hype</span><strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * HYPE_PER_MOVE}</strong></div>
+        {secondsLeft !== null && <div className="dashboard-recording-timer" role="timer" aria-label="Recording time remaining"><span>Recording</span><strong>{secondsLeft}s</strong></div>}
+      </>}
     />
   );
 }
