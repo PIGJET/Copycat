@@ -27,7 +27,7 @@ function demoRankings(crew,results){
     return b.average-a.average||b.timing-a.timing||a.index-b.index;
   });
 }
-function weakestPart(score){return ['arms','legs','torso','timing'].reduce((a,b)=>score[a]<=score[b]?a:b)}
+function weakestPart(score){return ['arms','legs','torso','timing'].filter(part=>Number.isFinite(score[part])).reduce((a,b)=>score[a]<=score[b]?a:b,'timing')}
 function rankTransition(crew,previousResults,currentResults){
   const before=demoRankings(crew,previousResults),after=demoRankings(crew,currentResults);
   const previousRanks=new Map(before.filter(r=>r.average!==null).map((r,i)=>[r.player.id,i+1]));

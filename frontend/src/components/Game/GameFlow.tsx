@@ -6,6 +6,10 @@ import { checkHealth } from "../../game/api";
 import { getRecording } from "../../game/recordingSource";
 import { isMockMode } from "../../game/teamTurn";
 import { TeamTurnDashboard } from "./TeamTurnDashboard";
+import { PLAYER_COLORS } from "./playerColors";
+import type { RoundInfo } from "./ResultsPages";
+import { useGameMusic } from "../../game/useGameMusic";
+import type { MusicMode } from "../../game/useGameMusic";
 import { allAttempts, startError } from "../../game/rules";
 import { useGame } from "../../game/useGame";
 import { FinaleScene } from "../../shame/FinaleScene";
@@ -44,6 +48,8 @@ export function GameFlow() {
   const [gameSeed, setGameSeed] = useState(newSeed);
   /** The full-screen finale scene has finished (or fell back); show the headline. */
   const [sceneDone, setSceneDone] = useState(false);
+  /** A real camera take is recording right now (drives the gameplay music). */
+  const [turnRecording, setTurnRecording] = useState(false);
 
   // ---- GET /health ----
   useEffect(() => {
@@ -60,13 +66,24 @@ export function GameFlow() {
   const toUi = (p: Player | null | undefined): UiPlayer => {
     if (!p) return { id: "nobody", name: "", avatar: "cat" };
     const index = Math.max(0, game.players.findIndex((x) => x.id === p.id));
-    return { id: p.id, name: p.name, avatar: avatars[p.name.toLocaleLowerCase()] ?? AVATARS[index % AVATARS.length] };
+    return { id: p.id, name: p.name, avatar: avatars[p.name.toLocaleLowerCase()] ?? AVATARS[index % AVATARS.length], color: PLAYER_COLORS[index % PLAYER_COLORS.length] };
   };
   const toRanking = (r: RankingRow): Ranking => ({ player: toUi(r.player), average: round1(r.average), attempts: r.attempts.length });
   const rankings = game.rankings.map(toRanking);
+  const roundInfo: RoundInfo = { round: game.roundNumber, rounds: game.totalRounds, mode: game.mode === "full" ? "FULL GAME" : "QUICK GAME" };
+  const toggleSound = () => setSoundOn((v) => !v);
+
+  // ---- music: silent on the home screen and during the finale scene (it has its own audio) ----
+  const inTurn = game.phase === "creatorRecording" || game.phase === "copying";
+  let musicMode: MusicMode = "idle";
+  if (solo || screen === "home" || (screen === "game" && game.phase === "setup")) musicMode = "off";
+  else if (screen === "game" && inTurn) musicMode = "gameplay";
+  else if (screen === "game" && game.phase === "finale" && !sceneDone) musicMode = "off";
+  useGameMusic({ mode: musicMode, recording: turnRecording && inTurn, bpm, soundOn });
 
   function goHome() {
     setSceneDone(false);
+    setTurnRecording(false);
     game.restart();
     setRevealPending(false);
     setRecordingBusy(false);
@@ -158,25 +175,26 @@ export function GameFlow() {
       const err = game.currentAttempt?.status === "error" ? game.currentAttempt.error : null;
       const player = toUi(game.currentPlayer);
       if (!err) {
-        return <ScorePage player={player} score={EMPTY_SCORE} status="Scoring…" continueDisabled onContinue={() => {}} onMenu={goHome} />;
+        return <ScorePage player={player} score={EMPTY_SCORE} status="Scoring…" continueDisabled onContinue={() => {}} onMenu={goHome} roundInfo={roundInfo} />;
       }
       if (err.recording === "reference") {
-        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome} roundInfo={roundInfo}
           continueLabel={`${game.creator?.name ?? "CREATOR"} RE-RECORDS`}
           onContinue={() => { setRevealPending(false); game.redoReference(); }} />;
       }
       if (err.recording === "attempt") {
-        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+        return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome} roundInfo={roundInfo}
           continueLabel="RECORD AGAIN" onContinue={() => { setRevealPending(false); game.redoAttempt(); }} />;
       }
-      return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome}
+      return <ScorePage player={player} score={EMPTY_SCORE} status={err.message} onMenu={goHome} roundInfo={roundInfo}
         continueLabel="RETRY" onContinue={game.retryScore}
         secondaryAction={{ label: "RECORD AGAIN", onClick: () => { setRevealPending(false); game.redoAttempt(); } }} />;
     }
     // Scored: reveal the attempt that was just scored (the latest scored one).
     const latest = allAttempts(game.rounds).filter((a) => a.score).at(-1);
     const player = toUi(game.players.find((p) => p.id === latest?.playerId));
-    return <ScorePage player={player} score={toScore(latest?.score)} worstPart={latest?.score?.worst_part} onMenu={goHome}
+    return <ScorePage player={player} score={toScore(latest?.score)} worstPart={latest?.score?.worst_part} onMenu={goHome} roundInfo={roundInfo}
+      continueLabel={game.phase === "copying" && game.currentPlayer ? `Next turn · ${game.currentPlayer.name}` : "See leaderboard"}
       onContinue={() => {
         setRevealPending(false);
         if (game.phase === "roundResults") game.nextStep();
@@ -188,7 +206,7 @@ export function GameFlow() {
     if (MOCK) {
       return <DashboardPage player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
         round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} phase={recordingBusy ? "recording" : "idle"}
-        onMenu={goHome} onRecord={record} />;
+        onMenu={goHome} onRecord={record} soundOn={soundOn} onSoundToggle={toggleSound} />;
     }
     const role = game.phase === "creatorRecording" ? "creator" : "copier";
     // A fresh key per turn remounts the recorder: new camera session, clean turn state.
@@ -196,6 +214,7 @@ export function GameFlow() {
       role={role} reference={role === "copier" ? game.round?.reference ?? null : null}
       player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
       round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} onMenu={goHome}
+      soundOn={soundOn} onSoundToggle={toggleSound} onRecordingChange={setTurnRecording}
       onComplete={(recording) => {
         game.submitRecording(recording);
         if (role === "copier") setRevealPending(true);
@@ -203,7 +222,9 @@ export function GameFlow() {
   }
 
   if (game.phase === "roundResults" || game.phase === "leaderboard") {
-    return <LeaderboardPage players={rankings} onMenu={goHome}
+    const nextCreatorId = game.phase === "leaderboard" ? game.rounds[game.state.roundIndex + 1]?.creatorId : undefined;
+    return <LeaderboardPage players={rankings} onMenu={goHome} roundInfo={roundInfo}
+      nextCreator={game.players.find((p) => p.id === nextCreatorId)?.name}
       nextLabel={game.phase === "roundResults" ? "LEADERBOARD" : game.isLastRound ? "BREAKING NEWS" : "NEXT ROUND"}
       onNext={game.nextStep} />;
   }

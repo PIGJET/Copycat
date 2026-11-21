@@ -1,11 +1,11 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-function setup(){
+function setup(tracking){
   const events={},elements=new Map(),classes=new Set();let timer=null,now=0;
-  const element=selector=>{if(!elements.has(selector))elements.set(selector,{value:'120',disabled:false,hidden:false,textContent:'',innerHTML:'',srcObject:null,parentElement:{hidden:true},classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},focus(){}});return elements.get(selector)};
+  const element=selector=>{if(!elements.has(selector))elements.set(selector,{remove(){},replaceChildren(){},after(){},value:'120',disabled:false,hidden:false,textContent:'',innerHTML:'',srcObject:null,parentElement:{hidden:true},classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},focus(){}});return elements.get(selector)};
   const root={hidden:false,innerHTML:'',classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name),remove(){}},addEventListener:(type,fn)=>(events[type]??=[]).push(fn),replaceChildren(){this.innerHTML=''},querySelector:selector=>selector==='.beat-guide'?null:element(selector)};
-  const context=vm.createContext({document:{hidden:false,querySelector:selector=>selector==='#game-screen'?root:selector==='.animated-board'?null:selector==='#sound'?{addEventListener(){}}:element(selector),addEventListener(){}},window:{scrollTo(){}},location:{search:''},performance:{now:()=>now},URLSearchParams,homeScreen:{hidden:false},lobby:{hidden:true},soundOn:false,crewColors:['lime','pink','cyan','purple'],portrait:()=>'<svg></svg>',goHome(){},blip(){},matchMedia:()=>({matches:true}),cancelAnimationFrame(){},setInterval:fn=>{timer=fn;return 1},clearInterval:()=>{timer=null},setTimeout:()=>1,clearTimeout(){}});
+  const context=vm.createContext({CopycatTracking:tracking,document:{createElement:()=>({setAttribute(){}}),hidden:false,querySelector:selector=>selector==='#game-screen'?root:selector==='.animated-board'?null:selector==='#sound'?{addEventListener(){}}:element(selector),addEventListener(){}},window:{scrollTo(){}},location:{search:''},performance:{now:()=>now},URLSearchParams,homeScreen:{hidden:false},lobby:{hidden:true},soundOn:false,crewColors:['lime','pink','cyan','purple'],portrait:()=>'<svg></svg>',goHome(){},blip(){},matchMedia:()=>({matches:true}),cancelAnimationFrame(){},setInterval:fn=>{timer=fn;return 1},clearInterval:()=>{timer=null},setTimeout:()=>1,clearTimeout(){}});
   const read=f=>fs.readFileSync(path.join(__dirname,'../dist',f),'utf8');
   vm.runInContext(read('demo-data.js')+'\n'+read('round-ui.js')+'\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,renderPreview,leavePreview,getCreator,getChallenger};',context);
   const click=action=>(events.click||[]).forEach(fn=>fn({target:{closest:()=>({disabled:false,dataset:{action}})}}));
@@ -47,3 +47,37 @@ test('standings use completed scores, preserve unscored dashes, and escape playe
 });
 
 test('a delayed capture callback follows elapsed game time instead of adding timer drift',()=>{const h=setup();h.ui.enterPreview(crew,'quick',false,'creator');h.click('record');h.tick(7500);assert.equal(h.ui.preview.phase,'recording');assert.equal(h.ui.preview.seconds,6);h.tick(5500);assert.equal(h.ui.preview.screen,'challenge')});
+
+test('a countdown digit stays mounted until the next second',()=>{
+  const h=setup();
+  h.ui.enterPreview(crew,'full',false,'creator');
+  const overlay=h.element('#capture-overlay');
+  let markup='',writes=0;
+  Object.defineProperty(overlay,'innerHTML',{get:()=>markup,set:value=>{markup=value;writes++}});
+  h.click('record');
+  h.tick(400); h.tick(500);
+  assert.equal(writes,1); assert.match(markup,/>3</);
+  h.tick(100); assert.equal(writes,2); assert.match(markup,/>2</);
+  h.tick(1000); assert.equal(writes,3); assert.match(markup,/>1</);
+  h.tick(1000); assert.equal(writes,4); assert.equal(h.ui.preview.phase,'recording');
+});
+
+test('camera turns replay the creator recording and score the actual challenger sequence',()=>{
+  let turn;
+  const reference={frames:[1]}, attempt={frames:[2]};
+  const score={total:97,arms:98,legs:95,torso:97,timing:98};
+  const scored=[];
+  const tracking={mount:props=>{turn=props},unmount(){},scoreAttempt:(ref,seq)=>{scored.push([ref,seq]);return score}};
+  const h=setup(tracking);
+  h.ui.enterPreview(crew,'full',false,'creator');
+  h.ui.preview.live=true;h.ui.renderPreview();
+  assert.equal(turn.player.id,crew[0].id);
+  turn.onRecord(reference);
+  assert.equal(turn.reference,reference);
+  assert.equal(turn.player.id,crew[1].id);
+  turn.onRecord(attempt);
+  assert.deepEqual(scored.at(-1),[reference,attempt]);
+  assert.equal(h.ui.preview.results[0].score,score);
+  assert.equal(h.ui.preview.results[0].source,'tracking');
+  assert.equal(h.ui.preview.screen,'score');
+});
