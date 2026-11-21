@@ -23,13 +23,15 @@ export async function collectReferenceFrames(
   return frames;
 }
 
+export function hasFullBody({ landmarks }: RecordingFrame) {
+  return landmarks?.length === 33 && BODY_POINTS.every((index) => {
+    const { x, y, visibility } = landmarks[index];
+    return visibility >= 0.5 && x >= 0 && x <= 1 && y >= 0 && y <= 1;
+  });
+}
+
 export function referenceQuality(frames: RecordingFrame[], durationMs: number) {
-  const visible = frames.filter(({ landmarks }) =>
-    landmarks?.length === 33 && BODY_POINTS.every((index) => {
-      const { x, y, visibility } = landmarks[index];
-      return visibility >= 0.5 && x >= 0 && x <= 1 && y >= 0 && y <= 1;
-    }),
-  );
+  const visible = frames.filter(hasFullBody);
   const firstMs = visible[0]?.t ?? Infinity;
   let previousMs = -REFERENCE_SAMPLE_MS;
   let longestGapMs = 0;
@@ -40,10 +42,12 @@ export function referenceQuality(frames: RecordingFrame[], durationMs: number) {
   longestGapMs = Math.max(longestGapMs, durationMs - previousMs - REFERENCE_SAMPLE_MS);
   const sampleCount = Math.round(durationMs / REFERENCE_SAMPLE_MS);
   const coverage = visible.length / Math.max(1, sampleCount);
+  const adequateCoverage = coverage >= 0.8 && longestGapMs <= 1000.001;
   return {
     coverage,
+    adequateCoverage,
     sampleCoverage: frames.length / Math.max(1, sampleCount),
     longestGapMs,
-    usable: coverage >= 0.8 && firstMs <= 250 && longestGapMs <= 1000.001,
+    usable: adequateCoverage && firstMs <= 250,
   };
 }
