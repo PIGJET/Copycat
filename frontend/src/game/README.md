@@ -3,10 +3,10 @@ Game lane: players, rounds, calling /score, running averages and picking the los
 ## Solo dance challenge
 
 Start the FastAPI backend on port 8000 from `backend/` and run `npm run dev`
-from `frontend/`. Open `/src/game/solo.html` on the Vite server to exercise the
-Game lane. To use a different backend URL, set `VITE_API_BASE_URL` before starting
-Vite. The shared React entry point can mount the default export from `Game.tsx`
-once the team coordinates that change.
+from `frontend/`. Open the Vite server's normal root URL to play Solo.
+To use a different backend URL, set `VITE_API_BASE_URL` before starting Vite.
+The default React entry point mounts `Game.tsx`. The development route
+`/src/game/solo.html` remains available for the isolated Game lane.
 
 Choose **Use sample link** and **Prepare clip** for the verified 5–10 second
 section, or choose a permitted local MP4. Preview the clip, get ready, and
