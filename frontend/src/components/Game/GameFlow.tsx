@@ -175,10 +175,10 @@ export function GameFlow() {
   }
 
   if (game.phase === "creatorRecording" || game.phase === "copying") {
+    // No onSkip: team play has no skip rule, so DashboardPage hides the Skip turn button.
     return <DashboardPage player={toUi(game.currentPlayer)} creator={toUi(game.creator)} players={rankings}
       round={game.roundNumber} rounds={game.totalRounds} bpm={bpm} phase={recordingBusy ? "recording" : "idle"}
-      onMenu={goHome} onRecord={record}
-      onSkip={() => { /* useGame has no skip rule yet; every copier must be scored. */ }} />;
+      onMenu={goHome} onRecord={record} />;
   }
 
   if (game.phase === "roundResults" || game.phase === "leaderboard") {
