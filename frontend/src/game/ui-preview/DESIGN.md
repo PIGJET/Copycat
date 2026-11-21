@@ -70,3 +70,5 @@ Player tiles remain in the same four-column desktop/two-column narrow layout, bu
 Main buttons use a solid lower edge and small pressed displacement. Secondary buttons are quieter, with underlines and hover/focus feedback. Selected avatars retain their lime treatment and gain a small pixel check for a non-color selection cue. No additional decorative animation is introduced. The requested countdown, metronome, rank movement, and sounds retain their behavior and reduced-motion support.
 
 Apply these rules consistently to existing screens. Do not reintroduce glowing cards, heavy Arial display headings, decorative slogans, repeated status chips, broad letter spacing, or extra containers. The broadcast finale may retain its white/red framing because it is functional genre-specific presentation.
+
+BPM setup uses the established pixel heading, large lime tempo value, one slider, and START GAME action. Four restrained square pulses preview tempo visually. It follows camera check in both modes; no song, scoring, or recorder integration is added. Menu music continues until the creator/challenge screen. The same metronome is available in Solo and Team.

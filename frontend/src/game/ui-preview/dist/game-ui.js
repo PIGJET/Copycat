@@ -19,8 +19,9 @@ function VideoPanel({label,player,original=false,large=false}){
   return `<section class="video-panel ${large?'large-video':''} ${original?'original-video':'camera-video'} ${!original&&preview.tracking==='body'?'body-missing':''}" aria-label="${label}"><div class="video-panel-head"><span>${label}</span><strong>${escapeUI(player.name)}</strong></div><div class="video-placeholder">${denied?'<svg class="camera-off" viewBox="0 0 80 64" aria-hidden="true"><path d="M8 14h42v36H8zM50 27l22-12v34L50 37M7 4l65 56" fill="none" stroke="currentColor" stroke-width="5"/></svg>':poseOutline()}<strong>${original?'Original video placeholder':denied?'Camera access denied':'Webcam placeholder'}</strong><span>${original?'No reference recording connected':denied?'Allow camera access when the recorder is integrated.':'No camera or pose tracker connected'}</span></div>${!original?'<div id="capture-overlay" class="capture-overlay" aria-live="polite"></div>':''}</section>`;
 }
 const trackingStates={ready:{label:'Tracking ready (demo)',help:'Keep your full body inside the frame.'},body:{label:'Full body not detected (demo)',help:'Step back so your head and feet fit in the frame.'},denied:{label:'Camera access denied (demo)',help:'Enable camera permission to use the integrated recorder.'},waiting:{label:'Waiting for tracking (demo)',help:'The recorder will enable capture when tracking is ready.'}};
-function RecordingControls(){const status=trackingStates[preview.tracking];return `<div class="capture-controls"><div class="tracking-status ${preview.tracking==='ready'?'tracking-ready':'tracking-warning'}"><strong id="tracking-label">${status.label}</strong><span>${status.help}</span></div><label class="preview-state">Preview state<select id="tracking-state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label>${ArcadeButton('PREVIEW RECORDING','record',false,preview.tracking!=='ready'||preview.phase!=='idle')}${!preview.solo?ArcadeButton('SKIP','skip',true):''}</div>${preview.solo?`<div class="capture-progress"><div><span id="capture-phase">10-second recording preview</span><strong id="capture-time">10s</strong></div><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress></div><div class="capture-bottom"><span>No video is being recorded.</span>${ArcadeButton('SKIP PREVIEW','skip',true)}</div>`:BeatGuide()}`}
+function RecordingControls(){const status=trackingStates[preview.tracking];return `<div class="capture-controls"><div class="tracking-status ${preview.tracking==='ready'?'tracking-ready':'tracking-warning'}"><strong id="tracking-label">${status.label}</strong><span>${status.help}</span></div><label class="preview-state">Preview state<select id="tracking-state" ${preview.phase!=='idle'?'disabled':''}>${Object.entries(trackingStates).map(([key,state])=>`<option value="${key}" ${preview.tracking===key?'selected':''}>${state.label.replace(' (demo)','')}</option>`).join('')}</select></label>${ArcadeButton('PREVIEW RECORDING','record',false,preview.tracking!=='ready'||preview.phase!=='idle')}${!preview.solo?ArcadeButton('SKIP','skip',true):''}</div>${BeatGuide()}${preview.solo?`<div class="capture-bottom"><span>No video is being recorded.</span>${ArcadeButton('SKIP PREVIEW','skip',true)}</div>`:''}`}
 function BeatGuide(){return `<section class="beat-guide" aria-label="Visual metronome" style="--beat-duration:${60/preview.bpm}s"><progress id="capture-progress" value="0" max="10" aria-label="Recording progress">0%</progress><div class="beat-guide-inner"><div class="beat-time"><strong id="capture-time">10s</strong><span id="capture-phase">Recording preview</span></div><div class="beat-visual"><div class="beat-lane" aria-hidden="true"><div class="beat-flow"></div><div class="beat-hit-line"></div><div class="beat-hit-square"></div></div><div class="beat-count" aria-hidden="true">${[1,2,3,4].map(n=>`<span data-beat="${n}" ${n===1?'class="active-beat"':''}>${n}</span>`).join('')}</div></div><div class="beat-tools"><label>DEMO BPM<input id="beat-bpm" type="number" min="60" max="180" step="5" value="${preview.bpm}" aria-label="Metronome tempo in beats per minute"></label><button class="ui-secondary" data-action="beat-toggle" aria-label="${preview.beatPlaying?'Pause':'Start'} beat guide" aria-pressed="${preview.beatPlaying}">${preview.beatPlaying?'PAUSE':'PLAY'}</button></div></div></section>`}
+function TempoScreen(){return `${GameHeader('CHOOSE BPM','SETUP')}<div class="tempo-setup" style="--beat-duration:${60/preview.bpm}s"><label for="tempo-bpm">Beat guide tempo</label><div class="tempo-value"><input id="tempo-bpm" type="number" min="60" max="180" step="1" value="${preview.bpm}" inputmode="numeric" aria-label="BPM"><span>bpm</span></div><label class="sr-only" for="tempo-slider">Choose BPM</label><input id="tempo-slider" class="tempo-slider" type="range" min="60" max="180" step="1" value="${preview.bpm}"><div class="tempo-scale"><span>60</span><span>180</span></div><div class="tempo-beats" aria-hidden="true">${[0,1,2,3].map(i=>`<span style="--beat-index:${i}"></span>`).join('')}</div>${ArcadeButton('START GAME','tempo-start')}</div>`}
 function creatorScreen(){const p=getCreator();return `${GameHeader(p.name,'CREATOR')}${VideoPanel({label:'CREATOR CAMERA',player:p,large:true})}${RecordingControls()}`}
 function challengeScreen(){const p=getChallenger();return `${GameHeader(p.name,'COPY CHALLENGE')}<div class="challenge-count">CHALLENGER ${preview.challenger+1} / ${getChallengers().length}</div><div class="video-pair">${VideoPanel({label:'ORIGINAL',player:getCreator(),original:true})}${VideoPanel({label:'YOU',player:p})}</div>${RecordingControls()}`}
 function ScoreDisplay(score){return `<div class="score-display" aria-label="${score} out of 100"><span>${score}</span><span class="score-denominator">/100</span></div>`}
@@ -34,15 +35,16 @@ function finaleScreen(){const rows=demoRankings(preview.crew,preview.results),lo
 function clearPreviewTimers(){clearInterval(previewTimer);clearTimeout(scoreTimer);previewTimer=null;scoreTimer=null;stopBeatGuide();stopRankAnimation();stopCameraCheck()}
 function renderPreview(){
   clearPreviewTimers();
-  gameRoot.innerHTML=({camera:CameraCheckScreen,creator:creatorScreen,challenge:challengeScreen,score:scoreScreen,leaderboard:leaderboardScreen,finale:finaleScreen}[preview.screen]||creatorScreen)();
+  gameRoot.innerHTML=({camera:CameraCheckScreen,tempo:TempoScreen,creator:creatorScreen,challenge:challengeScreen,score:scoreScreen,leaderboard:leaderboardScreen,finale:finaleScreen}[preview.screen]||creatorScreen)();
   gameRoot.classList.toggle('camera-check-screen',preview.screen==='camera');
+  gameRoot.classList.toggle('tempo-setup-screen',preview.screen==='tempo');
   gameRoot.classList.toggle('finale-screen',preview.screen==='finale');
   const teamCapture=!preview.solo&&['creator','challenge'].includes(preview.screen);
   gameRoot.classList.toggle('team-capture',teamCapture);
   document.querySelector('.arcade').classList.toggle('team-capture-active',teamCapture);
   document.querySelector('.arcade').classList.toggle('news-active',preview.screen==='finale');
   gameRoot.querySelector('#screen-title')?.focus();window.scrollTo(0,0);
-  if(teamCapture&&preview.beatPlaying)startBeatGuide();
+  if(['creator','challenge'].includes(preview.screen)&&preview.beatPlaying)startBeatGuide();
   if(preview.screen==='leaderboard')animateRankings();
   if(preview.screen==='score'){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;blip(660)};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
@@ -68,14 +70,16 @@ function startCapturePreview(){
   const bpmInput=gameRoot.querySelector('#beat-bpm');if(bpmInput)bpmInput.disabled=true;
   previewTimer=setInterval(()=>{if(run!==preview.run)return clearPreviewTimers();if(preview.phase==='countdown'){preview.count--;blip(330);if(preview.count<=0)preview.phase='recording'}else preview.seconds--;updateCaptureUI();if(preview.phase==='recording'&&preview.seconds<=0)finishCapture()},1000);
 }
-function setBeatTempo(value){if(value===preview.bpm)return;preview.bpm=value;gameRoot.querySelector('.beat-guide')?.style.setProperty('--beat-duration',`${60/value}s`);if(preview.beatPlaying)startBeatGuide()}
-gameRoot.addEventListener('input',e=>{if(e.target.id==='beat-bpm'&&e.target.value!==''){const value=Number(e.target.value);if(Number.isFinite(value)&&value>=60&&value<=180)setBeatTempo(Math.round(value))}});
-gameRoot.addEventListener('focusout',e=>{if(e.target.id==='beat-bpm'){const value=e.target.value===''?preview.bpm:Number(e.target.value);const bounded=Number.isFinite(value)?Math.max(60,Math.min(180,Math.round(value))):preview.bpm;e.target.value=String(bounded);setBeatTempo(bounded)}});
+function normaliseBPM(value,fallback=120){if(String(value).trim()==='')return fallback;const n=Number(value);return Number.isFinite(n)?Math.max(60,Math.min(180,Math.round(n))):fallback}
+function setBeatTempo(value){if(value===preview.bpm)return;preview.bpm=value;gameRoot.querySelector('.beat-guide')?.style.setProperty('--beat-duration',`${60/value}s`);gameRoot.querySelector('.tempo-setup')?.style.setProperty('--beat-duration',`${60/value}s`);for(const id of ['#tempo-bpm','#tempo-slider']){const input=gameRoot.querySelector(id);if(input)input.value=String(value)}if(preview.beatPlaying)startBeatGuide()}
+gameRoot.addEventListener('input',e=>{if(['beat-bpm','tempo-bpm','tempo-slider'].includes(e.target.id)&&e.target.value!==''){const value=Number(e.target.value);if(Number.isFinite(value)&&value>=60&&value<=180)setBeatTempo(Math.round(value))}});
+gameRoot.addEventListener('focusout',e=>{if(['beat-bpm','tempo-bpm'].includes(e.target.id)){const bounded=normaliseBPM(e.target.value,preview.bpm);e.target.value=String(bounded);setBeatTempo(bounded)}});
 gameRoot.addEventListener('change',e=>{if(e.target.id==='tracking-state'){preview.tracking=e.target.value;renderPreview();gameRoot.querySelector('#tracking-state').focus()}});
 gameRoot.addEventListener('click',e=>{
   const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
   switch(b.dataset.action){
     case'exit':leavePreview();break;
+    case'tempo-start':if(preview.screen==='tempo'){setBeatTempo(normaliseBPM(gameRoot.querySelector('#tempo-bpm').value,preview.bpm));preview.screen=preview.afterCamera;renderPreview()}break;
     case'record':startCapturePreview();break;
     case'skip':finishCapture();break;
     case'beat-toggle':preview.beatPlaying=!preview.beatPlaying;b.textContent=preview.beatPlaying?'PAUSE':'PLAY';b.setAttribute('aria-label',`${preview.beatPlaying?'Pause':'Start'} beat guide`);b.setAttribute('aria-pressed',String(preview.beatPlaying));if(preview.beatPlaying)startBeatGuide();else stopBeatGuide();break;
@@ -90,13 +94,14 @@ let beatTimer=null;
 function stopBeatGuide(){clearTimeout(beatTimer);beatTimer=null;gameRoot.querySelector('.beat-guide')?.classList.remove('beat-playing')}
 function beatClick(downbeat){if(!soundOn)return;audio??=new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=downbeat?1000:700;g.gain.setValueAtTime(.05,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.035);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.04)}
 function startBeatGuide(){stopBeatGuide();const guide=gameRoot.querySelector('.beat-guide');if(!guide||!preview.beatPlaying||document.hidden)return;const beatMs=60000/preview.bpm;let step=-1;const started=performance.now();void guide.offsetWidth;guide.classList.add('beat-playing');function tick(){if(!guide.isConnected||!preview.beatPlaying||document.hidden)return;const current=Math.floor((performance.now()-started)/beatMs);if(step!==current){step=current;guide.querySelectorAll('[data-beat]').forEach(el=>el.classList.toggle('active-beat',Number(el.dataset.beat)===step%4+1));beatClick(step%4===0)}const untilNext=started+(step+1)*beatMs-performance.now();beatTimer=setTimeout(tick,Math.max(1,untilNext))}tick()}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBeatGuide();else if(!preview.solo&&['creator','challenge'].includes(preview.screen)&&preview.beatPlaying)startBeatGuide()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopBeatGuide();else if(['creator','challenge'].includes(preview.screen)&&preview.beatPlaying)startBeatGuide()});
 // Optional, explicit presentation harness. Does not run on the normal entry path.
 // Example: index.html?demo=score or ?demo=finale. All results remain demo fixtures.
 function openDemoScreen(name){
   const sample=[{id:101,name:'Alex',avatar:'cat'},{id:102,name:'Jamie',avatar:'rabbit'},{id:103,name:'Riley',avatar:'frog'},{id:104,name:'Taylor',avatar:'fox'}];
   enterPreview(sample,'quick');
   if(name==='camera'){applyCameraDemoState();return}
+  if(name==='tempo'){preview.screen='tempo';renderPreview();return}
   if(name==='creator'){preview.screen='creator';renderPreview();return}
   preview.screen='challenge';
   if(['score','leaderboard','finale'].includes(name)){
@@ -107,6 +112,6 @@ function openDemoScreen(name){
   renderPreview();
 }
 const requestedDemo=new URLSearchParams(location.search).get('demo');
-if(['camera','creator','challenge','score','leaderboard','finale'].includes(requestedDemo))openDemoScreen(requestedDemo);
+if(['camera','tempo','creator','challenge','score','leaderboard','finale'].includes(requestedDemo))openDemoScreen(requestedDemo);
 
 

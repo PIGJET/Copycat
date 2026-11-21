@@ -91,5 +91,5 @@ async function enableCameraCheck(){
 document.querySelector('#game-screen').addEventListener('click',e=>{
   const button=e.target.closest('[data-action]');if(!button||button.disabled)return;
   if(button.dataset.action==='camera-enable')enableCameraCheck();
-  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.screen=preview.afterCamera;renderPreview()}
+  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.screen='tempo';renderPreview()}
 });

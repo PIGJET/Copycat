@@ -7,7 +7,7 @@ const source=fs.readFileSync(path.join(__dirname,'../dist/home-music.js'),'utf8'
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function setup({initialSound=true,play=()=>Promise.resolve()}={}){
   let screen='home';
-  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'}},status={textContent:''},calls={plays:0,pauses:0};
+  const game={hidden:true,classList:{contains:name=>name==='camera-check-screen'&&screen==='camera'||name==='tempo-setup-screen'&&screen==='tempo'}},status={textContent:''},calls={plays:0,pauses:0};
   const soundEvents={},documentEvents={},windowEvents={};let observer;
   const music={volume:1,play(){calls.plays++;return play();},pause(){calls.pauses++;}};
   const document={hidden:false,addEventListener:(type,fn)=>documentEvents[type]=fn,
@@ -50,8 +50,8 @@ test('a delayed play result cannot continue audio after gameplay starts',async()
 });
 test('music continues through lobby and camera setup until gameplay',async()=>{
   const h=setup();await settle();
-  await h.navigate('lobby');await h.navigate('camera');assert.equal(h.calls.pauses,0);
+  await h.navigate('lobby');await h.navigate('camera');await h.navigate('tempo');assert.equal(h.calls.pauses,0);
   await h.navigate('challenge');assert.equal(h.calls.pauses,1);
   await h.navigate('leaderboard');assert.equal(h.calls.pauses,2);
-  await h.navigate('lobby');assert.equal(h.calls.plays,4);
+  await h.navigate('lobby');assert.equal(h.calls.plays,5);
 });

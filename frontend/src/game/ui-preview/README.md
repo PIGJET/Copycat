@@ -42,3 +42,5 @@ The visual finish uses bundled Silkscreen and Barlow font files in dist/fonts, w
 
 
 Home music plays the bundled dist/audio/night-shade.mp3 track (AdhesiveWombat — Night Shade) without a visible player or YouTube connection. Sound defaults on at 25% volume and loops continuously through home, lobby, and camera setup. Browser-blocked autoplay retries after a click or keypress. Gameplay, muting, or hiding the tab pauses playback. Menus resume from the same position. Run node --test tests/home-music.test.cjs for lifecycle tests.
+
+BPM setup follows camera check in Solo and Team. Choose 60–180 BPM with the slider or number input, then START GAME. The chosen BPM sets the beat guide throughout turns and rounds. Songs will be added later; this does not alter the menu song speed. Music keeps playing during setup. Direct review: dist/index.html?demo=tempo. Both Solo and Team have a beat guide. Tests: node --test tests/demo-model.test.cjs tests/home-music.test.cjs tests/tempo-setup.test.cjs (21 pass).

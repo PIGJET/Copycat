@@ -36,6 +36,28 @@ button:focus-visible,a:focus-visible { outline:3px solid var(--cyan); outline-of
 .mode:focus-visible,.start-button:focus-visible { outline:0; box-shadow:inset 0 0 0 3px white }
 .key { border:0; font-family:var(--body); font-size:12px; opacity:.6 }
 
+/* Tempo is a setup choice, using the same display type and tactile action. */
+.tempo-setup { width:min(480px,100%); margin:52px auto 60px; text-align:center }
+.tempo-setup>label:not(.sr-only) { font-size:18px; color:#c5b4d1 }
+.tempo-value { display:flex; justify-content:center; align-items:baseline; gap:12px; margin:14px 0 30px }
+.tempo-value input { width:3.5ch; min-width:0; padding:0 0 6px; border:0; border-bottom:2px solid #62477c; border-radius:0; background:transparent; color:var(--lime); font:400 96px/1.2 var(--display); text-align:center; appearance:textfield }
+.tempo-value input::-webkit-inner-spin-button,.tempo-value input::-webkit-outer-spin-button { appearance:none; margin:0 }
+.tempo-value input:focus-visible { outline:3px solid var(--cyan); outline-offset:5px }
+.tempo-value>span { font-size:24px; color:#c5b4d1 }
+.tempo-slider { display:block; width:100%; height:44px; margin:0; padding:0; appearance:none; background:transparent; cursor:pointer; accent-color:var(--lime) }
+.tempo-slider::-webkit-slider-runnable-track { height:6px; background:#62477c }
+.tempo-slider::-moz-range-track { height:6px; background:#62477c }
+.tempo-slider::-webkit-slider-thumb { appearance:none; width:20px; height:26px; margin-top:-10px; background:var(--lime); border:0; border-bottom:4px solid #6a9800; border-radius:0 }
+.tempo-slider::-moz-range-thumb { width:20px; height:22px; background:var(--lime); border:0; border-bottom:4px solid #6a9800; border-radius:0 }
+.tempo-slider:focus-visible { outline:3px solid var(--cyan); outline-offset:4px }
+.tempo-scale { display:flex; justify-content:space-between; color:#b5a1c5; font-size:14px }
+.tempo-beats { display:flex; justify-content:center; gap:18px; margin:34px 0 }
+.tempo-beats span { width:12px; height:12px; background:#62477c; animation:tempo-tick calc(var(--beat-duration) * 4) steps(1,end) infinite; animation-delay:calc(var(--beat-index) * var(--beat-duration)) }
+.tempo-setup .ui-primary { min-width:220px }
+@keyframes tempo-tick { 0% { background:var(--lime) } 25%,100% { background:#62477c } }
+@media(max-width:700px) { .tempo-setup { margin:40px auto; padding:0 12px } .tempo-value input { font-size:72px } .tempo-value>span { font-size:20px } }
+@media(max-height:800px) and (min-width:701px) { .tempo-setup { margin-top:24px; margin-bottom:24px } .tempo-value input { font-size:80px } .tempo-beats { margin:26px 0 } }
+
 /* Character-selection tiles: one colored edge instead of nested glowing frames. */
 .roster-frame { border:0; background:transparent; box-shadow:none; padding:0 }
 .roster-heading { padding:0 2px; margin-bottom:16px; font-size:14px; font-weight:600 }

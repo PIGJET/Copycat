@@ -7,7 +7,7 @@
   let request = 0;
   music.volume = 0.25;
   const shouldPlay = () => soundOn && !document.hidden
-    && (game.hidden || game.classList.contains('camera-check-screen'));
+    && (game.hidden || game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen'));
 
   async function syncMusic() {
     const current = ++request;
