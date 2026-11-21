@@ -3,6 +3,7 @@ import { ArcadeButton, CameraCheckPage, DashboardPage, GameHeader, HomePage, Lea
 import type { PoseSequence } from "../../types/pose";
 import { ScoreInputError, scoreAttempt } from "../../game/scoreAttempt";
 import type { AttemptScore } from "../../game/scoreAttempt";
+import { useGameMusic } from "../../game/useGameMusic";
 import { WinnerPage } from "./ResultsPages";
 import type { Player, Ranking } from "./uiTypes";
 
@@ -27,6 +28,12 @@ export function GameFlow() {
   const [turnIndex, setTurnIndex] = useState(0);
   const [bpm, setBpm] = useState(120);
   const [soundOn, setSoundOn] = useState(true);
+  const [recordingMusic, setRecordingMusic] = useState(false);
+  useGameMusic({ gameplay: screen === "dashboard", recording: recordingMusic, bpm, soundOn });
+
+  function toggleSound() {
+    setSoundOn(value => !value);
+  }
 
   const creator = mode === "solo" ? referencePlayer : players[round] ?? players[0] ?? soloPlayer;
   const challengers = mode === "solo" ? players : players.filter(player => player.id !== creator.id);
@@ -52,6 +59,7 @@ export function GameFlow() {
   }).sort((a, b) => (b.average ?? -1) - (a.average ?? -1));
 
   function resetResults() {
+    setRecordingMusic(false);
     setRecordingsByRound(new Map());
     setScoresByRound(new Map());
   }
@@ -166,7 +174,7 @@ export function GameFlow() {
 
   if (screen === "dashboard") {
     return <DashboardPage key={`${round}-${turnIndex}`} reference={reference} player={activePlayer} creator={creator} players={rankings} round={round + 1} rounds={totalRounds} bpm={bpm}
-      onMenu={returnHome} onRecord={completeTurn} onSkip={creatorTurn ? undefined : openNextTurn} />;
+      onMenu={returnHome} onRecord={completeTurn} onRecordingChange={setRecordingMusic} soundOn={soundOn} onSoundToggle={toggleSound} onSkip={creatorTurn ? undefined : openNextTurn} />;
   }
 
   if (screen === "judging") {
@@ -205,7 +213,7 @@ export function GameFlow() {
     return <WinnerPage players={rankings} onReplay={replay} onMenu={returnHome} roundInfo={roundInfo} />;
   }
 
-  return <HomePage soundOn={soundOn} onSoundToggle={() => setSoundOn(value => !value)}
+  return <HomePage soundOn={soundOn} onSoundToggle={toggleSound}
     onSolo={() => { setMode("solo"); setPlayers([soloPlayer]); setRound(0); setScreen("camera"); }}
     onTeam={() => { setMode("team"); setScreen("lobby"); }} />;
 }

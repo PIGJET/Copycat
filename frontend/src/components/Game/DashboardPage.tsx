@@ -11,8 +11,8 @@ import "./DashboardMetronome.css";
 import "./DashboardTurnPrompt.css";
 const recordingSeconds = 10;
 
-export type DashboardPageProps = { player: Player; creator: Player; players: Ranking[]; round: number; rounds: number; phase?: string; trackingStatus?: string; bpm?: number; onMenu: () => void; onRecord: (recording: PoseSequence) => void; onSkip?: () => void; reference?: PoseSequence; onTrackingChange?: (status: string) => void };
-export function DashboardPage({ player, creator, players, round, rounds, phase = "idle", trackingStatus = "ready", bpm = 120, onMenu, onRecord, onSkip, reference, onTrackingChange }: DashboardPageProps) {
+export type DashboardPageProps = { player: Player; creator: Player; players: Ranking[]; round: number; rounds: number; phase?: string; trackingStatus?: string; bpm?: number; onMenu: () => void; onRecord: (recording: PoseSequence) => void; onSkip?: () => void; reference?: PoseSequence; onTrackingChange?: (status: string) => void; onRecordingChange?: (recording: boolean) => void; soundOn?: boolean; onSoundToggle?: () => void };
+export function DashboardPage({ player, creator, players, round, rounds, phase = "idle", trackingStatus = "ready", bpm = 120, onMenu, onRecord, onSkip, reference, onTrackingChange, onRecordingChange, soundOn, onSoundToggle }: DashboardPageProps) {
   const cameraRef = useRef<CameraHandle>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [showTurnPrompt, setShowTurnPrompt] = useState(true);
@@ -35,7 +35,8 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
     setCaptureError("");
     recordingDeadline.current = performance.now() + recordingSeconds * 1000;
     setSecondsLeft(recordingSeconds);
-  }, []);
+    onRecordingChange?.(true);
+  }, [onRecordingChange]);
 
   function startTurn() {
     setShowTurnPrompt(false);
@@ -74,12 +75,13 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
     recordingDeadline.current = null;
     const sequence = cameraRef.current.stopRecording(String(player.id));
     setSecondsLeft(null);
+    onRecordingChange?.(false);
     if (sequence.frames.length === 0) {
       setCaptureError("No poses captured. Step into frame and try again.");
       return;
     }
     onRecord(sequence);
-  }, [onRecord, player.id]);
+  }, [onRecord, onRecordingChange, player.id]);
 
   useEffect(() => {
     const deadline = recordingDeadline.current;
@@ -103,12 +105,17 @@ export function DashboardPage({ player, creator, players, round, rounds, phase =
     return () => window.clearTimeout(timer);
   }, [recording, stopCapture]);
 
- return <PageFrame className="dashboard-active"><section className="game-screen dance-dashboard dashboard-active"><header className="dashboard-header"><div className="dashboard-brand"><ArcadeButton secondary className="dashboard-menu" onClick={onMenu}>Menu</ArcadeButton><span>COPY<span>CAT</span></span></div><div className="dashboard-round">Round <strong>{round} / {rounds}</strong></div></header><div className="dashboard-turn"><PlayerAvatar player={player} className="dashboard-turn-avatar" /><div><h2>{player.name}’s turn</h2><p>{isCreator ? "Create a dance for everyone to copy." : reference ? `Watch ${creator.name}’s move, then copy it after the countdown.` : "Get in frame and record your dance."}</p></div></div><div className="dashboard-arena"><aside className="dashboard-scores" aria-label="Round standings"><div className="dashboard-panel-title"><h3>Scores</h3><span>Average /100</span></div><ol>{players.map(row => <li className={`dashboard-score-row ${row.player.id === player.id ? "is-current" : ""}`} key={row.player.id}><PlayerAvatar player={row.player} className="dashboard-avatar"/><span className="dashboard-score-player"><strong>{row.player.name}</strong></span><strong className="dashboard-score-value">{row.average ?? "—"}</strong></li>)}</ol></aside><div className="dashboard-stage"><div className="dashboard-camera-scene"><div className="dashboard-camera-feed" hidden={replaying}><Camera ref={cameraRef} onReadyChange={setCameraReady} /></div>
+ return <PageFrame className="dashboard-active"><section className="game-screen dance-dashboard dashboard-active"><header className="dashboard-header"><div className="dashboard-brand"><ArcadeButton secondary className="dashboard-menu" onClick={onMenu}>Menu</ArcadeButton><span>COPY<span>CAT</span></span></div><div className="dashboard-round">Round <strong>{round} / {rounds}</strong>
+      {onSoundToggle && <ArcadeButton secondary aria-pressed={soundOn} onClick={onSoundToggle}>Sound {soundOn ? "On" : "Off"}</ArcadeButton>}
+      </div></header><div className="dashboard-turn"><PlayerAvatar player={player} className="dashboard-turn-avatar" /><div><h2>{player.name}’s turn</h2><p>{isCreator ? "Create a dance for everyone to copy." : reference ? `Watch ${creator.name}’s move, then copy it after the countdown.` : "Get in frame and record your dance."}</p></div></div><div className="dashboard-arena"><aside className="dashboard-scores" aria-label="Round standings"><div className="dashboard-panel-title"><h3>Scores</h3><span>Average /100</span></div><ol>{players.map(row => <li className={`dashboard-score-row ${row.player.id === player.id ? "is-current" : ""}`} key={row.player.id} aria-current={row.player.id === player.id ? "true" : undefined}><PlayerAvatar player={row.player} className="dashboard-avatar"/><span className="dashboard-score-player"><strong>{row.player.name}</strong>
+        {row.player.id === player.id && <span className="dashboard-up-now">Up now</span>}
+      </span><strong className="dashboard-score-value">{row.average ?? "—"}</strong></li>)}</ol></aside><div className="dashboard-stage"><div className="dashboard-camera-scene"><div className="dashboard-camera-feed" hidden={replaying}><Camera ref={cameraRef} onReadyChange={setCameraReady} /></div>
       {showTurnPrompt && (
         <div className="dashboard-turn-prompt" role="status">
           <PlayerAvatar player={player} className="dashboard-turn-prompt-avatar" />
           <div>
-            <strong>{isCreator ? "Create a move" : reference ? "Copy the move" : "Your turn to dance"}</strong>
+            <span className="dashboard-turn-prompt-label">Up next</span>
+            <strong>{player.name}</strong>
             <p>{isCreator
               ? "Record a dance move for everyone else to copy."
               : reference
