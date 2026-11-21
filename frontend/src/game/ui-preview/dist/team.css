@@ -1,0 +1,103 @@
+/* Team capture HUD: original Copycat artwork, player colors, and beat guide. */
+.team-capture-active>.topbar { position:absolute; right:max(32px,calc((100vw - 1500px)/2)); top:16px; padding:0; height:auto; z-index:6 }
+.team-capture-active>.topbar .sound { font-size:11px; min-height:40px }
+.game-screen.team-capture { width:min(1500px,calc(100% - 64px)); padding-top:16px; padding-bottom:18px }
+.team-capture .game-nav { padding-right:150px; margin-bottom:12px; min-height:42px }
+.team-capture .round-meta { gap:20px }
+.team-player-strip { list-style:none; margin:0 0 14px; padding:0; display:flex; justify-content:center; gap:16px }
+.team-player { position:relative; flex:1; max-width:360px; min-width:0; display:flex; align-items:center; gap:14px; min-height:80px; padding:10px 16px; border:1px solid #473453; border-bottom:3px solid var(--slot-color); background:#181122 }
+.team-player.current-player { border-color:var(--slot-color); background:color-mix(in srgb,var(--slot-color) 11%,#100b1d) }
+.team-player.current-player::after { content:''; position:absolute; bottom:-8px; left:calc(50% - 6px); width:12px; height:6px; background:var(--slot-color); clip-path:polygon(0 0,100% 0,50% 100%) }
+.hud-avatar { flex-shrink:0; width:54px; height:54px }
+.hud-avatar svg { width:100%; height:100%; display:block }
+.hud-player-text { display:flex; flex-direction:column; gap:7px; min-width:0; padding-right:16px }
+.hud-player-text strong { font-family:var(--display); font-size:19px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.hud-player-text>span { font-size:10px; font-weight:800; letter-spacing:1px; color:var(--slot-color) }
+.hud-slot { position:absolute; right:10px; top:10px; font-size:10px; font-weight:bold; color:#b29ac3 }
+.team-capture .game-heading { display:flex; align-items:baseline; gap:16px; margin:0 0 12px }
+.team-capture .game-heading .phase-label { font-size:11px; margin:0 }
+.team-capture .game-heading h2 { font-size:30px; letter-spacing:-.7px; line-height:1.15 }
+.team-capture .challenge-count { display:none }
+.team-capture .video-pair { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:20px }
+.team-capture .large-video { max-width:none }
+.team-capture .video-placeholder { aspect-ratio:auto; height:clamp(250px,calc(100svh - 450px),620px); min-height:0 }
+.team-capture .large-video .pose-outline { width:100px; height:134px }
+.team-capture .capture-controls { margin:14px 0; gap:16px }
+.team-capture .tracking-status strong { font-size:13px }
+.team-capture .tracking-status>span { font-size:12px }
+.team-capture .preview-state { font-size:11px; gap:4px }
+.team-capture .preview-state select { font-size:12px; padding-top:8px; padding-bottom:8px }
+.team-capture .capture-controls>.ui-primary { font-size:14px; padding:15px 22px; min-height:49px }
+.team-capture .capture-controls>.ui-secondary { font-size:11px; min-height:38px; padding:10px 13px }
+.beat-guide { border:1px solid #5e436f; background:#160e23; --beat-step:80px }
+.beat-guide>progress { height:3px }
+.beat-guide-inner { display:grid; grid-template-columns:148px minmax(100px,1fr) 170px; align-items:center; gap:24px; padding:12px 16px }
+.beat-time { display:flex; flex-direction:column; gap:5px; min-width:0 }
+.beat-time strong { font-family:var(--display); font-size:22px; font-variant-numeric:tabular-nums; line-height:1 }
+.beat-time>span { font-size:10px; color:#b39cc5; line-height:1.5 }
+.beat-visual { min-width:0 }
+.beat-lane { position:relative; overflow:hidden; height:30px; background:#23162f; border-top:1px solid #62447a; border-bottom:1px solid #62447a }
+.beat-flow { position:absolute; inset:0 calc(-1 * var(--beat-step)) 0 20%; background-image:repeating-linear-gradient(90deg,transparent 0 76px,#a4d76b 76px 80px); background-size:var(--beat-step) 100%; opacity:.65 }
+.beat-hit-line { position:absolute; left:20%; top:0; bottom:0; width:2px; background:var(--lime) }
+.beat-hit-square { position:absolute; left:calc(20% - 6px); top:8px; width:14px; height:14px; background:#80658e; transform:rotate(45deg); border:2px solid var(--lime) }
+.beat-count { display:flex; justify-content:center; align-items:center; gap:9px; margin-top:6px }
+.beat-count>span { display:flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid #62447a; color:#ae94c1; font-size:10px; font-weight:800; line-height:1 }
+.beat-count>.active-beat { background:var(--lime); border-color:var(--lime); color:var(--bg) }
+.beat-tools { display:flex; align-items:center; justify-content:flex-end; gap:14px }
+.beat-tools label { display:flex; flex-direction:column; gap:5px; color:#b39cc5; font-size:9px; font-weight:700; letter-spacing:.5px }
+.beat-tools input { width:62px; min-height:30px; border:1px solid #65497a; border-radius:0; background:#24162f; color:white; font-family:var(--body); font-size:16px; font-weight:700; padding:4px 5px; line-height:1.2 }
+.beat-tools input:focus-visible { outline:2px solid var(--lime); outline-offset:3px }
+.beat-tools input:disabled { color:#b39cc5; opacity:.7 }
+.beat-tools .ui-secondary { min-height:32px; font-size:10px; padding:8px 10px; min-width:58px }
+.beat-playing .beat-flow { animation:beat-scroll var(--beat-duration) linear infinite }
+.beat-playing .beat-hit-square { animation:beat-pulse var(--beat-duration) ease-out infinite }
+@keyframes beat-scroll { from{background-position:0 0} to{background-position:calc(-1 * var(--beat-step)) 0} }
+@keyframes beat-pulse { 0%{background:var(--lime)} 65%,100%{background:#47344f} }
+@media(max-width:1000px) {
+  .hud-player-text strong { font-size:16px }
+  .hud-avatar { width:44px; height:44px }
+  .team-player { padding:10px; gap:9px }
+  .team-capture .capture-controls { flex-wrap:wrap }
+  .beat-guide-inner { grid-template-columns:110px minmax(80px,1fr) 160px; gap:16px }
+}
+@media(max-width:700px) {
+  .team-capture-active>.topbar { right:16px; top:16px }
+  .team-capture-active>.topbar .sound { font-size:10px; min-height:34px; padding:8px 10px }
+  .game-screen.team-capture { width:calc(100% - 32px); padding-top:16px; padding-bottom:16px }
+  .team-capture .game-nav { padding-right:125px; gap:12px; align-items:center; margin-bottom:16px }
+  .team-capture .game-nav>.ui-secondary { padding:10px; font-size:11px; min-height:36px }
+  .team-capture .round-meta { gap:5px 9px; font-size:9px; max-width:none; margin-left:auto }
+  .team-capture .demo-tag { font-size:8px; padding:2px 4px }
+  .team-player-strip { display:grid; grid-template-columns:repeat(var(--team-size,4),minmax(0,1fr)); gap:8px; margin-bottom:18px }
+  .team-player { min-height:105px; padding:8px 4px; flex-direction:column; justify-content:center; gap:7px }
+  .hud-avatar { width:40px; height:40px }
+  .hud-player-text { text-align:center; padding:0; max-width:100%; gap:5px }
+  .hud-player-text strong { font-size:12px }
+  .hud-player-text>span { font-size:8px; letter-spacing:0 }
+  .hud-slot { display:none }
+  .team-capture .game-heading { display:block; margin-bottom:14px }
+  .team-capture .game-heading .phase-label { margin-bottom:7px; font-size:10px }
+  .team-capture .game-heading h2 { font-size:30px }
+  .team-capture .video-pair { grid-template-columns:1fr; gap:16px }
+  .team-capture .video-placeholder { height:250px }
+  .team-capture .capture-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px 10px; margin:18px 0 }
+  .team-capture .tracking-status { grid-column:1 / -1 }
+  .team-capture .preview-state { grid-column:1 / -1 }
+  .team-capture .preview-state select { width:100%; max-width:none }
+  .team-capture .capture-controls>.ui-primary { margin:0; width:100%; font-size:12px; padding:14px 12px }
+  .team-capture .capture-controls>.ui-secondary { min-height:45px }
+  .beat-guide { position:sticky; bottom:0; z-index:4 }
+  .beat-guide-inner { grid-template-columns:49px minmax(60px,1fr) 103px; gap:10px; padding:10px }
+  .beat-time strong { font-size:18px }
+  .beat-time>span { font-size:8px; line-height:1.4 }
+  .beat-tools { gap:6px }
+  .beat-tools input { width:46px; font-size:14px; padding:4px 2px }
+  .beat-tools label { font-size:7px; letter-spacing:0 }
+  .beat-tools .ui-secondary { min-width:46px; font-size:8px; padding:8px 5px }
+  .beat-count { gap:5px }
+  .beat-count>span { width:15px; height:15px; font-size:9px }
+}
+@media(prefers-reduced-motion:reduce) {
+  .beat-playing .beat-flow,.beat-playing .beat-hit-square { animation:none }
+}
+
