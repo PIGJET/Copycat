@@ -115,3 +115,43 @@ Called once, for the loser, after all the rounds.
 ## `GET /health`
 
 `{"status": "ok"}`. Use it to show "backend not running" before the game starts.
+
+## Dance-video reference import (Backend → Game → Recorder)
+
+An optional dance-video mode uses a prerecorded reference instead of a creator's camera recording.
+Players choose a section between 5 and 60 seconds and take turns against the same reference.
+The backend imports media; Recorder extracts reference poses from the returned local video.
+`/score` and `/roast` retain their existing request/response formats. Live ratings, when added
+by Recorder/Game, are provisional; the completed `/score` total determines the leaderboard.
+
+### `POST /reference-video`
+
+Request:
+
+```json
+{"url": "https://www.youtube.com/watch?v=BaW_jenozKc", "start_seconds": 0, "duration_seconds": 10}
+```
+
+- `url` is required. HTTPS YouTube watch, Shorts and youtu.be video links are accepted;
+  playlists and live/former-live sources are excluded. Use content authorized for processing.
+- `start_seconds` defaults to 0; `duration_seconds` defaults to 10 and must be 5–60.
+  Both must be finite numbers and the section must fit inside the source.
+- Success: `200`, `Content-Type: video/mp4`, containing the completed clip's bytes.
+  Game fetches a Blob and owns its object URL. No server filesystem path or persistent URL is returned.
+- The MP4 is normalized to H.264/yuv420p with optional AAC, at 30 fps, within 1280×720.
+  Its own decoded timeline is the reference timeline: `t = mediaTime * 1000`.
+  A `reference_ms` score timestamp maps directly to seconds in this final clip, without
+  adding the original source section offset. Extract raw, unmirrored MediaPipe landmarks.
+- Prepare and cache the reference once for all turns. Do not submit the MP4 to `/score`;
+  submit extracted poses using the existing Recording format.
+- Processing may take up to 180 seconds. Show a preparing state, allow cancellation and
+  offer permitted local-file selection when retrieval fails. Arbitrary links may be unavailable.
+
+Errors are `{ "detail": "<safe player-facing message>", "reason": "<developer code>" }`:
+400 invalid URL/request/section/source; 502 retrieval, conversion, size or storage failure;
+503 tools unavailable or another import busy; 504 deadline exceeded. A disconnected request
+is canceled (internally 499). There is one active importer per backend process; run one uvicorn
+worker for this local mode. Temporary files are removed after processing, including failures.
+
+Recorder/Game still need to implement video preparation, live feedback, camera-video retention,
+turn flow and correction replay. This endpoint alone does not supply those frontend features.
