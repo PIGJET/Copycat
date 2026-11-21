@@ -41,4 +41,4 @@ Leaderboard updates retain the previous order while averages count to their new 
 The visual finish uses bundled Silkscreen and Barlow font files in dist/fonts, with licenses included. art-direction.css refines typography, flat player surfaces, empty slots, button depth, and secondary hierarchy while preserving the existing composition and all JavaScript behavior.
 
 
-Home music streams YouTube video mRN_T6JkH-c through the official player. The existing sound toggle starts playback at 25% volume on home; leaving home, muting, or hiding the tab pauses it. No audio is extracted. The visible player supports a manual play fallback. Run node --test tests/home-music.test.cjs for lifecycle tests.
+Home music streams YouTube video mRN_T6JkH-c through the official player. Sound defaults on and attempts playback at 25% volume on home, retrying after a click or keypress if autoplay is blocked; leaving home, muting, or hiding the tab pauses it. No audio is extracted. The visible player supports a manual play fallback. Run node --test tests/home-music.test.cjs for lifecycle tests.

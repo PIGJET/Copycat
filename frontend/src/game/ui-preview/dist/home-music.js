@@ -8,6 +8,7 @@
   let readyPlayer = null;
   let loading = false;
   let failed = false;
+  let autoplayBlocked = false;
   let apiPromise;
   const shouldPlay = () => soundOn && !home.hidden && !document.hidden;
 
@@ -64,10 +65,12 @@
             else readyPlayer.pauseVideo();
           },
           onAutoplayBlocked() {
-            status.textContent = 'Press play in the player to start the music.';
+            autoplayBlocked = true;
+            status.textContent = 'Click or press a key to start the music.';
           },
           onStateChange(event) {
             if (event.data === 1) {
+              autoplayBlocked = false;
               if (shouldPlay()) status.textContent = '';
               else event.target.pauseVideo();
             }
@@ -87,7 +90,15 @@
   }
 
   sound.addEventListener('click', syncMusic);
+  // Browser autoplay policy can require a gesture. Respect mute and navigation
+  // handlers before retrying, so a mode or mute click never starts hidden music.
+  const retryPlayback = () => {
+    if (autoplayBlocked && shouldPlay()) syncMusic();
+  };
+  document.addEventListener('click', retryPlayback);
+  document.addEventListener('keydown', retryPlayback);
   new MutationObserver(syncMusic).observe(home, { attributes: true, attributeFilter: ['hidden'] });
   document.addEventListener('visibilitychange', syncMusic);
   window.addEventListener('pagehide', () => readyPlayer?.pauseVideo());
+  syncMusic();
 })();
