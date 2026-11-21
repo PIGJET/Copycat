@@ -1,10 +1,8 @@
 # Run the merged game
 
-From `frontend/`, run `npm ci` and `npm run build`. Then run `python src/game/ui-preview/serve_songs.py` and open http://localhost:5173. The song server needs NumPy, SciPy and FFmpeg (on PATH or set COPYCAT_FFMPEG). It serves the built app and prepares the selected original-artist preview.
+From `frontend/`, run `npm ci` followed by `npm run dev` and open the localhost address it prints. For the built app, run `npm run build` then `npm run preview`. Both commands serve the song previews on the same port as the game. npm installs the platform-specific FFmpeg binary. The server fetches original-artist previews from Deezer on demand and caches recent selections in memory. These tracks need internet access and availability depends on region. The bundled chiptunes work offline. A static-only web host needs a server for the `/songs/` route.
 
 Choose **Continue** after camera check to use the webcam and MediaPipe tracker on the dance floor. In Team mode the creator records a pose reference and each challenger watches it before recording. Scores use the captured poses. Solo captures a practice turn without a reference score. **Continue demo** uses the existing camera-free preview.
-
-For frontend development, run the song server with COPYCAT_PORT=5174, then run `npm run dev` in `frontend/`. Vite proxies song requests to port 5174.
 
 The material below describes the original standalone preview.
 
