@@ -152,8 +152,12 @@ export function placePip(place: LoserPlacement, aspect: number, video: { w: numb
   return placeCutout({ x0: 0, y0: 0, x1: 1, y1: 1 }, aspect, place, video, screenW, screenH);
 }
 
-/** The container/codec to record, webm first, mp4 where that's all the browser does (Safari). */
+/** The container/codec to record: MP4/H.264 where the browser can (plays everywhere, and its header
+ * carries the duration), else WebM. */
 export function pickMimeType(isSupported: (type: string) => boolean): string | null {
-  const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4;codecs=avc1,mp4a", "video/mp4"];
+  const types = [
+    "video/mp4;codecs=avc1.42E01F,mp4a.40.2", "video/mp4;codecs=avc1,mp4a", "video/mp4;codecs=avc1", "video/mp4",
+    "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm",
+  ];
   return types.find((type) => { try { return isSupported(type); } catch { return false; } }) ?? null;
 }
