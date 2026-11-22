@@ -5,10 +5,9 @@ import type { AttemptResult, ReferenceClip } from '../types/challenge';
 import type { PoseRecording } from '../types/pose';
 import type { ScoreResult } from './api';
 import { findReplayPose } from './replay';
-import { readAnalysis, analysisAt, mistakeSections, errorColor, REPLAY_SEGMENTS, worstPart, describeMistake } from './replayAnalysis';
+import { readAnalysis, analysisAt, mistakeSections, errorColor, REPLAY_SEGMENTS, worstPart } from './replayAnalysis';
 import type { ErrorSample } from './replayAnalysis';
 import { ReplayTimeline } from './ReplayTimeline';
-import { formatReplayTime } from './replayTimelineData';
 
 function seekFrame(video: HTMLVideoElement, seconds: number, signal: AbortSignal) {
   signal.throwIfAborted();
@@ -130,14 +129,21 @@ function ReplayPane({ label, url, videoRef, recording, offsetMs, mirrored, onSto
           onEnded={onStop} onWaiting={onStop} onPause={onStop} onError={onError} />
         <canvas ref={canvasRef} aria-hidden="true" />
       </div>
+      {mirrored && showMistakes && <div className="attempt-legend" aria-label="Mistake color legend">
+        <span className="attempt-legend__title">Pose match</span>
+        <span><i className="attempt-legend__swatch attempt-legend__swatch--close" aria-hidden="true" />Close <small>≤10°</small></span>
+        <span><i className="attempt-legend__swatch attempt-legend__swatch--moderate" aria-hidden="true" />Moderate <small>&gt;10–30°</small></span>
+        <span><i className="attempt-legend__swatch attempt-legend__swatch--large" aria-hidden="true" />Large <small> &gt;30°</small></span>
+      </div>}
     </figure>
   );
 }
 
-export function ResultsReplay({ reference, attempt, score }: {
+export function ResultsReplay({ reference, attempt, score, onChangeClip }: {
   reference: ReferenceClip;
   attempt: AttemptResult;
   score: ScoreResult;
+  onChangeClip: () => void;
 }) {
   const referenceVideo = useRef<HTMLVideoElement>(null);
   const attemptVideo = useRef<HTMLVideoElement>(null);
@@ -157,8 +163,6 @@ export function ResultsReplay({ reference, attempt, score }: {
   const [position, setPosition] = useState(initialMs);
   const [rate, setRate] = useState(1);
   const [showMistakes, setShowMistakes] = useState(true);
-  const [selected, setSelected] = useState<number | null>(worst?.peak.reference_ms ?? null);
-  const formatTime = formatReplayTime;
 
   function pauseBoth() {
     playbackRequest.current.generation++;
@@ -274,25 +278,16 @@ export function ResultsReplay({ reference, attempt, score }: {
       <ReplayTimeline videoUrl={reference.videoUrl} durationMs={reference.durationMs} position={position}
         samples={samples} playing={isPlaying} disabled={isSeeking || Boolean(error)}
         onToggle={() => void playBoth()} onSeek={seekTo} onSeekStart={pauseBoth} />
-      <div className="replay-mistakes" aria-label="Mistake sections">
-        {sections.map((section,i)=><button key={section.peak.reference_ms} type="button"
-          className={selected===section.peak.reference_ms ? 'is-selected' : ''}
-          aria-label={`Mistake ${i+1}, ${formatTime(section.peak.reference_ms)}, ${describeMistake(section.peak)}`}
-          aria-pressed={selected===section.peak.reference_ms}
-          onClick={()=>{setSelected(section.peak.reference_ms);seekTo(Math.max(0,section.peak.reference_ms-1000));}}>
-          Mistake {i+1} · {formatTime(section.peak.reference_ms)}
-        </button>)}
+      <div className="replay-controls" aria-label="Replay controls">
+        <div className="replay-controls__speed"><span>Speed</span><div className="replay-speed-options" role="group" aria-label="Playback speed">
+          {[.25, .5, 1].map(value => <button type="button" key={value} aria-pressed={rate === value}
+            onClick={() => {setRate(value);for (const video of [referenceVideo.current, attemptVideo.current]) if (video) video.playbackRate = value;}}>{value}×</button>)}
+        </div></div>
+        <label className="replay-controls__toggle"><input type="checkbox" role="switch" checked={showMistakes} onChange={e=>setShowMistakes(e.target.checked)}/><span className="replay-toggle-track" aria-hidden="true"/> Show mistakes</label>
+        <button type="button" disabled={isSeeking} onClick={() => void move(0, offset / 1000)}>Replay from start</button>
+        <button type="button" className="solo-primary" onClick={onChangeClip}>Replace clip</button>
       </div>
       {samples.length===0 && <p role="status">Mistake details unavailable</p>}
-      {showMistakes && samples.length>0 &&
-        <p className="replay-legend">Green: close · Amber: moderate mismatch · Red: large mismatch</p>}
-      <div className="solo-actions">
-        <label>Speed <select value={rate} onChange={e=>{const value=Number(e.target.value);setRate(value);for(const video of [referenceVideo.current,attemptVideo.current])if(video)video.playbackRate=value;}}>
-          <option value={.25}>0.25×</option><option value={.5}>0.5×</option><option value={1}>1×</option></select></label>
-        <label><input type="checkbox" checked={showMistakes} onChange={e=>setShowMistakes(e.target.checked)}/> Show mistakes</label>
-        <button type="button" disabled={isSeeking} onClick={() => void move(0, offset / 1000)}>Replay from start</button>
-        <button type="button" disabled={isSeeking} onClick={() => {setSelected(worst?.peak.reference_ms ?? null);seekTo(initialMs);}}>Worst mistake</button>
-      </div>
       {isSeeking && <p role="status">Finding replay frames…</p>}
       {error && <p role="alert">{error}</p>}
     </section>

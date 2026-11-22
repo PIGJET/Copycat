@@ -71,14 +71,14 @@
 .solo-actions input[type=checkbox] { accent-color: #b6ff00; }
 
 /* The replay strip follows the reference clock; it is a seek control, not an editor. */
-.filmstrip-timeline { --replay-progress: 0%; margin: 2rem 0 1rem; padding: clamp(14px, 2.5vw, 26px); border: 1px solid #55446d; border-radius: 18px; background: #15101f; }
+.filmstrip-timeline { --replay-progress: 0%; margin: .5rem 0 1rem; padding: clamp(14px, 2.5vw, 26px); border: 1px solid #55446d; border-radius: 18px; background: #15101f; }
 .filmstrip-heading { display: flex; justify-content: space-between; gap: 1rem; color: #fff; font-family: Silkscreen, monospace; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
 .filmstrip-heading span:last-child { color: #b7a9cd; font-family: Barlow, sans-serif; letter-spacing: 0; }
 .filmstrip-ticks { display: flex; justify-content: space-between; gap: .2rem; margin: 1.6rem 0 .35rem; color: #dcd5eb; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .filmstrip-track { position: relative; overflow: visible; border: 1px solid #62477c; border-radius: 9px; background: #29203a; }
 .filmstrip-frames { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); overflow: hidden; height: clamp(58px, 10vw, 112px); border-radius: 8px; }
 .filmstrip-frames > div { min-width: 0; border-right: 1px solid #110c19; background: linear-gradient(135deg, #332640, #21192e); }
-.filmstrip-frames img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.filmstrip-frames img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .filmstrip-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #e1d9ed; font-size: .85rem; pointer-events: none; }
 .filmstrip-dim { position: absolute; inset: 0 0 0 var(--replay-progress); background: #100b1d66; pointer-events: none; border-radius: 0 8px 8px 0; }
 .filmstrip-playhead { position: absolute; z-index: 2; top: -7px; bottom: -9px; left: var(--replay-progress); width: 3px; transform: translateX(-50%); background: #b6ff00; border-radius: 4px; pointer-events: none; }
@@ -103,3 +103,300 @@
 .solo-game .replay-mistakes button.is-selected { border-color: #b6ff00; color: #b6ff00; }
 @media (max-width: 600px) { .filmstrip-legend { width: 100%; margin-left: 0; } .filmstrip-ticks span:nth-child(even) { visibility: hidden; } }
 .filmstrip-score { overflow: hidden; color: #100b1d; font-size: .7rem; font-weight: bold; text-align: center; white-space: nowrap; }
+
+/* Solo adopts the multiplayer dance arena while retaining the real Solo flow. */
+.solo-game {
+  --solo-accent: #ffd246;
+  --solo-muted: #c2bfd6;
+  --solo-line: #555380;
+  --solo-surface: #10111e;
+  position: relative;
+  isolation: isolate;
+  padding: clamp(24px, 3vw, 48px) clamp(18px, 4vw, 64px) 80px;
+  background-color: #070810;
+  background-image: radial-gradient(circle, #ffffff90 1px, transparent 1.5px), radial-gradient(circle, #a8b8db90 1px, transparent 1.5px);
+  background-size: 137px 173px, 89px 127px;
+  background-position: 18px 37px, 52px 14px;
+  color: #fff8e8;
+}
+.solo-game__stage { width: 100%; max-width: 1500px; }
+.solo-game__header { justify-content: space-between; border: 0; margin: 0 0 clamp(38px, 5vw, 70px); padding: 0; }
+.solo-game__brand { display: flex; align-items: center; gap: clamp(20px, 3vw, 42px); }
+.solo-game__header h1 { margin: 0; color: #ffd246; font: 400 clamp(22px, 2vw, 28px)/1 Silkscreen, monospace; text-shadow: 3px 3px 0 #77451d; }
+.solo-game__header h1 span { margin-left: .2em; color: inherit; }
+.solo-game__mode { color: #c2bfd6; font: 400 12px/1.4 Silkscreen, monospace; letter-spacing: .08em; }
+.solo-game .solo-game__menu { padding: 10px 0; border: 0; background: transparent; color: #c2bfd6; font-size: 14px; }
+.solo-game .solo-game__menu:hover { color: #fff8e8; }
+.solo-screen__intro { margin-bottom: 26px; }
+.solo-game .solo-screen__intro h2 { margin: 8px 0; color: #fff8e8; font-size: clamp(28px, 3.6vw, 48px); line-height: 1.2; }
+.solo-screen__intro > p { margin: 0; color: #c2bfd6; }
+.solo-eyebrow { display: block; color: #ffd246; font: 400 11px/1.4 Silkscreen, monospace; letter-spacing: .08em; }
+.solo-source-card, .solo-panel, .solo-result-card { background: #0e0e1df5; border: 2px solid #555380; box-shadow: 5px 5px 0 #16172e; }
+.solo-source-card { width: min(100%, 760px); padding: clamp(20px, 3vw, 36px); box-sizing: border-box; }
+.solo-card-heading { display: flex; gap: 16px; align-items: flex-start; padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid #33324a; }
+.solo-card-heading > span { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; background: #30284e; color: #ffd246; font: 400 15px/1 Silkscreen, monospace; }
+.solo-card-heading h3, .solo-panel h3 { margin: 0; color: #fff8e8; font: 400 17px/1.4 Silkscreen, monospace; }
+.solo-game .solo-card-heading p { margin: 5px 0 0; color: #c2bfd6; font-size: 15px; }
+.solo-game .solo-source label, .solo-game .solo-file { color: #fff8e8; font-size: 15px; font-weight: 700; }
+.solo-game .solo-source input { min-height: 48px; border: 1px solid #66618e; background: #18182b; padding: 12px; }
+.solo-game .solo-file { margin-top: 22px; padding-top: 22px; border-top: 1px solid #33324a; }
+.solo-game .solo-file input { width: 100%; font-size: 14px; color: #c2bfd6; }
+.solo-game button { border: 1px solid #777297; border-bottom-width: 2px; background: #18182b; color: #f5efff; min-height: 44px; padding: 10px 16px; font-weight: 700; }
+.solo-game button:hover:not(:disabled) { background: #2b2844; }
+.solo-game .solo-primary, .solo-game .challenge-recorder button { background: #ffd246; color: #241a08; border: 0; border-bottom: 4px solid #a7751e; min-height: 48px; }
+.solo-game .solo-primary:hover:not(:disabled), .solo-game .challenge-recorder button:hover:not(:disabled) { background: #ffe385; }
+.solo-arena { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 28px; }
+.solo-arena__stage { min-width: 0; padding: 18px; border: 3px solid #bcb5ee; background: #10111e; box-shadow: 6px 6px 0 #24265c; }
+.solo-arena__stage .challenge-recorder__videos { gap: 14px; }
+.solo-arena__stage .challenge-recorder__videos > div > span { display: block; margin-bottom: 10px; color: #ddd6ee; font: 400 11px/1.4 Silkscreen, monospace; text-transform: uppercase; }
+.solo-arena__stage .challenge-recorder__reference, .solo-arena__stage .challenge-recorder__camera { border: 1px solid #555380; }
+.solo-panel { padding: 22px 18px; }
+.solo-panel h3 { margin-top: 10px; }
+.solo-game .solo-panel p { color: #c2bfd6; font-size: 15px; }
+.solo-panel__stat { display: flex; justify-content: space-between; gap: 12px; padding-top: 16px; margin-top: 20px; border-top: 1px solid #33324a; color: #c2bfd6; font-size: 14px; }
+.solo-panel__stat strong { color: #fff8e8; }
+.solo-rating { min-height: 0; margin-top: 16px; color: #ffd246; font-size: 22px; }
+.solo-result-card { padding: clamp(20px, 3vw, 36px); margin-bottom: 40px; }
+.solo-score { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.solo-score > span:first-child { flex-basis: 100%; color: #c2bfd6; font: 400 11px/1.4 Silkscreen, monospace; }
+.solo-score strong { color: #ffd246; line-height: 1.1; }
+.solo-breakdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 28px 0; border-block: 1px solid #555380; }
+.solo-breakdown > div { padding: 16px; border-right: 1px solid #555380; }
+.solo-breakdown > div:last-child { border: 0; }
+.solo-breakdown dt { color: #c2bfd6; font-size: 14px; }
+.solo-breakdown dd { margin: 8px 0 0; color: #fff8e8; font: 400 clamp(17px, 2vw, 23px)/1.3 Silkscreen, monospace; }
+.solo-replay__media { border: 2px solid #bcb5ee; box-shadow: 4px 4px 0 #24265c; }
+@media (max-width: 850px) {
+  .solo-arena { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .solo-game__header { margin-bottom: 42px; }
+  .solo-panel { padding: 18px; }
+}
+@media (max-width: 600px) {
+  .solo-game { padding: 24px 16px 60px; }
+  .solo-game__brand { gap: 16px; }
+  .solo-game__mode { font-size: 10px; }
+  .solo-arena__stage { padding: 12px; }
+  .solo-breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .solo-breakdown > div:nth-child(2) { border-right: 0; }
+  .solo-breakdown > div:nth-child(-n+2) { border-bottom: 1px solid #555380; }
+  .solo-game .solo-source-card .solo-actions > button { flex: 1 1 100%; }
+}
+
+.solo-game .filmstrip-timeline { border-radius: 0; border: 2px solid #555380; background: #0e0e1d; box-shadow: 5px 5px 0 #16172e; }
+.solo-game .filmstrip-playhead, .solo-game .filmstrip-playhead span { background: #ffd246; }
+.solo-game .filmstrip-playhead span { color: #241a08; }
+.solo-game .filmstrip-play { border-color: #a7751e; border-radius: 0; background: #ffd246; color: #241a08; }
+.solo-game .replay-mistakes button.is-selected { border-color: #ffd246; color: #ffd246; }
+
+/* Keep the reference link immediately available when Solo opens. */
+.solo-source-screen { max-width: 800px; }
+.solo-screen__intro--compact { margin-bottom: 18px; }
+.solo-source--top { max-width: none; }
+.solo-game .solo-source__hint { margin: 0; color: #c2bfd6; font-size: 14px; }
+.solo-source-screen .solo-file { max-width: none; }
+.solo-source-screen .solo-actions { margin-top: 2px; }
+/* The camera preview is mirrored for the player; counter-mirror the readable HUD. */
+.solo-live-overlay { position: absolute; inset: 0; z-index: 2; transform: scaleX(-1); pointer-events: none; }
+.solo-live-score { inset: auto auto 12px 12px; }
+.solo-live-score span:last-child { color: #bfc8df; font-size: .55rem; }
+@media (max-width: 600px) { .solo-source--top .solo-actions > button { flex: 1 1 100%; } }
+
+/* The source controls and both video frames share the Solo stage. */
+.solo-import { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, .48fr); align-items: start; gap: 8px 24px; margin-bottom: 24px; }
+.solo-import .solo-source { max-width: none; gap: 8px; }
+.solo-import .solo-source .solo-actions { margin: 4px 0 0; }
+.solo-game .solo-import .solo-file { max-width: none; padding: 0; margin: 0; border: 0; }
+.solo-import .solo-source__hint, .solo-import > [role='alert'], .solo-import > [role='status'] { grid-column: 1 / -1; }
+.solo-arena { grid-template-columns: minmax(0, 1fr); }
+.solo-arena__stage .challenge-recorder__videos { width: 100%; }
+.solo-reference-placeholder { display: grid; place-items: center; box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; padding: 20px; text-align: center; color: #c2bfd6; background: #0b0812; border: 1px solid #555380; }
+@media (max-width: 700px) { .solo-import { grid-template-columns: minmax(0, 1fr); } }
+
+/* The Solo sound toggle keeps its focus outline without a decorative border. */
+.arcade:has(.solo-game) > .topbar .sound { border: 0; box-shadow: none; }
+
+/* Solo fills the viewport, including the area behind the global sound control. */
+.arcade:has(.solo-game) { background: #070810; }
+.arcade:has(.solo-game) > .topbar { position: absolute; inset: 16px 24px auto auto; z-index: 7; width: auto; height: auto; padding: 0; }
+.arcade:has(.solo-game) > #game-screen { width: 100%; max-width: none; margin: 0; padding: 0; }
+.arcade:has(.solo-game) > .floor, .arcade:has(.solo-game) > .stars { display: none; }
+.solo-game__header { padding-right: 145px; }
+@media (max-width: 600px) {
+  .arcade:has(.solo-game) > .topbar { top: 10px; right: 12px; }
+  .solo-game__header { padding-top: 40px; padding-right: 0; }
+}
+
+/* Give the two video surfaces the room, with feedback on the camera itself. */
+.solo-game__stage { max-width: none; }
+.solo-arena__stage { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.solo-arena__stage .challenge-recorder__videos { gap: clamp(12px, 1.5vw, 24px); }
+.solo-arena__stage .challenge-recorder__reference,
+.solo-arena__stage .challenge-recorder__camera,
+.solo-reference-frame,
+.solo-reference-placeholder { width: 100%; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; }
+.solo-arena__stage .challenge-recorder__reference,
+.solo-arena__stage .challenge-recorder__camera,
+.solo-reference-placeholder { border: 2px solid #555380; }
+.solo-arena__stage .challenge-recorder__camera { transition: border-color 180ms ease, box-shadow 180ms ease; }
+.solo-arena__stage--capture[data-live-rating='perfect'] .challenge-recorder__camera { border-color: #b6ff00; box-shadow: 0 0 24px #b6ff00a0, 0 0 55px #b6ff0045; }
+.solo-arena__stage--capture[data-live-rating='good'] .challenge-recorder__camera { border-color: #50dfbd; box-shadow: 0 0 22px #50dfbda0, 0 0 50px #50dfbd45; }
+.solo-arena__stage--capture[data-live-rating='almost'] .challenge-recorder__camera { border-color: #ffc558; box-shadow: 0 0 22px #ffc558a0, 0 0 50px #ffc55845; }
+.solo-arena__stage--capture[data-live-rating='miss'] .challenge-recorder__camera { border-color: #ff647d; box-shadow: 0 0 20px #ff647d90, 0 0 45px #ff647d40; }
+.solo-reference-frame { position: relative; background: #0b0812; }
+.solo-reference-frame .challenge-recorder__reference { display: block; height: 100%; }
+.solo-reference-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: #080913d9; text-align: center; color: #fff8e8; }
+.solo-reference-loading strong { font: 400 clamp(15px, 1.6vw, 22px)/1.4 Silkscreen, monospace; color: #ffd246; }
+.solo-reference-loading span { color: #ded8ed; font-size: 15px; }
+.solo-loading-track { width: min(75%, 320px); height: 8px; overflow: hidden; border-radius: 999px; background: #3a3555; }
+.solo-loading-track > div { width: 38%; height: 100%; border-radius: inherit; background: #ffd246; animation: solo-loading 1.25s ease-in-out infinite; }
+@keyframes solo-loading { from { transform: translateX(-110%); } to { transform: translateX(280%); } }
+@media (max-width: 600px) { .solo-arena__stage { padding: 0; } }
+@media (prefers-reduced-motion: reduce) { .solo-loading-track > div { animation: none; width: 100%; opacity: .65; } .solo-arena__stage .challenge-recorder__camera { transition: none; } }
+
+/* Keep the active dance, camera controls and move guide together in the viewport. */
+@media (min-height: 560px) {
+  html:has(.solo-game--dancing), body:has(.solo-game--dancing) { height: 100%; overflow: hidden; }
+  .arcade:has(.solo-game--dancing) { height: 100dvh; min-height: 0; overflow: hidden; }
+  .arcade:has(.solo-game--dancing) > #game-screen { height: 100%; }
+  .solo-game--dancing { height: 100%; min-height: 0; padding: 16px clamp(14px, 2vw, 32px); }
+  .solo-game--dancing .solo-game__stage { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  .solo-game--dancing .solo-game__header { flex: none; margin-bottom: 10px; }
+  .solo-game--dancing .solo-screen { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .solo-game--dancing .solo-screen__intro { flex: none; margin-bottom: 8px; }
+  .solo-game--dancing .solo-screen__intro h2 { margin: 3px 0; font-size: clamp(20px, 2.5vw, 32px); }
+  .solo-game--dancing .solo-screen__intro p { font-size: 14px; }
+  .solo-game--dancing .solo-arena, .solo-game--dancing .solo-arena__stage { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .solo-game--dancing .challenge-recorder { display: grid; grid-template-rows: minmax(0, 1fr) auto auto auto; gap: 6px; flex: 1; min-height: 0; }
+  .solo-game--dancing .challenge-recorder__videos { width: 100%; max-width: none; height: 100%; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .solo-game--dancing .challenge-recorder__videos > div { display: flex; flex-direction: column; min-height: 0; }
+  .solo-game--dancing .challenge-recorder__videos > div > span { flex: none; margin-bottom: 4px; }
+  .solo-game--dancing .challenge-recorder__reference, .solo-game--dancing .challenge-recorder__camera { flex: 1; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; }
+  .solo-game--dancing .pose-cue-track { min-width: 0; margin: 0; color: #ffd246; font: 400 11px/1.4 Silkscreen, monospace; text-transform: uppercase; }
+  .solo-game--dancing .pose-cue-track canvas { width: 100%; height: clamp(70px, 15dvh, 150px); margin-top: 4px; border: 2px solid #555380; border-radius: 12px; }
+  .solo-game--dancing .challenge-recorder > p { margin: 0; color: #dcd7eb; font-size: 14px; }
+  .solo-game--dancing .challenge-recorder > button { justify-self: start; min-height: 40px; padding: 7px 18px; }
+  .solo-game--dancing .solo-screen > .solo-actions { flex: none; margin: 4px 0 0; }
+  .solo-game--dancing .solo-screen > .solo-actions button { min-height: 36px; padding: 5px 12px; font-size: 13px; }
+}
+@media (min-height: 560px) and (max-width: 600px) {
+  .solo-game--dancing .solo-game__header { padding-top: 35px; }
+  .solo-game--dancing .solo-screen__intro p { display: none; }
+  .solo-game--dancing .pose-cue-track canvas { height: clamp(70px, 12dvh, 110px); }
+}
+
+/* Prioritize the dance surfaces over navigation during an active Solo turn. */
+.solo-game--dancing .solo-game__brand h1,
+.solo-game--dancing .solo-game__mode { display: none; }
+.solo-game--dancing .solo-game__brand { gap: 0; }
+.solo-game--dancing .solo-game__menu { min-height: 30px; padding: 4px 0; font-size: 12px; }
+@media (min-height: 560px) {
+  .solo-game--dancing { padding: 8px clamp(10px, 1.3vw, 20px); }
+  .solo-game--dancing .solo-game__header { margin-bottom: 2px; }
+  .solo-game--dancing .solo-screen__intro { margin-bottom: 4px; }
+  .solo-game--dancing .solo-screen__intro .solo-eyebrow,
+  .solo-game--dancing .solo-screen__intro p { display: none; }
+  .solo-game--dancing .solo-screen__intro h2 { margin: 0; font-size: clamp(16px, 1.5vw, 24px); }
+  .solo-game--dancing .challenge-recorder { gap: 4px; }
+  .solo-game--dancing .challenge-recorder__videos { gap: clamp(8px, 1vw, 16px); }
+  .solo-game--dancing .pose-cue-track canvas { height: clamp(80px, 18dvh, 170px); }
+  .solo-game--dancing .solo-screen > .solo-actions { margin-top: 2px; }
+}
+@media (min-height: 560px) and (max-width: 600px) {
+  .solo-game--dancing .solo-game__header { padding-top: 26px; }
+  .solo-game--dancing .pose-cue-track canvas { height: clamp(72px, 14dvh, 130px); }
+}
+
+@media (min-height: 560px) {
+  .solo-game--dancing .pose-cue-track canvas { height: clamp(130px, 27dvh, 260px); }
+}
+@media (min-height: 560px) and (max-width: 600px) {
+  .solo-game--dancing .pose-cue-track canvas { height: clamp(110px, 23dvh, 190px); }
+}
+
+/* Solo has no global sound control; reclaim its header space. */
+.arcade:has(.solo-game) > .topbar { display: none; }
+.solo-game__header { padding-right: 0; }
+@media (max-width: 600px) {
+  .solo-game__header, .solo-game--dancing .solo-game__header { padding-top: 0; }
+}
+
+/* Keep the turn action easy to find above the dance surfaces. */
+.solo-game--dancing .challenge-recorder > button {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 4;
+  transform: translateX(-50%);
+}
+
+/* Compact replay controls share a row and wrap on smaller screens. */
+.replay-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.solo-game .replay-controls button { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.solo-game .replay-controls .solo-primary { min-height: 40px; }
+.solo-game .replay-controls button.is-selected { border-color: #ffd246; color: #ffd246; }
+.replay-controls__speed, .replay-controls__toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; color: #eee8f7; font-size: 14px; }
+.replay-controls__speed select { min-height: 40px; padding: 6px 28px 6px 10px; border: 1px solid #777297; border-radius: 0; color: #fff8e8; background: #18182b; font: inherit; cursor: pointer; }
+.replay-controls__speed select:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.replay-controls__toggle input { width: 18px; height: 18px; margin: 0; accent-color: #ffd246; }
+@media (max-width: 600px) { .replay-controls { gap: 6px; } .replay-controls__speed, .replay-controls__toggle { padding-inline: 4px; } }
+
+.replay-speed-options { display: inline-flex; border: 1px solid #777297; }
+.solo-game .replay-speed-options button { min-width: 46px; min-height: 38px; padding: 6px 9px; border: 0; border-right: 1px solid #777297; background: #18182b; color: #eee8f7; }
+.solo-game .replay-speed-options button:last-child { border-right: 0; }
+.solo-game .replay-speed-options button[aria-pressed='true'] { background: #ffd246; color: #241a08; }
+.replay-controls__toggle { position: relative; cursor: pointer; user-select: none; }
+.replay-controls__toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.replay-toggle-track { position: relative; width: 40px; height: 22px; flex: 0 0 auto; border: 1px solid #777297; border-radius: 999px; background: #393342; transition: background-color .15s; }
+.replay-toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff8e8; transition: transform .15s; }
+.replay-controls__toggle input:checked + .replay-toggle-track { background: #ffd246; border-color: #ffd246; }
+.replay-controls__toggle input:checked + .replay-toggle-track::after { transform: translateX(18px); background: #241a08; }
+.replay-controls__toggle input:focus-visible + .replay-toggle-track { outline: 2px solid #fff; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .replay-toggle-track, .replay-toggle-track::after { transition: none; } }
+
+/* Shared Solo typography for video labels, controls, status and replay details. */
+.solo-game .solo-replay__pane figcaption {
+  margin: 0 0 10px;
+  color: #ded8ed;
+  font: 400 11px/1.4 Silkscreen, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.solo-game .replay-controls__speed > span,
+.solo-game .filmstrip-heading > span:first-child {
+  color: #ffd246;
+  font: 400 11px/1.4 Silkscreen, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.solo-game .filmstrip-heading > span:last-child,
+.solo-game .filmstrip-ticks,
+.solo-game .filmstrip-placeholder,
+.solo-game .filmstrip-no-score,
+.solo-game .filmstrip-legend,
+.solo-game .replay-legend,
+.solo-game .replay-controls__toggle,
+.solo-game .solo-source__hint,
+.solo-game [role='status'] {
+  color: #ded8ed;
+  font-family: Barlow, system-ui, sans-serif;
+}
+.solo-game .filmstrip-time { color: #fff8e8; font-family: Barlow, system-ui, sans-serif; }
+.solo-game .solo-file input::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 12px;
+  border: 1px solid #777297;
+  background: #18182b;
+  color: #fff8e8;
+  font: 700 14px/1.2 Barlow, system-ui, sans-serif;
+  cursor: pointer;
+}
+.solo-game .solo-file input::file-selector-button:hover { background: #2b2844; }
+
+.attempt-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; color: #eee8f7; font: 600 14px/1.35 Barlow, system-ui, sans-serif; }
+.attempt-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.attempt-legend .attempt-legend__title { color: #ffd246; font: 400 10px/1.4 Silkscreen, monospace; text-transform: uppercase; letter-spacing: .04em; }
+.attempt-legend small { color: #bcb7cc; font-size: 12px; }
+.attempt-legend__swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.attempt-legend__swatch--close { background: #33e88e; }
+.attempt-legend__swatch--moderate { background: #ffcb65; }
+.attempt-legend__swatch--large { background: #ff5c74; }

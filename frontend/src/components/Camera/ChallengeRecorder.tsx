@@ -319,11 +319,16 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
           <div className="challenge-recorder__camera">
             <video ref={camera} muted autoPlay playsInline />
             <canvas ref={overlay} aria-hidden="true" />
+            {cuePhase === 'countdown' && ['3', '2', '1'].includes(status) && (
+              <div className="challenge-recorder__countdown" aria-hidden="true">
+                <span key={status} data-count={status}>{status}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
       <PoseCueTrack reference={reference} source={sourceSize} videoRef={referenceVideo} phase={cuePhase} />
-      <p role="status">{issue || status || (cameraReady && pose.isReady && referenceReady ? 'Ready to dance' : 'Getting ready…')}</p>
+      <p role="status">{issue || status || (cameraReady && pose.isReady && referenceReady ? '' : 'Getting ready…')}</p>
       <button
         type="button"
         disabled={Boolean(issue) || busy || completed || !cameraReady || !pose.isReady || !referenceReady}

@@ -24,3 +24,10 @@ export function timelineSections(samples: ErrorSample[], durationMs: number): Ti
   }
   return result;
 }
+
+/** Size thumbnail pixels without stretching the source image. */
+export function thumbnailSize(width: number, height: number): { width: number; height: number } | null {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+  const scale = Math.min(1, 960 / width, 540 / height);
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}

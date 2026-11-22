@@ -19,3 +19,10 @@ test('timeline ticks include the exact end and time labels handle minutes', () =
  assert.equal(formatReplayTime(62500),'1:02');
  assert.deepEqual(timelineTicks(0),[]);
 });
+
+test('thumbnail dimensions preserve portrait and landscape video proportions', async () => {
+ const { thumbnailSize } = await import('./replayTimelineData.ts');
+ assert.deepEqual(thumbnailSize(1080, 1920), { width: 304, height: 540 });
+ assert.deepEqual(thumbnailSize(1920, 1080), { width: 960, height: 540 });
+ assert.equal(thumbnailSize(0, 1080), null);
+});
