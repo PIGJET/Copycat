@@ -1,20 +1,14 @@
 // Full-screen finale scene: plays /scenes/proposal.mp4 with the loser cut out of their clip
 // (MediaPipe selfie segmentation) dancing on the right. Falls back to the plain finale by
 // calling onFinish if the scene or clip is missing, segmentation fails, or it runs under 15 fps.
+// (The old React GameFlow uses this; the arcade finale plays ShameVideo.tsx instead.)
 import { useEffect, useRef, useState } from "react";
-import { FilesetResolver, ImageSegmenter } from "@mediapipe/tasks-vision";
 
-import { MIN_FPS, confidenceToAlpha, fpsFromSamples, pushSample, scaledWidth, tooSlow } from "./sceneMath";
+import { benchmark, createCutout, loopDance, waitForData } from "./cutout";
+import type { Cutout } from "./cutout";
+import { MIN_FPS, fpsFromSamples, pushSample, tooSlow } from "./sceneMath";
 
-const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite";
 export const DEFAULT_SCENE_URL = "/scenes/proposal.mp4";
-
-/** Segment at this height; smaller is faster, and the dancer is only ~1/3 of the screen. */
-const SEG_HEIGHT = 256;
-const BENCHMARK_FRAMES = 12;
-const WARMUP_FRAMES = 2;
 /** While playing, only bail out after this long so one slow frame doesn't kill the scene. */
 const RUNTIME_GRACE_MS = 2000;
 /** Safety net: if the scene isn't playing by now (slow wifi, stuck load), show the plain finale. */
@@ -48,19 +42,6 @@ async function videoExists(url: string, signal: AbortSignal): Promise<boolean> {
   }
 }
 
-function waitForData(video: HTMLVideoElement, timeoutMs = 8000): Promise<void> {
-  if (video.readyState >= 2) return Promise.resolve();
-  // The error may already have happened before we started listening.
-  if (video.error) return Promise.reject(new Error("clip failed to load"));
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("clip took too long to load")), timeoutMs);
-    video.addEventListener("loadeddata", () => { clearTimeout(timer); resolve(); }, { once: true });
-    video.addEventListener("error", () => { clearTimeout(timer); reject(new Error("clip failed to load")); }, { once: true });
-  });
-}
-
-const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
-
 export function FinaleScene({ loserClipUrl, clipStartMs = 0, clipDurationMs, sceneUrl = DEFAULT_SCENE_URL, onFinish }: FinaleSceneProps) {
   const [stage, setStage] = useState<"preparing" | "playing">("preparing");
   const clipRef = useRef<HTMLVideoElement>(null);
@@ -76,7 +57,7 @@ export function FinaleScene({ loserClipUrl, clipStartMs = 0, clipDurationMs, sce
     const controller = new AbortController();
     let done = false;
     let raf = 0;
-    let segmenter: ImageSegmenter | null = null;
+    let segmenter: Cutout | null = null;
     let prepareTimer = 0;
 
     const finish = (reason: FinishReason, detail?: string) => {
@@ -105,76 +86,17 @@ export function FinaleScene({ loserClipUrl, clipStartMs = 0, clipDurationMs, sce
 
       await clip.play().catch(() => {});
       await waitForData(clip);
-      const loopStart = clipStartMs / 1000;
-      const loopEnd = clipDurationMs ? (clipStartMs + clipDurationMs) / 1000 : Infinity;
-      clip.currentTime = loopStart;
-      // Loop just the dance, not the countdown recorded before it (checked every frame in step()).
-      const wrap = () => {
-        if (clip.ended || clip.currentTime >= loopEnd || clip.currentTime < loopStart - 0.5) {
-          clip.currentTime = loopStart;
-          if (clip.paused) void clip.play().catch(() => {});
-        }
-      };
-      clip.addEventListener("ended", wrap);
-
-      const vision = await FilesetResolver.forVisionTasks(WASM_URL);
-      if (done) return;
-      const create = (delegate: "GPU" | "CPU") =>
-        ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate },
-          runningMode: "VIDEO",
-          outputConfidenceMasks: true,
-          outputCategoryMask: false,
-        });
-      // GPU is much faster; some laptops can't start it, so try CPU before giving up.
-      segmenter = await create("GPU").catch(() => create("CPU"));
+      const wrap = loopDance(clip, clipStartMs, clipDurationMs);
+      const made = await createCutout(clip, overlay, wrap);
       if (done) {
-        segmenter.close();
+        made.close();
         return;
       }
-
-      // Small working canvases: the frame we segment, and the cut-out with alpha applied.
-      const w = scaledWidth(clip.videoWidth, clip.videoHeight, SEG_HEIGHT);
-      const h = SEG_HEIGHT;
-      const frame = document.createElement("canvas");
-      frame.width = w;
-      frame.height = h;
-      const fctx = frame.getContext("2d", { willReadFrequently: true });
-      overlay.width = w;
-      overlay.height = h;
-      const octx = overlay.getContext("2d");
-      if (!fctx || !octx) return finish("failed", "no 2D canvas");
-
-      let lastTs = 0;
-      /** Segment the current clip frame and draw the cut-out. Returns processing time in ms. */
-      const step = (): number => {
-        const t0 = performance.now();
-        wrap();
-        fctx.drawImage(clip, 0, 0, w, h);
-        const ts = Math.max(lastTs + 1, performance.now()); // timestamps must strictly increase
-        lastTs = ts;
-        const result = segmenter!.segmentForVideo(frame, ts);
-        try {
-          const mask = result.confidenceMasks?.[0];
-          if (!mask) throw new Error("no confidence mask");
-          const conf = mask.getAsFloat32Array();
-          const img = fctx.getImageData(0, 0, w, h);
-          for (let i = 0, p = 3; i < conf.length; i++, p += 4) img.data[p] = confidenceToAlpha(conf[i]);
-          octx.clearRect(0, 0, w, h);
-          octx.putImageData(img, 0, 0);
-        } finally {
-          result.close();
-        }
-        return performance.now() - t0;
-      };
+      segmenter = made;
+      const step = () => made.step();
 
       // Benchmark before showing anything: too slow → plain finale.
-      const samples: number[] = [];
-      for (let i = 0; i < BENCHMARK_FRAMES && !done; i++) {
-        const ms = step();
-        if (i >= WARMUP_FRAMES) samples.push(ms);
-        await nextFrame();
-      }
+      const samples = await benchmark(made, () => done);
       if (done) return;
       if (tooSlow(samples)) return finish("too-slow", `${fpsFromSamples(samples).toFixed(1)} fps < ${MIN_FPS}`);
       console.info(`[finale scene] segmentation ~${Math.round(fpsFromSamples(samples))} fps, playing scene`);

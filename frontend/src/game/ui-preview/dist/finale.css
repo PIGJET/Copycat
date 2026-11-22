@@ -48,20 +48,10 @@
 .finale-screen .ui-primary:disabled { opacity:.45; cursor:not-allowed }
 .finale-send .ui-primary { width:100% }
 .finale-send>span { display:block; font-size:13px; line-height:1.5; color:#b3a4bf; margin-top:12px }
-.finale-share-dialog { width:min(480px,calc(100% - 32px)); padding:28px; background:#1b122b; color:#ede5f2; border:1px solid #78618e; border-radius:0; max-height:calc(100svh - 40px); overflow:auto }
-.finale-share-dialog::backdrop { background:#08050bcc }
-.share-dialog-heading { display:flex; justify-content:space-between; align-items:center; gap:20px }
-.share-dialog-heading h2 { font:600 26px/1.2 var(--body); margin:0 }
-.share-dialog-heading button { width:44px; flex-shrink:0 }
-.finale-share-dialog p { color:#c3b6ce; font:400 16px/1.5 var(--body); margin:20px 0 }
-.finale-share-dialog #share-status { padding-top:16px; border-top:1px solid #4c395d; color:#ede5f2 }
-.share-dialog-actions { display:flex; flex-wrap:wrap; align-items:center; gap:18px }
 .finale-screen :is(button,a):focus-visible { outline:3px solid #fff8e8; outline-offset:4px }
 @media(max-width:900px) { .finale-screen .finale-layout { grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr); gap:24px } }
-@media(max-width:700px) { .game-screen.finale-screen { width:calc(100% - 32px); padding-top:12px } .finale-nav { margin-bottom:20px } .finale-heading h2 { font-size:26px; margin-bottom:24px } .finale-screen .finale-layout { grid-template-columns:1fr; gap:28px } .finale-screen .news-headline { padding:18px } .finale-screen .news-headline h3 { font-size:24px } .finale-send { margin-top:24px; padding-top:24px } .finale-share-dialog { padding:22px } }
+@media(max-width:700px) { .game-screen.finale-screen { width:calc(100% - 32px); padding-top:12px } .finale-nav { margin-bottom:20px } .finale-heading h2 { font-size:26px; margin-bottom:24px } .finale-screen .finale-layout { grid-template-columns:1fr; gap:28px } .finale-screen .news-headline { padding:18px } .finale-screen .news-headline h3 { font-size:24px } .finale-send { margin-top:24px; padding-top:24px } }
 
 .finale-replay-controls[hidden] { display:none }
 .finale-send>p { margin:14px 0 0; font-size:14px; line-height:1.5 }
 
-#replay-delivery { display:grid; gap:10px }
-#replay-recipient { min-width:0; padding:12px; font:inherit; background:#171022; color:white; border:1px solid #806690 }

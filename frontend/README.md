@@ -74,21 +74,15 @@ export default defineConfig([
 
 ```
 
-## Finale replay delivery
+## Finale video download
 
-Play a live camera game to record silent dance clips. The breaking-news screen plays the lowest-scoring available recording from the last-place player. Device sharing and download work locally.
-
-To enable the **Send replay** form, set the following server variables for the channels you use in `frontend/.env.local` and restart Vite.
-
-| Channel | Variables |
-| --- | --- |
-| Email attachment | `RESEND_API_KEY`, `REPLAY_FROM_EMAIL` (verified sender) |
-| SMS download link | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (SMS-capable number), `REPLAY_PUBLIC_ORIGIN` (your public HTTPS origin) |
-
-Run the game on localhost. For SMS, configure your public HTTPS reverse proxy to forward only GET and HEAD requests under `/replays/` to the running game server. Text recipients can download their clip for one hour while that server remains running. Email attachments work from localhost without a public endpoint. Setup references: [Resend](https://resend.com/docs/api-reference/emails/send-email) and [Twilio](https://www.twilio.com/docs/messaging/api/message-resource).
+The finale starts with the breaking-news shame video (`src/shame/ShameVideo.tsx`). It's recorded in the browser while it
+plays (the composite plus the clip's audio, via `MediaRecorder`), so **Download video** on the finale screen saves it
+straight away as `copycat-<loser>-breaking-news.webm` (or `.mp4` where the browser records that). If the composite can't
+be recorded, it saves the loser's own worst take instead. Everything stays on the device: nothing is uploaded.
 
 ## GitHub Pages
 
 In the repository's **Settings → Pages**, choose **GitHub Actions** as the publishing source. The **Deploy Copycat to GitHub Pages** workflow builds and publishes the frontend on pushes to `main`. You can also run it manually from **Actions** on `main`.
 
-For scoring, dance imports, and roast results on the deployed site, set the repository Actions variable `VITE_API_URL` to the public HTTPS URL of a separately hosted Copycat backend. Keep server credentials on the backend. GitHub Pages serves the static frontend and bundled chiptune tracks. The Vite song-preview server and email/SMS replay delivery require separate server hosting. Players can download recorded replays from the browser.
+For scoring, dance imports, and roast results on the deployed site, set the repository Actions variable `VITE_API_URL` to the public HTTPS URL of a separately hosted Copycat backend. Keep server credentials on the backend. GitHub Pages serves the static frontend and bundled chiptune tracks. The Vite song-preview server requires separate server hosting. Players can download the finale video from the browser.

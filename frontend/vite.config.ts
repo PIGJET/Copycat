@@ -1,8 +1,7 @@
-import { cpSync, createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
+import { cpSync, createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { replayDelivery } from './replayDelivery.ts'
 import { songServer } from './songServer.ts'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
@@ -13,9 +12,16 @@ const arcade = new URL('./src/game/ui-preview/dist/index.html', import.meta.url)
 // Liangray's real-song catalog: previews are fetched/converted on demand by songServer.ts.
 const catalog = readFileSync(new URL('./src/game/ui-preview/dist/song-catalog.js', import.meta.url), 'utf8')
 const tracks: {id:string}[] = JSON.parse(catalog.slice(catalog.indexOf(' = ') + 3).trim().replace(/;$/, ''))
-// frontend/public stays available too, for optional files such as public/scenes/proposal.mp4.
+// frontend/public stays available too, for optional files such as public/scenes/proposal.mp4 and the
+// shame video's reaction clips in public/shame-clips/ (gitignored: local only, never committed).
 const extraPublic = fileURLToPath(new URL('./public', import.meta.url))
-const TYPES: Record<string, string> = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' }
+const SERVED = ['/scenes/', '/shame-clips/']
+/** The .mp4 reaction clips in public/shame-clips/ (the shame video fetches this as shame-clips/index.json). */
+const shameClips = () => {
+  const dir = join(extraPublic, 'shame-clips')
+  return existsSync(dir) ? readdirSync(dir).filter(name => /\.mp4$/i.test(name) && statSync(join(dir, name)).isFile()).sort() : []
+}
+const TYPES: Record<string, string> = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json' }
 
 function extraPublicDir(): Plugin {
   let outDir = 'dist'
@@ -25,7 +31,12 @@ function extraPublicDir(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = normalize(decodeURIComponent((req.url ?? '').split('?')[0]))
-        if (!path.startsWith('/scenes/')) return next()
+        if (path === '/shame-clips/index.json') {
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Cache-Control', 'no-store')
+          return res.end(JSON.stringify(shameClips()))
+        }
+        if (!SERVED.some(prefix => path.startsWith(prefix))) return next()
         const file = join(extraPublic, path)
         if (!file.startsWith(extraPublic) || !existsSync(file) || !statSync(file).isFile()) return next()
         const size = statSync(file).size
@@ -49,6 +60,13 @@ function extraPublicDir(): Plugin {
     closeBundle() {
       const scenes = join(extraPublic, 'scenes')
       if (existsSync(scenes)) cpSync(scenes, join(outDir, 'scenes'), { recursive: true })
+      // Always write the clip list (an empty one in CI, where the gitignored clips don't exist).
+      const clips = shameClips()
+      mkdirSync(join(outDir, 'shame-clips'), { recursive: true })
+      for (const name of clips) cpSync(join(extraPublic, 'shame-clips', name), join(outDir, 'shame-clips', name))
+      writeFileSync(join(outDir, 'shame-clips', 'index.json'), JSON.stringify(clips))
+      const settings = join(extraPublic, 'shame-clips', 'clips.json')
+      if (existsSync(settings)) cpSync(settings, join(outDir, 'shame-clips', 'clips.json'))
     },
   }
 }
@@ -57,7 +75,6 @@ export default defineConfig({
   publicDir: 'src/game/ui-preview/dist',
   plugins: [
     react(),
-    replayDelivery(), // Liangray's finale "Send replay" (email/SMS, needs keys in .env.local)
     songServer(new Set(tracks.map(track => track.id))),
     extraPublicDir(),
     { name: 'copycat-arcade-entry', transformIndexHtml: { order: 'pre', handler() {
