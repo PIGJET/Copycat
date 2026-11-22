@@ -1,6 +1,6 @@
 # Recorder handoff
 
-The Game lane can use `prepareReference(videoUrl, signal)` from `utils/referenceRecorder.ts`.
+Solo mode (`src/game/Game.tsx`) uses `prepareReference(videoUrl, signal)` from `utils/referenceRecorder.ts`.
 Give it the object URL of the imported or locally selected clip. Prepare the reference
 once per clip and reuse the returned poses for every player.
 
@@ -23,3 +23,5 @@ Verify from `frontend/` with `node --test src/utils/*.test.mjs`, `npm run build`
 `i-54NhTqlH8`. It exercises a native Chrome recording with a simulated camera,
 including an interrupted turn and technical retry. A hardware camera rehearsal
 is still needed before relying on the measured timing on the demo laptop.
+
+`Camera.tsx` and `Camera.css` are from the first recorder and are no longer used by the app (listed for cleanup).

@@ -1,23 +1,27 @@
 # Copycat contract
 
-The shared interface between the lanes. If your code talks to another lane, it follows this file.
-Changing it needs a heads-up to the whole team first (see AGENTS.md), because every lane depends on it.
+The shared interfaces in Copycat: the backend API, the Recording format, and the bridge between
+Liangray's arcade UI and the engine. If your code talks across one of these, it follows this file.
+Changing it needs a heads-up to the whole team first (see AGENTS.md).
 
-**The game:** one laptop, one camera. A creator records a 10-second dance and the others copy it one at a time.
-Each copy is scored against the original. After all the rounds, the player with the lowest average `total`
-gets a "breaking news" shame video.
+**The game:** one laptop, one camera. In each round a creator records a 10-second dance and the others
+copy it one at a time. Each copy is scored against the original, and the creator role rotates. When the
+game ends (after every player has created, or early with End game), the player with the lowest average
+`total` gets a "breaking news" shame video.
 
-## Lanes
+## How the frontend fits together
 
-| Lane | Branch | Owns | Does |
-|---|---|---|---|
-| Backend | `backend-scoring-roast` / PRs to `main` | `backend/` | `/score` and `/roast` (Python, FastAPI) |
-| Recorder | `recorder` | `frontend/src/components/Camera/`, `frontend/src/hooks/`, `frontend/src/utils/`, `frontend/src/types/` | Camera, countdown, MediaPipe Pose, produces a **Recording** (below) and keeps the video for screenshots |
-| Game | `game` | `frontend/src/game/` | Players, rounds, calling `/score`, running averages, picking the loser |
-| Shame | `shame` | `frontend/src/shame/` | Grabs the worst-moment frames, calls `/roast`, plays the breaking-news video |
+The frontend lives in `frontend/` (`npm install`, then `npm run dev`).
 
-The frontend is React + TypeScript + Vite, in `frontend/` (`npm install`, then `npm run dev`).
-Shared frontend files (`App.tsx`, `main.tsx`, config) need a heads-up to the team before changing.
+| Part | Where | Does |
+|---|---|---|
+| Arcade UI | `frontend/src/game/ui-preview/dist/` (plain HTML, CSS, JS, served as Vite's public folder) | Draws every screen: home, lobby, camera check, tempo, dance turns, scores, leaderboard, finale |
+| Engine bridge | `frontend/src/arcade/bridge.tsx`, loaded by `src/main.tsx` | Exposes the engine to the arcade scripts (see [The bridge](#the-bridge)) |
+| Team recorder | `frontend/src/components/Game/TeamTurnDashboard.tsx` | Camera, MediaPipe pose, countdown, the copier's skeleton replay, produces a **Recording** |
+| Solo mode | `frontend/src/game/Game.tsx` | Reference import, live rating, scoring and replay timeline |
+| Shame video | `frontend/src/shame/` | The breaking-news video and its recording for Download video |
+
+`main.tsx`, `vite.config.ts` and the bridge are shared: tell the team before changing them.
 
 ## Backend
 
@@ -25,7 +29,7 @@ Shared frontend files (`App.tsx`, `main.tsx`, config) need a heads-up to the tea
 - CORS is open, so the frontend can call it from any local dev server.
 - Full details and examples: [`backend/README.md`](backend/README.md)
 
-## Recording (produced by Recorder, consumed by `/score`)
+## Recording (produced by the team recorder and solo mode, consumed by `/score`)
 
 ```json
 {
@@ -66,8 +70,9 @@ Request: `{"reference": <creator's Recording>, "attempt": <copier's Recording>}`
 
 - `arms`, `legs` and `torso` can be `null` if that body area was never visible.
 - `worst_moment` / `best_moment` are `t` values in each recording's own timeline: they line up with the
-  `t` you sent. Shame uses `worst_moment` to grab screenshots.
-- **The Game lane averages `total`** across a player's rounds. The lowest average loses.
+  `t` you sent.
+- **The frontend averages `total`** across a player's attempts. The lowest average loses; a lower average
+  `timing` loses a tie. Players with no scored attempt can't lose.
 
 ### Optional Solo replay analysis
 
@@ -115,20 +120,20 @@ Called once, for the loser, after all the rounds.
 
 - `headline` starts with `BREAKING:` and is under 90 characters. `roast_line` is under 120.
 - `source` is `"gemini"` or `"fallback"`. **A valid `/roast` request always gets a 200**, even with no wifi or no
-  Gemini key, so the Shame lane never needs its own fallback text. It can take up to about 8 seconds, so show a
+  Gemini key, so the frontend never needs its own fallback text. It can take up to about 8 seconds, so show a
   "developing story..." screen while waiting.
 
 ## `GET /health`
 
 `{"status": "ok"}`. Use it to show "backend not running" before the game starts.
 
-## Dance-video reference import (Backend → Game → Recorder)
+## Dance-video reference import (solo mode)
 
 An optional dance-video mode uses a prerecorded reference instead of a creator's camera recording.
 Players choose a section between 5 and 60 seconds and take turns against the same reference.
-The backend imports media; Recorder extracts reference poses from the returned local video.
-`/score` and `/roast` retain their existing request/response formats. Live ratings, when added
-by Recorder/Game, are provisional; the completed `/score` total determines the leaderboard.
+The backend imports media; solo mode extracts reference poses from the returned local video.
+`/score` and `/roast` keep their request/response formats. Solo's live ratings are provisional; the
+completed `/score` total is the official score.
 
 ### `POST /reference-video`
 
@@ -144,7 +149,7 @@ Request:
   Both must be finite numbers and the section must fit inside the source. Send
   `duration_seconds: null` with start 0 to import the entire source, which must be 5–60 seconds.
 - Success: `200`, `Content-Type: video/mp4`, containing the completed clip's bytes.
-  Game fetches a Blob and owns its object URL. No server filesystem path or persistent URL is returned.
+  The frontend fetches a Blob and owns its object URL. No server filesystem path or persistent URL is returned.
 - The MP4 is normalized to H.264/yuv420p with optional AAC, at 30 fps, within 1280×720.
   Its own decoded timeline is the reference timeline: `t = mediaTime * 1000`.
   A `reference_ms` score timestamp maps directly to seconds in this final clip, without
@@ -160,5 +165,48 @@ Errors are `{ "detail": "<safe player-facing message>", "reason": "<developer co
 is canceled (internally 499). There is one active importer per backend process; run one uvicorn
 worker for this local mode. Temporary files are removed after processing, including failures.
 
-Recorder/Game still need to implement video preparation, live feedback, camera-video retention,
-turn flow and correction replay. This endpoint alone does not supply those frontend features.
+Solo mode (`frontend/src/game/Game.tsx`, `utils/referenceRecorder.ts`) calls this endpoint, extracts the
+reference poses, records the player's turn with video and shows the correction replay.
+
+## The bridge
+
+`frontend/src/arcade/bridge.tsx` puts these on `globalThis` for the arcade scripts:
+
+**`CopycatTracking`**
+
+| Member | Does |
+|---|---|
+| `mock` | `true` with `?mock=1`: turns use fake recordings (`arcade/MockTurn.tsx`), still scored by the backend |
+| `mount(turn)` | Mounts a team turn into `turn.stage` (camera) and `turn.controls` (buttons). `turn` has `player`, `creator`, `reference` (the creator's Recording; omitted for the creator's own turn), `mock`, `phaseChanged(phase, count, seconds)` (`"idle"`, `"countdown"` or `"recording"`), `onRecord(recording)` and `onSkip()` |
+| `unmount()` | Removes the current turn |
+| `score(reference, attempt)` | `POST /score`. Rejects with `{ message, recording, status }`, where `recording` says who should redo their take |
+| `roast(loserRow)` | `POST /roast` with the loser's averages and the worst part from their worst attempt |
+| `finaleScene(loserRow, roastPromise)` | Plays the breaking-news video over the page. Never rejects. Resolves `{ reason, video, recorded }`: `video` is the recorded composite (`recorded: true`) or the loser's own worst take, or `null` |
+| `release(results, extra)` | Revokes a finished game's video object URLs |
+| `checkHealth()` | `GET /health` |
+
+A loser row is the arcade UI's ranking row: `{ player, attempts: [{ playerId, score, recording }], average, timing }`.
+
+**`CopycatSolo`**: `mount(element, onBack)` and `unmount()` for solo mode.
+
+**`CopycatFinale`** (defined by `ui-preview/dist/finale-video.js`, used by the finale screen):
+`setVideo(blob)` for the on-screen replay, `setDownload(blob, playerName)` for Download video (saved as
+`copycat-<player>-breaking-news.mp4` or `.webm`), `clear()`. Nothing is uploaded.
+
+## Reaction clips (`frontend/public/shame-clips/`)
+
+The breaking-news video plays reaction clips from this folder. The `.mp4` files are local only and
+gitignored. The dev server lists them at `shame-clips/index.json`; `vite build` writes that list too.
+Optional per-clip settings go in the committed `clips.json`:
+
+```json
+[
+  { "file": "shamevid1.mp4", "start": 0, "insertAt": 19, "end": 28.3,
+    "loser": { "x": 0.43, "feetY": 0.74, "height": 0.5 } }
+]
+```
+
+- `start` / `end` (seconds): the part that plays, in full. `insertAt`: when the cut-out loser appears.
+- `loser`: fractions of the clip's frame. `x` is their horizontal centre, `feetY` where their feet touch the
+  floor, `height` their height. Clips without an entry use the default lower-right spot.
+- Bad entries or fields are ignored.

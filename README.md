@@ -1,119 +1,160 @@
-[README.md](https://github.com/user-attachments/files/35225649/README.md)
 # Copycat
 
 **Copy your friends. Get judged. Get exposed.**
 
-Copycat is a dance party game you play on one laptop. One player records a dance, everyone else watches it and tries to copy it, and the game scores how close each copy was. Players take turns being the creator. Whoever has the lowest average at the end gets a breaking news shame video of their own worst dance.
+Copycat is a one-laptop dance party game. One player makes up a 10-second dance, everyone else
+tries to copy it in front of the same webcam, and a pose-tracking scorer decides who copied best.
+The lowest scorer ends up in a breaking-news segment about their dancing.
 
-Built at [Hack Western 13](https://hackwestern.com) (November 20 to 22, 2026).
+Built at Hack Western 13 (November 20 to 22, 2026).
 
-<!-- Add a demo GIF or screenshot here -->
-<!-- Devpost: add link here -->
-
----
+<!-- Demo GIF or screenshot goes here: ![Copycat demo](docs/demo.gif) -->
+**Demo:** _GIF or screenshot coming soon_
+**Devpost:** _link coming soon_
 
 ## How a game works
 
 ### Team play (2 to 4 players)
 
-1. Enter player names and pick **Quick** (one round, player 1 creates) or **Full** (everyone creates once).
-2. Turn on the camera and pick a song. The beat guide follows the song's BPM.
-3. **Creator's turn:** a 3-2-1 countdown, then 10 seconds to make up a dance. The game records your body movement and video.
-4. **Copier's turn:** you first watch the creator's dance played back as a mirrored skeleton. Then you press start, get a countdown, and have 10 seconds to copy it. A small skeleton guide stays in the corner while you dance.
-5. Each copy gets a score out of 100 with a breakdown for arms, legs, torso and timing, plus the body part you got most wrong. Live combos and hype callouts pop up while you dance.
-6. Creators rotate each round. After any round you can **End game** early.
-7. The player with the lowest average loses. Ties go to whoever had worse timing.
+1. Players enter names and pick avatars in the lobby, then pass a camera check and choose a song
+   or tempo.
+2. Each round has a **creator**. They record a 10-second dance after a 3-2-1 countdown.
+3. Every other player takes a turn as a **copier**. They first watch the creator's dance played back
+   as a skeleton (mirrored, like a dance mirror), then press **Your turn: start copying** and copy it
+   while a small synced skeleton guide plays alongside.
+4. Each copy is sent to the backend and scored out of 100, with a breakdown for arms, legs, torso
+   and timing.
+5. The creator role rotates, so every player creates once. After each round a leaderboard shows the
+   running averages. Players can carry on with **Next round** or stop early with **End game**.
+6. When the game ends, the player with the lowest average (timing breaks ties) gets the finale: a
+   short **breaking news** video with their dance cut out of the camera footage and pasted into a
+   reaction clip, plus a Gemini-written headline. The finale screen then shows the final standings
+   and a **Download video** button that saves the breaking-news video to the device.
 
-### The finale
-
-The loser gets a **breaking news shame video**. It opens with a news intro, plays a reaction clip, and then the loser is cut out of their worst take and pasted into the clip, dancing. A Gemini-written headline and roast line run along the bottom. The video can be downloaded straight from the finale screen. Nothing is uploaded anywhere.
+Players without a scored attempt can't be picked as the loser. If nobody has a score yet, End game
+just returns to the menu.
 
 ### Solo mode
 
-Pick a dance clip and copy it on your own. Solo includes a pose guide, an upcoming move carousel, and a replay timeline that shows where you matched the dance and where you didn't.
-
----
+Solo is a practice mode against a reference dance instead of a friend. Import a 5 to 60 second
+section of a YouTube dance video (or pick a local MP4), preview it, and dance along. You get a live
+rating during the turn, an official score at the end, and a replay timeline that lines up your
+camera footage with the reference and highlights the moments where your pose drifted.
 
 ## How scoring works
 
-Scoring runs on the Python backend (`backend/scoring.py`).
+Scoring runs on the backend (`backend/scoring.py`). The browser only records poses.
 
-1. **Body tracking.** In the browser, Google's MediaPipe Pose finds 33 body points on the webcam, 15 times a second.
-2. **Limb directions, not positions.** Each frame is turned into the direction each body part is pointing (upper arms, forearms, thighs, shins, shoulders, hips and spine). Height and where you stand in the frame don't affect your score.
-3. **Resampling.** Both recordings are resampled to the same 15 fps grid, so a slower laptop doesn't change the result.
-4. **Dynamic time warping.** The copy is lined up with the original so being slightly late doesn't wreck the score. The alignment can drift at most about one second, so being way off-beat still costs you.
-5. **Scoring.** Angle error per limb becomes a score from 0 to 100 (within 10 degrees is perfect, 60 degrees or worse is zero). Limbs that barely move in the original count for less, so the score focuses on the parts of the dance that actually happen.
-6. **Timing.** A timing score comes from how far the alignment strays from "same moment in both recordings". It only scales the pose score, so standing still on beat can't rescue a bad copy.
-7. **Worst moment.** The backend also returns the worst and best moments in both recordings. The shame video uses the worst one.
+1. **Pose tracking.** In the browser, MediaPipe's pose landmarker finds 33 body landmarks per camera
+   frame. A recording is a list of timestamped landmark frames, about 10 seconds long.
+2. **Limb directions, not positions.** Each frame is turned into the direction of 11 body segments
+   (upper arms, forearms, thighs, shins, the shoulder line, the hip line and the spine). Comparing
+   directions instead of raw positions means height, distance from the camera and where you stand
+   in the frame don't matter. Landmarks with low visibility are ignored.
+3. **Resampling.** Both recordings are resampled onto the same 15 frames-per-second grid, so cameras
+   and devices with different frame rates compare fairly.
+4. **Dynamic time warping.** DTW lines the copy up with the original, so a copier who is a beat late
+   still gets credit for the right moves. The alignment may drift at most one second off the
+   diagonal.
+5. **Per-limb scores.** Along the aligned path, each segment's average angle error becomes a 0 to 100
+   score: within 10 degrees is perfect, and 60 degrees or worse is zero. Arms, legs and torso are the
+   averages of their segments.
+6. **Weighting.** Limbs that barely move in the original count less, so a dance that is all arms is
+   mostly judged on arms.
+7. **Timing.** The timing score measures how far the alignment strays from "the same moment in both
+   recordings" (a one-second average lag scores zero). It can lift or lower the pose score by up to
+   30 percent, but it can't rescue a bad copy:
+   `total = pose x (0.7 + 0.3 x timing / 100)`.
+8. **Worst moment.** The scorer smooths the per-frame error and reports the worst body part and the
+   worst moment (a timestamp in each recording), along with the best moment.
 
-The **roast** comes from the Gemini API (`backend/roast.py`). It gets the loser's name, scores and worst body part, and writes one headline and one roast line. It's told to roast the dancing only, never the person. If Gemini is slow or offline, the game uses a pre-written headline instead.
+If a recording doesn't have enough usable frames, the backend answers with a friendly message that
+says who should redo their take (the creator or the copier).
 
----
+### The roast
+
+At the end of the game the frontend sends the loser's averages and worst body part to `/roast`.
+The backend asks Gemini (`gemini-3.5-flash-lite` by default) for a short `BREAKING:` headline and a
+one-line roast about the dancing, never the person. The output is validated and the call times out
+after 8 seconds. If there is no API key, no internet or a bad answer, the backend returns a canned
+headline instead, so `/roast` always succeeds.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Laptop
-    subgraph Browser
-      UI["Arcade UI<br/>(frontend/src/game/ui-preview)"]
-      Bridge["Engine bridge<br/>(frontend/src/arcade)"]
-      MP["MediaPipe pose + segmenter<br/>(served locally)"]
-      Shame["Shame video + recorder<br/>(frontend/src/shame)"]
-      UI <--> Bridge
-      Bridge --> MP
-      Bridge --> Shame
-    end
-    Backend["Python backend (FastAPI)<br/>/score  /roast  /reference-video"]
-    Bridge -- "pose frames" --> Backend
+  subgraph Browser["Browser (localhost:5173)"]
+    UI["Arcade UI<br/>plain JS/CSS screens<br/>(ui-preview/dist)"]
+    Bridge["Engine bridge<br/>arcade/bridge.tsx"]
+    Engine["React engine<br/>team recorder, solo mode,<br/>shame video + recorder"]
+    MP["MediaPipe pose + selfie segmenter<br/>(wasm and models served locally)"]
+    UI <-->|globalThis.CopycatTracking / CopycatSolo| Bridge
+    Bridge --> Engine
+    Engine --> MP
   end
-  Backend -- "headline request" --> Gemini["Gemini API"]
-  Vite["Vite dev server<br/>song previews + cache"] -- "30 s previews" --> Deezer["Deezer API"]
+  subgraph Vite["Vite dev server"]
+    Songs["Song server<br/>(previews + tempo, local cache)"]
+  end
+  subgraph Backend["Python backend (localhost:8000)"]
+    Score["POST /score<br/>pose comparison"]
+    Roast["POST /roast"]
+    Ref["POST /reference-video<br/>(solo import)"]
+  end
+  Engine -->|recordings| Score
+  Engine --> Roast
+  Engine --> Ref
+  UI --> Songs
+  Roast -.->|internet| Gemini["Gemini API"]
+  Songs -.->|internet, unless cached| Deezer["Deezer previews"]
+  Ref -.->|internet| YouTube["YouTube via yt-dlp"]
 ```
 
-- The **arcade UI** is plain HTML, CSS and JavaScript. The **engine bridge** connects it to the React and TypeScript game engine: camera recording, turn logic, scoring calls and the finale.
-- The **backend** scores every copy and asks Gemini for the roast. Everything else runs on the laptop.
-- **What needs internet:** the Gemini roast, uncached song previews, and solo's video import. Everything else works offline.
+Solid lines run on the laptop. Dotted lines need the internet, and each has a local fallback (see
+[Offline mode](#offline-mode)).
 
----
+- The **arcade UI** is Liangray's plain HTML, CSS and JavaScript (`frontend/src/game/ui-preview/dist`),
+  served as Vite's public folder. It draws every screen.
+- The **engine bridge** (`frontend/src/arcade/bridge.tsx`) exposes the React engine to those scripts
+  through `globalThis.CopycatTracking` (mount a team turn, score, roast, play the finale video) and
+  `globalThis.CopycatSolo` (mount solo mode).
+- The **backend** is a small FastAPI app. The request and response formats live in
+  [CONTRACT.md](CONTRACT.md).
 
 ## Tech stack
 
-| Part | Tech |
-| --- | --- |
-| Frontend | Vite, React, TypeScript, plain HTML/CSS/JS for the arcade UI |
-| Body tracking | MediaPipe Tasks Vision (pose landmarker lite, selfie segmenter) |
-| Backend | Python, FastAPI, NumPy |
-| AI roast | Google Gemini API |
-| Music | CC0 chiptune loops, Deezer song previews, ffmpeg for conversion |
-| Video | MediaRecorder for takes and the downloadable shame video |
-| Deploy | GitHub Pages (UI preview only, no backend) |
-
----
+- **Frontend:** TypeScript, React 19, Vite 8, plain JavaScript and CSS for the arcade screens
+- **Computer vision:** MediaPipe Tasks Vision 1.2.3 (pose landmarker lite, selfie segmenter)
+- **Media:** MediaRecorder, canvas `captureStream` and the Web Audio API for the recorded finale video
+  and the generated news sting
+- **Backend:** Python, FastAPI, NumPy, Uvicorn
+- **AI:** Google Gemini via the `google-genai` SDK
+- **Tools:** FFmpeg (song previews and solo imports), yt-dlp (solo YouTube imports), ESLint,
+  pytest and Node's built-in test runner
 
 ## Running it locally
 
-### What you need
+### Prerequisites
 
-- Node.js 22 or newer
 - Python 3.11 or newer
-- Chrome (recommended) and a webcam
-- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) (optional, the roast falls back without one)
+- Node.js 22.18 or newer (the song caching script runs TypeScript directly)
+- A webcam
+- Optional, for solo YouTube imports: `yt-dlp` and FFmpeg on your PATH (on macOS:
+  `brew install yt-dlp ffmpeg`)
+- Optional: a Gemini API key from <https://aistudio.google.com/apikey>
 
-### 1. Backend
+### Backend
 
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # then paste your GEMINI_API_KEY into .env
-uvicorn main:app --port 8000
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env   # then put your key in GEMINI_API_KEY (optional)
+.venv/bin/uvicorn main:app --port 8000
 ```
 
-Check it's running at [localhost:8000/health](http://localhost:8000/health). Leave this terminal open.
+Without a key, `/roast` still works and uses canned headlines. `.env` is gitignored; never commit it.
 
-### 2. Frontend
+### Frontend
 
 In a second terminal:
 
@@ -123,79 +164,140 @@ npm install
 npm run dev
 ```
 
-Open the link Vite prints (usually [localhost:5173](http://localhost:5173)) in Chrome. Keep the game tab in front while playing, since a take is cancelled if the tab goes to the background.
+Open the address Vite prints (usually <http://localhost:5173>). The frontend expects the backend at
+`http://localhost:8000`. To use another backend, set `VITE_API_URL` before `npm run dev`.
 
-### 3. Before a demo
+### Caching demo songs
 
-- **Cache songs so they work offline:**
-  ```bash
-  cd frontend && npm run songs:cache
-  ```
-  This saves the songs listed in `frontend/demo-songs.json`. Add more with `npm run songs:cache -- <id> <id>`. Uncached songs fall back to a CC0 chiptune loop at a similar tempo.
-- **Add reaction clips for the shame video.** Put `.mp4` files in `frontend/public/shame-clips/` (this folder is gitignored, so clips are never committed) and add an entry for each one to `clips.json`:
-  ```json
-  [
-    { "file": "myclip.mp4", "start": 0, "insertAt": 19, "end": 28.3,
-      "loser": { "x": 0.43, "feetY": 0.74, "height": 0.5 } }
-  ]
-  ```
-  `start` and `end` set which part of the clip plays. `insertAt` is when the loser appears, in seconds into the clip. `x`, `feetY` and `height` place the loser as fractions of the screen. Without clips, the loser is shown on a plain breaking news background.
+The song picker plays 30-second previews fetched from Deezer through the Vite server. To make a set
+of songs play without internet, cache them ahead of time:
+
+```bash
+cd frontend
+npm run songs:cache               # every song listed in demo-songs.json
+npm run songs:cache -- 884025     # or specific catalog IDs
+```
+
+Cached previews go in `frontend/.song-cache/`, which is gitignored. Song files must never be committed.
+
+### Adding reaction clips for the breaking-news video
+
+The breaking-news video pastes the loser into a reaction clip. Clips are not included in the repo.
+Put any `.mp4` files in `frontend/public/shame-clips/` (the videos are gitignored). Optionally,
+describe each clip in `frontend/public/shame-clips/clips.json`, which is committed:
+
+```json
+[
+  { "file": "shamevid1.mp4", "start": 0, "insertAt": 19, "end": 28.3,
+    "loser": { "x": 0.43, "feetY": 0.74, "height": 0.5 } }
+]
+```
+
+- `start` and `end`: the part of the clip that plays, in seconds. It plays in full, then the finale
+  screen shows.
+- `insertAt`: when the cut-out loser appears and starts dancing.
+- `loser`: where they stand, as fractions of the clip's frame. `x` is their horizontal centre,
+  `feetY` is where their feet touch the floor and `height` is their height. Keep `feetY` above about
+  0.75 so the news banner doesn't cover their feet.
+
+With clips that have no entry, the video lasts about 14 seconds and the loser stands in the
+lower-right corner.
+With no clips at all, the loser dances over a dark BREAKING NEWS background.
 
 ### Mock mode
 
-Add `?mock=1` to the URL ([localhost:5173/?mock=1](http://localhost:5173/?mock=1)) to play without a camera using fake recordings. Scores still come from the backend.
+Open <http://localhost:5173/?mock=1> to play without a camera. Turns produce fake recordings that are
+still scored by the real backend, which is handy for testing the game flow.
 
 ### Tests
 
 ```bash
-cd backend && pytest -q
-cd frontend && node --test && npm run lint && npm run build
+cd backend
+.venv/bin/python -m pytest -q
 ```
 
-Solo's video import tests are skipped unless `yt-dlp`, FFmpeg and Node are installed.
+```bash
+cd frontend
+npm run lint
+npm run build
+node --test $(find src -name "*.test.mjs" -o -name "*.test.cjs")
+```
 
----
+The backend tests mock Gemini, so they never call the real API.
+
+## Offline mode
+
+With the frontend and backend running on the same laptop, the game works without internet:
+
+- Pose tracking, the team recorder, scoring, the breaking-news video and its download all run
+  locally. The MediaPipe wasm and both models are served by the app itself.
+- The roast falls back to canned headlines when Gemini can't be reached.
+- Songs that were cached with `npm run songs:cache` play as normal. Uncached songs fall back to the
+  bundled chiptune loop closest to the chosen tempo.
+- Solo YouTube imports need internet. Picking a local MP4 still works.
 
 ## Project structure
 
-```
+```text
 backend/
-  main.py               API: /health, /score, /roast, /reference-video
-  scoring.py            dance comparison (limb angles, resampling, DTW)
-  roast.py              Gemini headline and roast, with fallbacks
-  reference_video.py    solo mode's clip import
+  main.py                 FastAPI app: /health, /score, /roast, /reference-video
+  scoring.py              pose comparison (limb directions, resampling, DTW, scores)
+  roast.py                Gemini headline with a canned fallback
+  reference_video.py      solo YouTube import with yt-dlp and FFmpeg
+  test_*.py               pytest suite
 frontend/
-  src/game/ui-preview/  the arcade UI (screens, styles, menu music, song catalog)
-  src/arcade/           bridge between the arcade UI and the engine
-  src/game/             game rules, turn logic, API client, solo mode, music
-  src/components/       camera, team turn recorder, pose replay
-  src/shame/            shame video, cut-out, recorder, finale scene
-  src/hooks/, utils/    pose detection, attempt capture, video recording
-  public/models/        MediaPipe models served locally
-  public/shame-clips/   your reaction clips (gitignored) and clips.json
-  scripts/              song cache script
+  vite.config.ts          serves the arcade UI, models, shame clips and the song server
+  songServer.ts           Deezer preview download, tempo detection and local cache
+  scripts/cache-songs.ts  npm run songs:cache
+  public/models/          MediaPipe pose and segmentation models
+  public/shame-clips/     reaction clips (local only) and clips.json
+  src/main.tsx            entry point: loads the engine bridge
+  src/arcade/             bridge to the arcade UI, mock turns
+  src/game/ui-preview/dist/  arcade UI: screens, styles, fonts, music, song catalog
+  src/components/Game/    team turn recorder and skeleton replay
+  src/game/               solo mode (Game.tsx), API client, team turn rules, combos
+  src/shame/              breaking-news video: cut-out, compositing, recording
+  src/hooks/, src/utils/  pose detection, recording and reference helpers
+CONTRACT.md               API and data formats
+AGENTS.md                 working rules for people and coding agents
 ```
-
-`AGENTS.md` and `CONTRACT.md` describe how the pieces talk to each other.
-
----
 
 ## Team
 
-| Name | GitHub | Built |
-| --- | --- | --- |
-| Clement Ho | [cclementho](https://github.com/cclementho) | Backend scoring engine and Gemini roast, game logic, team recorder and engine integration, shame video and download, offline mode |
-| Johnathan Tam | [johnathantam](https://github.com/johnathantam) | React port of the UI, camera check and countdown, music system and combos, how-to-play page, GitHub Pages deploy |
-| Justin Chow | [justintimejt](https://github.com/justintimejt) | Solo mode, video recording, reference clip import, pose guide and replay timeline |
-| Liangray Li | [PIGJET](https://github.com/PIGJET) | Arcade UI design, finale design, song catalog, menu music |
-
----
+- **Clement Ho** ([cclementho](https://github.com/cclementho)): backend scoring engine and Gemini
+  roast, game logic and End game, team recorder and the engine bridge to the arcade UI, breaking-news
+  video and finale download, offline mode.
+- **Johnathan Tam** ([johnathantam](https://github.com/johnathantam), jtam-western): first game MVP
+  and the React port of the UI, camera check and countdown, music system and dance combos, how-to-play
+  page, GitHub Pages deployment.
+- **Justin Chow** ([justintimejt](https://github.com/justintimejt)): solo mode, video recording and
+  replay, YouTube reference import (frontend and backend), replay timeline.
+- **Liangray Li** ([PIGJET](https://github.com/PIGJET)): arcade UI design, lobby and character
+  customization, tempo picker and beat guide, song catalog and preview server, chiptune and menu
+  music, finale design.
 
 ## Credits and licenses
 
-- **Chiptune loops:** [33 Free Chiptune Loops](https://hyperpixel.itch.io/33-free-chiptune-loops) by hyperpixel, CC0.
+- **Gameplay and lobby music:** "33 Free Chiptune Loops" by hyperpixel
+  (<https://hyperpixel.itch.io/33-free-chiptune-loops>), CC0 1.0, tempo-adjusted for each BPM step.
 - **Menu music:** "Night Shade" by AdhesiveWombat.
-- **Song previews:** 30-second previews streamed from the Deezer API. No song audio is stored in this repo.
-- **Fonts:** Barlow and Silkscreen, SIL Open Font License (license files in `frontend/src/game/ui-preview/dist/fonts/`).
-- **Body tracking:** [MediaPipe](https://ai.google.dev/edge/mediapipe) by Google, Apache 2.0.
-- **Reaction clips** for the shame video are not included and have to be supplied locally.
+- **Song previews:** fetched at runtime from Deezer's public API and credited on screen. No song
+  audio is included in the repo; the catalog only lists track IDs, titles and artists.
+- **Pose tracking and segmentation:** MediaPipe Tasks Vision and its pose landmarker lite and selfie
+  segmenter models, Apache License 2.0.
+- **Fonts:** Barlow and Silkscreen, SIL Open Font License 1.1 (license files in
+  `frontend/src/game/ui-preview/dist/fonts/`).
+- **Reaction clips** for the breaking-news video are not included and must be supplied locally.
+
+## Known limitations
+
+- One camera and one player in frame at a time. Copiers take turns.
+- Scoring compares 2D limb directions from a single camera, so moves toward or away from the camera
+  count for little, and baggy clothes or poor lighting can hurt tracking.
+- A take only needs both shoulders in frame to start and keep going, so the legs score can suffer
+  if a player's feet leave the frame.
+- The breaking-news cut-out needs a reasonably fast laptop. Below 15 frames per second it falls back
+  to showing the loser's clip in a box.
+- The song server and YouTube import run on the laptop's dev server and backend. The GitHub Pages
+  build needs a separately hosted backend and has no song previews.
+- Built in 36 hours: there are no accounts, no saved games and no online multiplayer.
