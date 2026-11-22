@@ -42,7 +42,7 @@ export type TeamTurnDashboardProps = Omit<DashboardPageProps, "onRecord" | "stag
    * buttons into `controls`; his screen draws everything else and hears about phases.
    */
   arcade?: ArcadeHost;
-  /** The creator's recording (copiers): its video plays beside the camera. */
+  /** The creator's recording (copiers): its video plays beside the camera (arcade: its skeleton replays instead). */
   reference: Recording | null;
   onComplete: (recording: Recording) => void;
 };
@@ -70,11 +70,6 @@ function parkVideo(video: HTMLVideoElement, seconds: number) {
   video.currentTime = seconds;
 }
 
-// Copier layout inside Liangray's stage (his .dashboard-camera-scene sets the box and frame).
-const FILL = { width: "100%", height: "100%", objectFit: "contain" } as const;
-const ARCADE_PAIR = { position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "48px 32px 32px", boxSizing: "border-box" } as const;
-const ARCADE_CELL = { position: "relative", margin: 0, minWidth: 0, minHeight: 0 } as const;
-const ARCADE_LABEL = { position: "absolute", top: -28, left: 0, color: "#c2bfd6", font: "600 14px/1.2 var(--body, sans-serif)" } as const;
 
 function abortTurn(turn: Turn) {
   window.clearTimeout(turn.timer);
@@ -95,12 +90,20 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  /** performance.now() when the take started recording (syncs the copier's skeleton preview). */
+  const [captureStartedAt, setCaptureStartedAt] = useState<number | null>(null);
   // Live hype/combo feedback: visual only, the score comes from POST /score.
   const combo = useRef(new DanceCombo());
   const [danceCue, setDanceCue] = useState<DanceCue | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
-  const referenceUrl = role === "copier" ? reference?.videoUrl ?? null : null;
+  // Arcade copiers follow the creator's skeleton (big replay first, then a synced corner panel), so
+  // the creator's video only plays in GameFlow's side-by-side layout.
+  const referenceUrl = role === "copier" && !arcade ? reference?.videoUrl ?? null : null;
+  const hasReplay = role === "copier" && !!arcade && !!reference?.frames.some((f) => f && ("landmarks" in f ? f.landmarks : "lm" in f && f.lm));
+  /** Arcade copier: the creator's dance is replaying big; Start waits until it ends. Bump to replay. */
+  const [watching, setWatching] = useState(hasReplay);
+  const [watchKey, setWatchKey] = useState(0);
   const referenceOffsetSec = (reference?.videoOffsetMs ?? 0) / 1000;
   const recordingSupported = Boolean(cameraRecordingType());
 
@@ -110,6 +113,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
     if (turn) abortTurn(turn);
     referenceVideo.current?.pause();
     setCountdown(null);
+    setCaptureStartedAt(null);
     setPhase("failed");
     setMessage(msg);
   }
@@ -245,6 +249,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   function beginCapture(turn: Turn) {
     turn.startedAt = now();
     turn.poses.start(turn.startedAt);
+    setCaptureStartedAt(turn.startedAt);
     combo.current.reset();
     setDanceCue(null);
     turn.phase = "recording";
@@ -341,7 +346,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   const ready = cameraReady && pose.isReady && !issue;
   const bodyVisible = bodyInFrame(pose.landmarks);
   // Start needs both shoulders and both hips in frame (teamTurn.ts CHECK_POINTS); limbs don't matter.
-  const canStart = ready && bodyVisible && !busy && (!referenceUrl || referenceReady);
+  const canStart = ready && bodyVisible && !busy && !watching && (!referenceUrl || referenceReady);
   const creatorName = page.creator.name;
 
   const cameraBox = (
@@ -359,7 +364,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
         preload="auto"
         // Mirror on screen like the selfie preview, so the creator's left arm shows on the same
         // side as the copier's left arm. The recorded data itself stays un-mirrored.
-        style={{ transform: "scaleX(-1)", ...(arcade ? FILL : null) }}
+        style={{ transform: "scaleX(-1)" }}
         onLoadedData={(e) => {
           e.currentTarget.currentTime = referenceOffsetSec; // park on the first move
           setReferenceReady(true);
@@ -393,7 +398,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
     stage = (
       <div className="challenge-recorder__videos">
         <div style={{ position: "relative" }}>
-          {phase === "recording" ? <PoseReplay frames={reference.frames} durationMs={TURN_MS} creator={creatorName} /> : <span>{creatorName}’s dance plays after the countdown</span>}
+          {phase === "recording" ? <PoseReplay frames={reference.frames} durationMs={TURN_MS} creator={creatorName} startedAt={captureStartedAt ?? undefined} /> : <span>{creatorName}’s dance plays after the countdown</span>}
         </div>
         <div>
           <span>Your camera</span>
@@ -421,28 +426,33 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
     )}
     <div className="dashboard-hype-total"><span>Hype</span><strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * HYPE_PER_MOVE}</strong></div>
   </>;
-  const startLabel = phase === "failed" ? "Try again" : role === "creator" ? "Start recording" : "Start copying";
+  const startLabel = phase === "failed" ? "Try again" : role === "creator" ? "Start recording" : hasReplay ? "Your turn: start copying" : "Start copying";
 
   if (arcade) {
     // Same engine; only the camera stage is ours. Buttons go into his controls row.
     const note = issue || message || (!busy ? tracking.hint : "");
-    // Creator: his stage styles size the camera. Copier: creator's video and camera side by side.
-    const arcadeStage = role === "copier" && referenceEl
-      ? <div style={ARCADE_PAIR}>
-          <figure style={ARCADE_CELL}><figcaption style={ARCADE_LABEL}>{creatorName}’s dance</figcaption>{referenceEl}</figure>
-          <figure style={ARCADE_CELL}><figcaption style={ARCADE_LABEL}>Your camera</figcaption>
-            <div className="challenge-recorder__camera" style={FILL}>
-              <video ref={camera} muted autoPlay playsInline style={FILL} />
-              <canvas ref={overlay} aria-hidden="true" style={{ objectFit: "contain" }} />
-            </div>
-          </figure>
-        </div>
-      : <div className="dashboard-camera-feed">{stage}</div>;
+    // The camera fills his stage for both roles. Copiers first watch the creator's skeleton dance
+    // once, big over the stage (Watch again replays it); during the countdown and take, John's
+    // copy-turn panel (7050fbd) keeps it in the corner, synced to their take.
+    const replay = watching && reference && (
+      <div className="pose-replay-stage">
+        <PoseReplay key={watchKey} frames={reference.frames} durationMs={TURN_MS} creator={creatorName}
+          caption={`${creatorName}’s dance`} onDone={() => setWatching(false)} />
+      </div>
+    );
+    const followInset = hasReplay && reference && (phase === "countdown" || phase === "recording") && (
+      <div className="pose-replay-inset pose-replay-inset--large">
+        <PoseReplay frames={reference.frames} durationMs={TURN_MS} creator={creatorName} startedAt={captureStartedAt ?? Infinity} />
+      </div>
+    );
+    const arcadeStage = <><div className="dashboard-camera-feed">{cameraBox}</div>{replay}{followInset}</>;
+    const startText = busy ? (phase === "finalizing" ? "Saving…" : "Get ready…") : watching ? `Watch ${creatorName}’s dance…` : canStart ? startLabel : tracking.label;
     return <>
       {arcadeStage}
       {danceOverlay}
       {createPortal(<>
-        <ArcadeButton onClick={() => void startTurn()} disabled={!canStart}>{busy ? (phase === "finalizing" ? "Saving…" : "Get ready…") : canStart ? startLabel : tracking.label}</ArcadeButton>
+        <ArcadeButton onClick={() => void startTurn()} disabled={!canStart}>{startText}</ArcadeButton>
+        {hasReplay && !busy && !watching && <ArcadeButton secondary onClick={() => { setWatchKey((k) => k + 1); setWatching(true); }}>Watch again</ArcadeButton>}
         {phase === "recording" && <ArcadeButton secondary onClick={() => { if (turnRef.current) fail(TURN_MESSAGES.cancelled); }}>Stop</ArcadeButton>}
         {note && <span role="status">{note}</span>}
       </>, arcade.controls)}
