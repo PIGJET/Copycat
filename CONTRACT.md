@@ -141,7 +141,8 @@ Request:
 - `url` is required. HTTPS YouTube watch, Shorts and youtu.be video links are accepted;
   playlists and live/former-live sources are excluded. Use content authorized for processing.
 - `start_seconds` defaults to 0; `duration_seconds` defaults to 10 and must be 5–60.
-  Both must be finite numbers and the section must fit inside the source.
+  Both must be finite numbers and the section must fit inside the source. Send
+  `duration_seconds: null` with start 0 to import the entire source, which must be 5–60 seconds.
 - Success: `200`, `Content-Type: video/mp4`, containing the completed clip's bytes.
   Game fetches a Blob and owns its object URL. No server filesystem path or persistent URL is returned.
 - The MP4 is normalized to H.264/yuv420p with optional AAC, at 30 fps, within 1280×720.

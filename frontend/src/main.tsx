@@ -3,6 +3,7 @@ import { DashboardPage, type ArcadeTurn } from "./components/Game/ArcadeDashboar
 import type { Player } from "./components/Game/uiTypes";
 import { scoreAttempt } from "./game/scoreAttempt";
 import type { PoseSequence } from "./types/pose";
+import Game from "./game/Game";
 
 type LiveTurn = {
   stage: HTMLElement; controls: HTMLElement; player: Player; creator: Player;
@@ -19,4 +20,13 @@ Object.assign(globalThis, { CopycatTracking: {
       onRecord={turn.onRecord} onSkip={turn.onSkip} onMenu={() => {}} />);
   },
   unmount() { root?.unmount(); root = undefined; }
+}});
+
+let soloRoot: Root | undefined;
+Object.assign(globalThis, { CopycatSolo: {
+  mount(element: HTMLElement, onBack: () => void) {
+    soloRoot = createRoot(element);
+    soloRoot.render(<Game onBack={onBack} />);
+  },
+  unmount() { soloRoot?.unmount(); soloRoot = undefined; },
 }});

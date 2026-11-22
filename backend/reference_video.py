@@ -129,11 +129,12 @@ def decode_metadata(raw: bytes) -> dict:
         raise ImportFailure(502, 'Could not read video information.', 'invalid_metadata') from None
 
 
-async def prepare_reference(url: str, start_seconds: float, duration_seconds: float,
+async def prepare_reference(url: str, start_seconds: float, duration_seconds: float | None,
                             work_dir: Path, disconnected: Disconnected | None = None) -> Path:
     url = canonical_url(url)
     if (not math.isfinite(start_seconds) or start_seconds < 0
-            or not math.isfinite(duration_seconds) or not 5 <= duration_seconds <= 60):
+            or (duration_seconds is None and start_seconds != 0)
+            or (duration_seconds is not None and (not math.isfinite(duration_seconds) or not 5 <= duration_seconds <= 60))):
         raise ImportFailure(400, 'Choose a section between 5 and 60 seconds with a nonnegative start.', 'invalid_range')
     tools = {name: shutil.which(name) for name in ('yt-dlp', 'ffmpeg', 'ffprobe', 'node')}
     if not all(tools.values()):
@@ -147,10 +148,16 @@ async def prepare_reference(url: str, start_seconds: float, duration_seconds: fl
     try:
         source_duration = float(metadata['duration'])
         if (metadata.get('is_live') or metadata.get('was_live') or metadata.get('_type') == 'playlist'
-                or not math.isfinite(source_duration) or source_duration < start_seconds + duration_seconds):
+                or not math.isfinite(source_duration) or source_duration <= 0):
             raise ValueError
     except (KeyError, ValueError, TypeError):
         raise ImportFailure(400, 'Choose a section within a prerecorded video, between 5 and 60 seconds.', 'invalid_source') from None
+    if duration_seconds is None:
+        if not 5 <= source_duration <= 60:
+            raise ImportFailure(400, 'Choose a video between 5 and 60 seconds long.', 'invalid_range')
+        duration_seconds = source_duration
+    elif source_duration < start_seconds + duration_seconds:
+        raise ImportFailure(400, 'Choose a section within a prerecorded video, between 5 and 60 seconds.', 'invalid_source')
     await run_process([*base, '--max-filesize', str(MAX_WORK_BYTES),
         '--ffmpeg-location', str(Path(tools['ffmpeg']).parent),
         '-f', 'bv*[height<=720]+ba/b[height<=720]',

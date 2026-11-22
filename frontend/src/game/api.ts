@@ -142,9 +142,9 @@ export async function checkBackend(signal: AbortSignal) {
   throw new Error('The Copycat backend is unavailable. Start it and try again.');
 }
 
-export async function importReference(url: string, startSeconds: number, durationSeconds: number, signal: AbortSignal) {
+export async function importReference(url: string, signal: AbortSignal) {
   const response = await post('/reference-video', {
-    url, start_seconds: startSeconds, duration_seconds: durationSeconds,
+    url, duration_seconds: null,
   }, signal, 'Could not import this clip. Try again or choose a local MP4.');
   if (response.headers.get('content-type')?.split(';')[0] !== 'video/mp4') {
     throw new Error('The importer did not return an MP4. Try again or choose a local file.');

@@ -22,15 +22,15 @@ test('score sends only pose data and classifies 422 by recording', async t => {
   })
 })
 
-test('import sends section bounds and rejects a successful non-MP4 response', async t => {
+test('import requests the whole video and rejects a successful non-MP4 response', async t => {
   const url = 'https://www.youtube.com/watch?v=i-54NhTqlH8'
   t.mock.method(globalThis, 'fetch', async (endpoint, options) => {
     assert.ok(endpoint.endsWith('/reference-video'))
     assert.equal(options.signal, signal)
-    assert.deepEqual(JSON.parse(options.body), { url, start_seconds: 5, duration_seconds: 5 })
+    assert.deepEqual(JSON.parse(options.body), { url, duration_seconds: null })
     return Response.json({ ok: true })
   })
-  await assert.rejects(importReference(url, 5, 5, signal), /MP4/)
+  await assert.rejects(importReference(url, signal), /MP4/)
 })
 
 test('only the current turn can be scored and a retry reuses its captured attempt', () => {
