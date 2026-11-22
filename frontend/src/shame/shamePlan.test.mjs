@@ -93,9 +93,10 @@ test('reaction clips are gitignored so they are never committed, but clips.json 
   assert.match(ignore, /^!frontend\/public\/shame-clips\/clips\.json$/m)
 })
 
-test('the recording prefers webm and falls back to mp4 (Safari), or none', () => {
-  assert.equal(pickMimeType(() => true), 'video/webm;codecs=vp9,opus')
-  assert.equal(pickMimeType((t) => t.startsWith('video/mp4')), 'video/mp4;codecs=avc1,mp4a')
+test('the recording prefers MP4/H.264 and falls back to WebM, or none', () => {
+  assert.equal(pickMimeType(() => true), 'video/mp4;codecs=avc1.42E01F,mp4a.40.2')
+  assert.equal(pickMimeType((t) => t.startsWith('video/webm')), 'video/webm;codecs=vp9,opus')
+  assert.equal(pickMimeType((t) => t === 'video/mp4'), 'video/mp4')
   assert.equal(pickMimeType(() => false), null)
   assert.equal(pickMimeType(() => { throw new Error('nope') }), null)
 })

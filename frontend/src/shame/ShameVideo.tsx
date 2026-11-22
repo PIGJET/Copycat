@@ -15,7 +15,7 @@ import type { Cutout } from "./cutout";
 import { MIN_FPS, fpsFromSamples, pushSample, tooSlow } from "./sceneMath";
 import { HEADLINE_ONLY_MS, INTRO_MS, MAX_PREP_MS, TOTAL_MS, clipNames, introLength, parseClipSettings, pickReactions, placeCutout, placePip, planReactions, tickerText } from "./shamePlan";
 import type { Box, ClipSettings, ReactionPlan } from "./shamePlan";
-import { ShameRecorder, canRecord } from "./recorder";
+import { ShameRecorder, canRecord, mediaDuration } from "./recorder";
 import { playSting } from "./sting";
 import "./ShameVideo.css";
 
@@ -51,8 +51,10 @@ const LIST_TIMEOUT_MS = 3000;
 const REACTION_VOLUME = 0.75;
 /** How fast the cut-out's placement follows the dancer's outline (per frame), to avoid jitter. */
 const BOX_SMOOTHING = 0.15;
-/** A clip with a set end may run this much past its planned length (buffering) before we move on. */
-const END_SLACK_MS = 1500;
+/** A clip with a set range only gives up early if its playback hasn't moved for this long (stuck). */
+const STALL_MS = 4000;
+/** Before the cut starts, hand over to the finale if nothing has happened by now (prep is capped at MAX_PREP_MS). */
+const PREP_SAFETY_MS = MAX_PREP_MS + 10_000;
 
 type Phase = "intro" | "cut" | "card";
 type Overlay = "cutout" | "pip";
@@ -190,6 +192,8 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       clipRef.current?.pause();
       reactionRefs.current.forEach((v) => v?.pause());
       if (detail) console.info(`[shame video] ${reason}: ${detail}`);
+      const shownS = elapsed() / 1000;
+      console.info(`[shame video] on screen ${shownS.toFixed(1)} s`);
       const rec = recorder;
       recorder = null;
       if (!rec) {
@@ -200,13 +204,17 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       if (mode !== "cutout") noComposite("the loser wasn't cut out");
       void rec.stop().then((video) => {
         void audio?.close().catch(() => {});
-        if (video && composite) console.info(`[shame video] recorded ${(video.size / 1e6).toFixed(1)} MB ${video.type}`);
+        if (video && composite) {
+          // Measured from the file itself, so it can be checked against the on-screen length.
+          void mediaDuration(video).then((s) => console.info(
+            `[shame video] recorded ${s === null ? "?" : s.toFixed(1)} s ${video.type}, ${(video.size / 1e6).toFixed(1)} MB (on screen ${shownS.toFixed(1)} s)`));
+        }
         onFinishRef.current(reason, detail, composite ? video : null);
       });
     };
     finishRef.current = finish;
-    // Safety net: whatever happens, hand over to the finale screen (moved once the cut's length is known).
-    let safety = window.setTimeout(() => finish("ended", "safety timeout"), TOTAL_MS + 2000);
+    // Safety net: whatever happens, hand over to the finale screen (replaced once the cut starts).
+    let safety = window.setTimeout(() => finish("ended", "safety timeout"), PREP_SAFETY_MS);
     timers.push(safety);
 
     let begun = false; // the cut or the headline card has been scheduled
@@ -333,29 +341,67 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
         video.play().catch(() => { video.muted = true; return video.play().catch(() => {}); });
         console.info(`[shame video] ${plan[i].file}: clip visible at ${video.currentTime.toFixed(1)} s (loser at ${plan[i].insertAt.toFixed(1)} s)`);
       };
-      // Clips with a set range advance when their own playback reaches `end` (a buffering stall
-      // must not cut the gasp); the wall clock is only a fallback for them, and drives looping clips.
+      // No cap on the total: a clip with a set range plays its whole start-to-end range and moves on
+      // when its own playback reaches `end` (or the file ends), however long that takes on the wall
+      // clock. Only a clip that's stopped moving for STALL_MS is given up on. Clips without a range
+      // loop for their share of TOTAL_MS.
       let segTimer = 0;
+      let stallWatch = 0;
       advance = (i: number) => {
         if (done) return;
         clearTimeout(segTimer);
+        clearInterval(stallWatch);
         const leaving = reactionAt(active);
         if (plan[active] && leaving) console.info(`[shame video] ${plan[active].file}: ends at ${leaving.currentTime.toFixed(1)} s`);
         if (i >= plan.length) return finish("ended");
         playReaction(i);
-        segTimer = window.setTimeout(() => advance(i + 1), plan[i].lengthMs + (plan[i].loop ? 0 : END_SLACK_MS));
-        timers.push(segTimer);
         const video = reactionAt(i);
-        if (video && !plan[i].loop) video.onended = () => { if (active === i) advance(i + 1); };
+        if (plan[i].loop || !video) {
+          segTimer = window.setTimeout(() => advance(i + 1), plan[i].lengthMs);
+          timers.push(segTimer);
+          return;
+        }
+        video.onended = () => { if (active === i) advance(i + 1); };
+        let lastTime = -1, lastMove = performance.now();
+        stallWatch = window.setInterval(() => {
+          if (done || active !== i) return clearInterval(stallWatch);
+          if (video.currentTime !== lastTime) { lastTime = video.currentTime; lastMove = performance.now(); }
+          else if (performance.now() - lastMove > STALL_MS) {
+            console.info(`[shame video] ${plan[i].file}: playback stuck at ${video.currentTime.toFixed(1)} s, moving on`);
+            advance(i + 1);
+          }
+        }, 500);
+        timers.push(stallWatch);
       };
       if (plan.length) advance(0);
       else later(() => finish("ended"), Math.max(0, TOTAL_MS - elapsed()));
-      const planned = plan.reduce((a, p) => a + p.lengthMs + (p.loop ? 0 : END_SLACK_MS), 0) || TOTAL_MS;
+      // Last resort only (the stall watch handles stuck clips): well past the planned length.
+      const planned = plan.reduce((a, p) => a + p.lengthMs, 0) || TOTAL_MS;
       clearTimeout(safety);
-      safety = window.setTimeout(() => finish("ended", "safety timeout"), planned + 2000);
+      safety = window.setTimeout(() => finish("ended", "safety timeout"), planned * 1.5 + 10_000);
       timers.push(safety);
       raf = requestAnimationFrame(mode === "cutout" ? drawCutout : draw);
     };
+
+    // Record from the very first frame of the BREAKING NEWS intro (the sting included) until the
+    // last clip's end.
+    if (recorder) {
+      try {
+        recorder.start(() => ({
+          phase: live.current.phase,
+          reaction: reactionAt(active),
+          loser: mode === "cutout" && loserVisible ? canvasRef.current : null,
+          place: plan[active]?.loser ?? null,
+          box: smooth,
+          playerName: live.current.playerName,
+          headline: live.current.headline,
+          line: live.current.line,
+        }));
+      } catch (e) {
+        noComposite(`recorder failed to start (${e instanceof Error ? e.message : String(e)})`);
+        recorder = null;
+      }
+    }
 
     (async () => {
       if (!clipUrl) return headlineOnly("no clip for the loser");
@@ -368,22 +414,12 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       const names = pickReactions(all);
       if (done) return;
       setReactions(names);
-      if (!names.length) noComposite("no reaction clips");
-      if (recorder && composite) {
-        try {
-          recorder.start(() => ({
-            phase: live.current.phase,
-            reaction: reactionAt(active),
-            loser: mode === "cutout" && loserVisible ? canvasRef.current : null,
-            place: plan[active]?.loser ?? null,
-            box: smooth,
-            playerName: live.current.playerName,
-            headline: live.current.headline,
-            line: live.current.line,
-          }));
-        } catch (e) {
-          noComposite(`recorder failed to start (${e instanceof Error ? e.message : String(e)})`);
-        }
+      if (!names.length) {
+        noComposite("no reaction clips");
+        // Nothing worth saving: stop recording now rather than drawing for nothing.
+        const rec = recorder;
+        recorder = null;
+        void rec?.stop();
       }
 
       let prepared: number | null = null;

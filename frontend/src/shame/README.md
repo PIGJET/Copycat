@@ -4,7 +4,9 @@ Shame lane: worst-moment screenshots, calling /roast and the breaking-news video
 
 When the team finale starts (the last round's VIEW FINALE, or End game), the arcade bridge
 (`arcade/bridge.tsx` → `finaleScene`) plays `<ShameVideo>` full screen, then Liangray's finale screen shows as before.
-It lasts 14 s (10 s with no clip), or longer when a clip in `clips.json` sets its own range, and has a SKIP button.
+There's no cap on its length: a clip with a range in `clips.json` plays its whole `start`–`end` range, then the finale
+screen shows (with `shamevid1`'s 0–28.3 s that's about 31 s, intro included). Clips without a range share 14 s; with no
+clip for the loser it's 10 s. It has a SKIP button.
 
 1. **Intro**: a BREAKING NEWS bar with a news sting generated in Web Audio (`sting.ts`, no sound file).
    It lasts 2.5 s, or up to 6 s while the clips and segmenter get ready.
@@ -29,7 +31,9 @@ Why it fell back is logged with `console.info("[shame video] …")`.
 
 Drop any `.mp4` files into `frontend/public/shame-clips/`. The folder is **gitignored**: never commit clips, since
 the repo is public. The dev server lists them at `/shame-clips/index.json`. `vite build` copies them into `dist/` and
-writes that list, an empty one in CI, where there are no clips. Reaction clips play with their own sound at 75% volume when SOUND is on.
+writes that list, an empty one in CI, where there are no clips. Reaction clips play with their own sound at 75% volume when SOUND is on. The Download video recording runs from the first frame of the intro to the last clip's end; it's MP4/H.264 where
+the browser can record that, else WebM. The console logs both lengths (`[shame video] on screen … s` and
+`recorded … s`) so they can be compared.
 
 Per-clip settings go in `frontend/public/shame-clips/clips.json`. This one file is committed (the videos never are):
 

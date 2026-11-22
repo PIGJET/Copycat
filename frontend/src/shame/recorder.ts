@@ -25,6 +25,28 @@ export interface RecordFrame {
   line: string;
 }
 
+/**
+ * How long a recorded video really is, in seconds (null if it can't be read). MediaRecorder WebM
+ * files have no duration in their header, so seek to the end to make the browser work it out.
+ */
+export function mediaDuration(blob: Blob): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const video = document.createElement("video");
+    video.muted = true;
+    video.preload = "metadata";
+    const done = (value: number | null) => { clearTimeout(timer); URL.revokeObjectURL(url); video.removeAttribute("src"); resolve(value); };
+    const timer = setTimeout(() => done(Number.isFinite(video.duration) ? video.duration : null), 5000);
+    video.onerror = () => done(null);
+    video.onloadedmetadata = () => {
+      if (Number.isFinite(video.duration)) return done(video.duration);
+      video.ondurationchange = () => { if (Number.isFinite(video.duration)) done(video.duration); };
+      video.currentTime = 1e9;
+    };
+    video.src = url;
+  });
+}
+
 export function canRecord(): boolean {
   return typeof MediaRecorder !== "undefined" && typeof HTMLCanvasElement.prototype.captureStream === "function"
     && typeof AudioContext !== "undefined" && !!pickMimeType((t) => MediaRecorder.isTypeSupported(t));
