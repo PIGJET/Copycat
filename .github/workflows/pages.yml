@@ -2,7 +2,7 @@ name: Deploy Copycat to GitHub Pages
 
 on:
   push:
-    branches: [merge-refactored-react-ui-with-new-ui]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
           path: frontend/dist
 
   deploy:
-    if: github.ref == 'refs/heads/merge-refactored-react-ui-with-new-ui'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
