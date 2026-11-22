@@ -6,3 +6,6 @@ node_modules/
 __pycache__/
 .venv/
 /docs/
+
+# Reaction clips for the finale shame video: local only, never commit them.
+frontend/public/shame-clips/

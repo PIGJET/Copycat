@@ -1,6 +1,44 @@
 Shame lane: worst-moment screenshots, calling /roast and the breaking-news video (see CONTRACT.md).
 
-## Finale scene (`FinaleScene.tsx`)
+## Shame video (`ShameVideo.tsx`)
+
+When the team finale starts (the last round's VIEW FINALE, or End game), the arcade bridge
+(`arcade/bridge.tsx` → `finaleScene`) plays `<ShameVideo>` full screen, then Liangray's finale screen shows as before.
+It lasts 14 s (10 s with no clip) and has a SKIP button.
+
+1. **Intro**: a BREAKING NEWS bar with a news sting generated in Web Audio (`sting.ts`, no sound file).
+   It lasts 2.5 s, or up to 6 s while the clips and segmenter get ready.
+2. **The cut**: the loser is cut out of their worst take (dance part only: `videoOffsetMs` for `durationMs`)
+   with MediaPipe's selfie segmenter (`cutout.ts`), dancing lower-right, about a third of the screen high.
+   They're composited on top of a random reaction clip from `frontend/public/shame-clips/`. With 2 or more clips, 2
+   different ones play back to back (the time is split between them, and short clips loop).
+3. **Lower third**: Liangray's finale banner (`.news-top`, `.news-headline`) with the `/roast` headline, and his
+   `.news-ticker` scrolling the roast line. It shows DEVELOPING STORY... while `/roast` is still loading, and
+   "<NAME> MAKES THE NEWS" if it fails.
+
+| Case | What plays |
+|---|---|
+| Segmentation fails, isn't ready in 6 s, or runs under 15 fps (benchmark first, then checked while playing) | The loser's plain clip in a picture-in-picture box instead of the cut-out |
+| `shame-clips/` is empty or missing | The loser over a dark BREAKING NEWS background |
+| The loser has no clip, or it won't load (mock recordings have none) | Intro, then the headline card only |
+| Anything else goes wrong (render error, stuck load) | It finishes early; a 16 s safety timeout always hands over |
+
+Why it fell back is logged with `console.info("[shame video] …")`.
+
+### Reaction clips
+
+Drop any `.mp4` files into `frontend/public/shame-clips/`. The folder is **gitignored**: never commit clips, since
+the repo is public. The dev server lists them at `/shame-clips/index.json`. `vite build` copies them into `dist/` and
+writes that list, an empty one in CI, where there are no clips. Reaction clips play with sound when SOUND is on.
+
+The segmenter model loads from `storage.googleapis.com` and the wasm from jsDelivr (same as pose detection),
+so the first finale needs internet.
+
+Tests: `node --test src/shame/shamePlan.test.mjs src/shame/scene.test.mjs` (timing, clip picking, fps threshold, alpha edge).
+
+## Old finale scene (`FinaleScene.tsx`)
+
+The old React `GameFlow` still uses this. It now shares `cutout.ts` with the shame video.
 
 At the team finale, before the headline, `GameFlow` shows `<FinaleScene>`:
 

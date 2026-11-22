@@ -9,7 +9,8 @@ import type { ArcadeHost } from "../components/Game/TeamTurnDashboard";
 import { ApiError, checkHealth, fetchRoast, scoreAttempt } from "../game/api";
 import { isMockMode } from "../game/teamTurn";
 import type { GameError, Recording, RoastRequest, RoastResult, ScoreResult } from "../game/types";
-import { DEFAULT_SCENE_URL as SCENE_URL, FinaleScene } from "../shame/FinaleScene";
+import { ShameVideo } from "../shame/ShameVideo";
+import type { ShameFinish } from "../shame/ShameVideo";
 import { MockTurn } from "./MockTurn";
 
 /** A player as his lobby stores them. */
@@ -112,26 +113,31 @@ async function roast(loser: ArcadeRanking): Promise<RoastResult> {
 }
 
 /**
- * Play the full-screen finale scene (frontend/public/scenes/proposal.mp4) with the loser cut out of
- * their worst clip. Resolves when it ends, is skipped, or falls back (no scene file, no clip, too slow).
+ * Play the shame video (src/shame/ShameVideo.tsx) over everything: BREAKING NEWS intro, the loser cut
+ * out of their worst take dancing over the reaction clips in public/shame-clips/, and the /roast
+ * headline. Resolves when it ends or is skipped; it never rejects, so the finale screen always follows.
  */
-async function finaleScene(loser: ArcadeRanking): Promise<string> {
+async function finaleScene(loser: ArcadeRanking, roasting?: Promise<RoastResult> | null): Promise<ShameFinish> {
   const clip = worstAttempt(loser)?.recording ?? null;
-  // Check first so the plain finale doesn't flash a black overlay when there's no scene.
-  if (!clip?.videoUrl) return "no-clip";
-  const scene = await fetch(SCENE_URL, { method: "HEAD" }).catch(() => null);
-  if (!scene?.ok || !(scene.headers.get("content-type") ?? "").startsWith("video/")) return "no-scene";
   return new Promise((resolve) => {
     const host = document.createElement("div");
     document.body.append(host);
     const root = createRoot(host);
-    root.render(
-      <FinaleScene loserClipUrl={clip?.videoUrl ?? null} clipStartMs={clip?.videoOffsetMs ?? 0} clipDurationMs={clip?.durationMs}
-        onFinish={(reason) => {
-          setTimeout(() => { root.unmount(); host.remove(); }, 0);
-          resolve(reason);
-        }} />,
-    );
+    let settled = false;
+    const done = (reason: ShameFinish) => {
+      if (settled) return;
+      settled = true;
+      setTimeout(() => { root.unmount(); host.remove(); }, 0);
+      resolve(reason);
+    };
+    try {
+      root.render(
+        <ShameVideo playerName={loser.player.name} clipUrl={clip?.videoUrl ?? null} clipStartMs={clip?.videoOffsetMs ?? 0}
+          clipDurationMs={clip?.durationMs} roast={roasting ?? null} onFinish={done} />,
+      );
+    } catch {
+      done("failed");
+    }
   });
 }
 

@@ -184,20 +184,22 @@ function scoreLive(player, recording) {
     renderPreview();
   });
 }
-// Finale: start POST /roast, play the optional full-screen scene, then show his finale screen.
+// Finale: start POST /roast, play the shame video (bridge finaleScene), then show his finale screen.
 async function openFinale() {
   const rows = demoRankings(preview.crew, preview.results), loser = rows.filter(r => r.average !== null).at(-1);
   const engine = preview.live && loser ? globalThis.CopycatTracking : null;
   const run = ++preview.run;
   if (engine) {
     preview.roast = {status:'loading'};
-    const ask = () => engine.roast(loser).then(result => { preview.roast = {status:'done', result} }, error => { preview.roast = {status:'error', error, retry:ask} }).then(updateHeadline);
+    let roasting = null;
+    const ask = () => (roasting = engine.roast(loser)).then(result => { preview.roast = {status:'done', result} }, error => { preview.roast = {status:'error', error, retry:ask} }).then(updateHeadline);
     preview.roast.retry = ask;
     ask();
     // Background music off before the scene's own audio (home-music.js keys off this class).
     gameRoot.classList.remove('results-leaderboard');
     globalThis.CopycatGameplayMusic?.stop();
-    await engine.finaleScene(loser);
+    // The shame video shows the same /roast headline, so it gets the call already in flight.
+    await engine.finaleScene(loser, roasting).catch(() => {});
     if (run !== preview.run) return;
   }
   preview.screen = 'finale';
