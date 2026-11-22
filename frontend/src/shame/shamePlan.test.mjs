@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 
-import { HEADLINE_ONLY_MS, INTRO_MS, MAX_PREP_MS, MAX_REACTIONS, MIN_FREE_SEGMENT_MS, TOTAL_MS, clipNames, introLength, parseClipSettings, pickReactions, placeCutout, planReactions, tickerText } from './shamePlan.ts'
+import { HEADLINE_ONLY_MS, INTRO_MS, MAX_PREP_MS, MAX_REACTIONS, MIN_FREE_SEGMENT_MS, TOTAL_MS, clipNames, introLength, pickMimeType, parseClipSettings, pickReactions, placeCutout, planReactions, tickerText } from './shamePlan.ts'
 
 test('the whole video lasts 10 to 15 seconds', () => {
   for (const ms of [TOTAL_MS, HEADLINE_ONLY_MS]) assert.ok(ms >= 10_000 && ms <= 15_000)
@@ -91,4 +91,11 @@ test('reaction clips are gitignored so they are never committed, but clips.json 
   const ignore = fs.readFileSync(new URL('../../../.gitignore', import.meta.url), 'utf8')
   assert.match(ignore, /^frontend\/public\/shame-clips\/\*$/m)
   assert.match(ignore, /^!frontend\/public\/shame-clips\/clips\.json$/m)
+})
+
+test('the recording prefers webm and falls back to mp4 (Safari), or none', () => {
+  assert.equal(pickMimeType(() => true), 'video/webm;codecs=vp9,opus')
+  assert.equal(pickMimeType((t) => t.startsWith('video/mp4')), 'video/mp4;codecs=avc1,mp4a')
+  assert.equal(pickMimeType(() => false), null)
+  assert.equal(pickMimeType(() => { throw new Error('nope') }), null)
 })

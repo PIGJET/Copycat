@@ -112,23 +112,34 @@ async function roast(loser: ArcadeRanking): Promise<RoastResult> {
   }
 }
 
+/** What the shame video hands the finale: how it ended, and the file for Download video. */
+interface FinaleSceneResult {
+  reason: ShameFinish;
+  /** The recorded breaking-news video, or the loser's own worst take if that couldn't be recorded. */
+  video: Blob | null;
+  /** True when `video` is the recorded composite. */
+  recorded: boolean;
+}
+
 /**
  * Play the shame video (src/shame/ShameVideo.tsx) over everything: BREAKING NEWS intro, the loser cut
  * out of their worst take dancing over the reaction clips in public/shame-clips/, and the /roast
- * headline. Resolves when it ends or is skipped; it never rejects, so the finale screen always follows.
+ * headline. It's recorded while it plays. Resolves when it ends or is skipped; it never rejects, so
+ * the finale screen always follows.
  */
-async function finaleScene(loser: ArcadeRanking, roasting?: Promise<RoastResult> | null): Promise<ShameFinish> {
+async function finaleScene(loser: ArcadeRanking, roasting?: Promise<RoastResult> | null): Promise<FinaleSceneResult> {
   const clip = worstAttempt(loser)?.recording ?? null;
+  const take = clip?.videoBlob?.size ? clip.videoBlob : null;
   return new Promise((resolve) => {
     const host = document.createElement("div");
     document.body.append(host);
     const root = createRoot(host);
     let settled = false;
-    const done = (reason: ShameFinish) => {
+    const done = (reason: ShameFinish, _detail?: string, video?: Blob | null) => {
       if (settled) return;
       settled = true;
       setTimeout(() => { root.unmount(); host.remove(); }, 0);
-      resolve(reason);
+      resolve({ reason, video: video ?? take, recorded: !!video });
     };
     try {
       root.render(

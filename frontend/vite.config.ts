@@ -2,7 +2,6 @@ import { cpSync, createReadStream, existsSync, mkdirSync, readdirSync, readFileS
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { replayDelivery } from './replayDelivery.ts'
 import { songServer } from './songServer.ts'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
@@ -76,7 +75,6 @@ export default defineConfig({
   publicDir: 'src/game/ui-preview/dist',
   plugins: [
     react(),
-    replayDelivery(), // Liangray's finale "Send replay" (email/SMS, needs keys in .env.local)
     songServer(new Set(tracks.map(track => track.id))),
     extraPublicDir(),
     { name: 'copycat-arcade-entry', transformIndexHtml: { order: 'pre', handler() {

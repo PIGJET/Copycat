@@ -40,9 +40,32 @@ function brass(ctx: Ctx, out: AudioNode, freqs: number[], at: number, length: nu
   }
 }
 
-/** Play the sting. Returns a stop function. Does nothing (and never throws) without Web Audio. */
-export function playSting(): () => void {
+function score(ctx: Ctx, out: AudioNode) {
+  const t = ctx.currentTime + 0.05;
+  const minor = [146.83, 174.61, 220]; // D minor
+  const lift = [155.56, 196, 233.08]; // E flat major
+  drum(ctx, out, t);
+  brass(ctx, out, minor, t, 0.16);
+  brass(ctx, out, minor, t + 0.22, 0.16);
+  drum(ctx, out, t + 0.44, 0.35);
+  brass(ctx, out, lift, t + 0.44, 0.2);
+  drum(ctx, out, t + 0.8, 0.6);
+  brass(ctx, out, [...minor, 293.66], t + 0.8, 1.45, 0.06);
+}
+
+/**
+ * Play the sting. Returns a stop function. Does nothing (and never throws) without Web Audio.
+ * With `shared`, it plays in that AudioContext into each of `outputs` (speakers, the recording).
+ */
+export function playSting(shared?: { ctx: AudioContext; outputs: AudioNode[] }): () => void {
   try {
+    if (shared) {
+      const out = shared.ctx.createGain();
+      out.gain.value = 0.9;
+      for (const node of shared.outputs) out.connect(node);
+      score(shared.ctx, out);
+      return () => { try { out.disconnect(); } catch { /* already gone */ } };
+    }
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return () => {};
     const ctx = new Ctor();
@@ -50,16 +73,7 @@ export function playSting(): () => void {
     const out = ctx.createGain();
     out.gain.value = 0.9;
     out.connect(ctx.destination);
-    const t = ctx.currentTime + 0.05;
-    const minor = [146.83, 174.61, 220]; // D minor
-    const lift = [155.56, 196, 233.08]; // E flat major
-    drum(ctx, out, t);
-    brass(ctx, out, minor, t, 0.16);
-    brass(ctx, out, minor, t + 0.22, 0.16);
-    drum(ctx, out, t + 0.44, 0.35);
-    brass(ctx, out, lift, t + 0.44, 0.2);
-    drum(ctx, out, t + 0.8, 0.6);
-    brass(ctx, out, [...minor, 293.66], t + 0.8, 1.45, 0.06);
+    score(ctx, out);
     const timer = setTimeout(() => void ctx.close().catch(() => {}), 3000);
     return () => {
       clearTimeout(timer);

@@ -15,6 +15,7 @@ import type { Cutout } from "./cutout";
 import { MIN_FPS, fpsFromSamples, pushSample, tooSlow } from "./sceneMath";
 import { HEADLINE_ONLY_MS, INTRO_MS, MAX_PREP_MS, TOTAL_MS, clipNames, introLength, parseClipSettings, pickReactions, placeCutout, placePip, planReactions, tickerText } from "./shamePlan";
 import type { Box, ClipSettings, ReactionPlan } from "./shamePlan";
+import { ShameRecorder, canRecord } from "./recorder";
 import { playSting } from "./sting";
 import "./ShameVideo.css";
 
@@ -32,8 +33,12 @@ export interface ShameVideoProps {
   roast?: Promise<RoastResult> | null;
   /** Folder of reaction clips, with its index.json (served by vite.config.ts). */
   clipsBase?: string;
-  /** Called once, when the video ends, is skipped or gives up. */
-  onFinish: (reason: ShameFinish, detail?: string) => void;
+  /**
+   * Called once, when the video ends, is skipped or gives up. `video` is the recording of the
+   * composite as shown (for Download video), or null when it couldn't be recorded: unsupported
+   * browser, no reaction clips, segmentation fell back, or skipped before the loser appeared.
+   */
+  onFinish: (reason: ShameFinish, detail?: string, video?: Blob | null) => void;
 }
 
 export const SHAME_CLIPS_BASE = `${import.meta.env.BASE_URL}shame-clips/`;
@@ -102,6 +107,11 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
   }, [roast]);
   const fallback = { headline: `${playerName.toUpperCase()} MAKES THE NEWS`, line: "More on this developing story after the break." };
   const news = !roast || roasted === "failed" ? fallback : roasted?.from === roast ? roasted : null;
+  // The recorder redraws the banner from these every frame.
+  const live = useRef({ phase, playerName, headline: "", line: "" });
+  useEffect(() => {
+    live.current = { phase, playerName, headline: news?.headline ?? "DEVELOPING STORY...", line: news?.line ?? "" };
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,7 +124,56 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
     let cutout: Cutout | null = null;
     let mode: Overlay | null = null;
     let wrap = () => {};
-    const stopSting = soundOn() ? playSting() : () => {};
+
+    // Recording for Download video: one AudioContext feeds the speakers (silent with SOUND off)
+    // and the recorder, which redraws the composite onto its own canvas.
+    let audio: AudioContext | null = null;
+    let speakers: GainNode | null = null;
+    let recorder: ShameRecorder | null = null;
+    if (clipUrl && canRecord()) {
+      try {
+        audio = new AudioContext();
+        void audio.resume().catch(() => {});
+        speakers = audio.createGain();
+        speakers.gain.value = soundOn() ? 1 : 0;
+        speakers.connect(audio.destination);
+        recorder = new ShameRecorder(audio);
+      } catch (e) {
+        console.info(`[shame video] can't record: ${e instanceof Error ? e.message : String(e)}`);
+        void audio?.close().catch(() => {});
+        audio = null;
+        speakers = null;
+        recorder = null;
+      }
+    }
+    /** The composite is only worth saving if the loser was cut out over a reaction clip throughout. */
+    let composite = true;
+    let loserEverShown = false;
+    let loserVisible = false;
+    const noComposite = (why: string) => {
+      if (composite && recorder) console.info(`[shame video] download falls back to the loser's take: ${why}`);
+      composite = false;
+    };
+    const stopSting = audio && speakers && recorder
+      ? playSting({ ctx: audio, outputs: [speakers, recorder.audioIn] })
+      : soundOn() ? playSting() : () => {};
+    const routed = new WeakSet<HTMLVideoElement>();
+    /** Send a reaction clip's audio through the AudioContext (to the speakers and the recording). */
+    const routeAudio = (video: HTMLVideoElement): boolean => {
+      if (!audio || !speakers || !recorder) return false;
+      if (routed.has(video)) return true;
+      try {
+        const gain = audio.createGain();
+        gain.gain.value = REACTION_VOLUME;
+        audio.createMediaElementSource(video).connect(gain);
+        gain.connect(speakers);
+        gain.connect(recorder.audioIn);
+        routed.add(video);
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
     const stopCutout = () => {
       cutout?.close();
@@ -131,7 +190,19 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       clipRef.current?.pause();
       reactionRefs.current.forEach((v) => v?.pause());
       if (detail) console.info(`[shame video] ${reason}: ${detail}`);
-      onFinishRef.current(reason, detail);
+      const rec = recorder;
+      recorder = null;
+      if (!rec) {
+        void audio?.close().catch(() => {});
+        return onFinishRef.current(reason, detail, null);
+      }
+      if (!loserEverShown) noComposite("the loser never appeared");
+      if (mode !== "cutout") noComposite("the loser wasn't cut out");
+      void rec.stop().then((video) => {
+        void audio?.close().catch(() => {});
+        if (video && composite) console.info(`[shame video] recorded ${(video.size / 1e6).toFixed(1)} MB ${video.type}`);
+        onFinishRef.current(reason, detail, composite ? video : null);
+      });
     };
     finishRef.current = finish;
     // Safety net: whatever happens, hand over to the finale screen (moved once the cut's length is known).
@@ -143,6 +214,7 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       if (done || begun) return;
       begun = true;
       if (why) console.info(`[shame video] headline card only: ${why}`);
+      noComposite("headline card only");
       mode = null;
       stopCutout();
       later(() => setPhase("card"), Math.max(0, INTRO_MS - elapsed()));
@@ -153,6 +225,7 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
     const switchToPip = (why: string) => {
       if (!pipLogged) console.info(`[shame video] picture-in-picture: ${why}`);
       pipLogged = true;
+      noComposite(`picture-in-picture (${why})`);
       mode = "pip";
       stopCutout();
       setOverlay("pip");
@@ -176,6 +249,8 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       if (!el) return;
       const waiting = !!(p && reaction && reaction.currentTime < p.insertAt - 0.05);
       el.style.visibility = waiting ? "hidden" : "";
+      loserVisible = !waiting;
+      if (loserVisible) loserEverShown = true;
       if (p && reaction && !waiting && !loserShown) {
         loserShown = true;
         // Start their dance from its first beat the moment they appear.
@@ -248,8 +323,13 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
         if (!video) return;
         video.loop = plan[i].loop;
         video.currentTime = plan[i].start;
-        video.volume = REACTION_VOLUME;
-        video.muted = !soundOn();
+        if (routeAudio(video)) {
+          video.volume = 1; // the gain node ducks it; SOUND off mutes the speakers, not the recording
+          video.muted = false;
+        } else {
+          video.volume = REACTION_VOLUME;
+          video.muted = !soundOn();
+        }
         video.play().catch(() => { video.muted = true; return video.play().catch(() => {}); });
         console.info(`[shame video] ${plan[i].file}: clip visible at ${video.currentTime.toFixed(1)} s (loser at ${plan[i].insertAt.toFixed(1)} s)`);
       };
@@ -288,6 +368,23 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
       const names = pickReactions(all);
       if (done) return;
       setReactions(names);
+      if (!names.length) noComposite("no reaction clips");
+      if (recorder && composite) {
+        try {
+          recorder.start(() => ({
+            phase: live.current.phase,
+            reaction: reactionAt(active),
+            loser: mode === "cutout" && loserVisible ? canvasRef.current : null,
+            place: plan[active]?.loser ?? null,
+            box: smooth,
+            playerName: live.current.playerName,
+            headline: live.current.headline,
+            line: live.current.line,
+          }));
+        } catch (e) {
+          noComposite(`recorder failed to start (${e instanceof Error ? e.message : String(e)})`);
+        }
+      }
 
       let prepared: number | null = null;
       const go = () => startCut(names, settings);
@@ -330,6 +427,9 @@ function ShameVideoInner({ playerName, clipUrl, clipStartMs = 0, clipDurationMs,
     return () => {
       // Unmount (or StrictMode re-run): stop quietly without reporting a finish.
       done = true;
+      void recorder?.stop();
+      recorder = null;
+      void audio?.close().catch(() => {});
       timers.forEach(clearTimeout);
       controller.abort();
       cancelAnimationFrame(raf);

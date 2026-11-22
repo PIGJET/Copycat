@@ -97,8 +97,7 @@ function NewsOverlay(loser,worst){const weak=weakestPart(worst.score);return `<d
 function NewsHeadline(weak){const r=preview.roast;if(!preview.live||!r)return `<h3>${escapeUI(CopycatDemoData.headlines[weak][0]+CopycatDemoData.headlines[weak].slice(1).toLowerCase())}</h3>`;if(r.status==='done')return `<h3>${escapeUI(r.result.headline)}</h3><p>${escapeUI(r.result.roast_line)}</p>`;if(r.status==='error')return `<h3>Report unavailable</h3><p>${escapeUI(r.error.message)}</p>${ArcadeButton('RETRY','retry-roast')}`;return '<h3>DEVELOPING STORY...</h3>'}
 function updateHeadline(){const node=gameRoot.querySelector('.news-headline');if(!node||preview.screen!=='finale')return;const rows=demoRankings(preview.crew,preview.results),loser=rows.filter(r=>r.average!==null).at(-1);if(loser)node.innerHTML=NewsHeadline(weakestPart(loser.attempts.reduce((a,b)=>a.score.total<=b.score.total?a:b).score))}
 function FinaleStandings(rows){let rank=0;return `<section class="final-standings" aria-labelledby="standings-title"><div class="final-standings-heading"><h3 id="standings-title">Final standings</h3><span>Score /100</span></div><ol class="final-ranks">${rows.map(row=>`<li class="${row.average===null?'unscored':rank===0?'winner':''}"><span class="final-rank">${row.average===null?'—':++rank}</span><span class="rank-avatar">${portrait(row.player)}</span><span class="final-rank-name"><strong>${escapeUI(row.player.name)}</strong>${row.average===null?'<span>Dance creator</span>':''}</span><strong class="final-rank-score">${scoreNumber(row.average)}</strong></li>`).join('')}</ol></section>`}
-function FinaleShareDialog(){return `<dialog id="finale-share-dialog" class="finale-share-dialog" aria-labelledby="share-title" aria-describedby="share-help"><div class="share-dialog-heading"><h2 id="share-title">Send replay</h2><button class="ui-secondary" data-share-action="close" aria-label="Close sharing">✕</button></div><p id="share-help">Enter an email for a video attachment or a mobile number with country code for a replay link.</p><form id="replay-delivery"><label for="replay-recipient">Email or mobile number</label><input id="replay-recipient" maxlength="254" placeholder="you@example.com or +14165550123" required><button id="replay-send" class="ui-primary">Send replay</button></form><p id="share-status" role="status">No video is available yet. This demo has no recorded footage.</p><div class="share-dialog-actions"><button class="ui-primary" id="share-native" data-share-action="share" disabled>Choose an app</button><button class="ui-secondary" id="share-download" data-share-action="download" disabled>Download video</button></div></dialog>`}
-function finaleScreen(){const rows=demoRankings(preview.crew,preview.results),loser=rows.filter(r=>r.average!==null).at(-1);if(!loser)return `${GameHeader('NO RESULTS','FINALE')}${ArcadeButton('MENU','exit')}`;const worst=loser.attempts.reduce((a,b)=>a.score.total<=b.score.total?a:b);return `<nav class="finale-nav" aria-label="Finale navigation">${ArcadeButton('Menu','exit',true)}</nav><header class="finale-heading"><h2 id="screen-title" tabindex="-1">${escapeUI(loser.player.name)} made the news.</h2></header><div class="finale-layout"><div class="finale-replay"><div class="broadcast" id="broadcast">${NewsOverlay(loser,worst)}</div><div class="finale-replay-controls"><button class="ui-secondary" id="finale-replay" data-action="replay" disabled>Watch again</button><span>Demo replay</span></div></div><aside class="finale-sidebar">${FinaleStandings(rows)}<div class="finale-send"><button class="ui-primary" data-share-action="open">Send replay</button><p>Share by email or text, or save it to your device.</p><span>Only shared when you choose.</span></div></aside></div>${FinaleShareDialog()}`}
+function finaleScreen(){const rows=demoRankings(preview.crew,preview.results),loser=rows.filter(r=>r.average!==null).at(-1);if(!loser)return `${GameHeader('NO RESULTS','FINALE')}${ArcadeButton('MENU','exit')}`;const worst=loser.attempts.reduce((a,b)=>a.score.total<=b.score.total?a:b);return `<nav class="finale-nav" aria-label="Finale navigation">${ArcadeButton('Menu','exit',true)}</nav><header class="finale-heading"><h2 id="screen-title" tabindex="-1">${escapeUI(loser.player.name)} made the news.</h2></header><div class="finale-layout"><div class="finale-replay"><div class="broadcast" id="broadcast">${NewsOverlay(loser,worst)}</div><div class="finale-replay-controls"><button class="ui-secondary" id="finale-replay" data-action="replay" disabled>Watch again</button><span>Demo replay</span></div></div><aside class="finale-sidebar">${FinaleStandings(rows)}<div class="finale-send"><button class="ui-primary" id="finale-download" data-finale-action="download" disabled>Download video</button><p>Save the breaking-news video to this device.</p><span id="finale-download-status">No video is available for this player.</span></div></aside></div>`}
 
 function clearPreviewTimers(){clearInterval(previewTimer);clearTimeout(scoreTimer);previewTimer=null;scoreTimer=null;stopBeatGuide();stopRankAnimation();stopCameraCheck()}
 let referenceDance = null;
@@ -198,8 +197,10 @@ async function openFinale() {
     // Background music off before the scene's own audio (home-music.js keys off this class).
     gameRoot.classList.remove('results-leaderboard');
     globalThis.CopycatGameplayMusic?.stop();
-    // The shame video shows the same /roast headline, so it gets the call already in flight.
-    await engine.finaleScene(loser, roasting).catch(() => {});
+    // The shame video shows the same /roast headline, so it gets the call already in flight. It
+    // hands back the file for Download video (the recorded video, or the loser's take).
+    const scene = await engine.finaleScene(loser, roasting).catch(() => null);
+    preview.finaleVideo = scene?.video ?? null;
     if (run !== preview.run) return;
   }
   preview.screen = 'finale';
@@ -210,6 +211,7 @@ function releaseLive() {
   liveRecordings = [];
   preview.scoring = null;
   preview.roast = null;
+  preview.finaleVideo = null;
 }
 function renderPreview(){
   globalThis.CopycatTracking?.unmount();
@@ -238,7 +240,9 @@ function renderPreview(){
   if(preview.screen==='finale'){playCue('finale');const loser=demoRankings(preview.crew,preview.results).filter(row=>row.average!==null).at(-1);
     const attempt=loser?.attempts.filter(turn=>turn.clip?.size).sort((a,b)=>a.score.total-b.score.total)[0];
     if(attempt) globalThis.CopycatFinale?.setVideo(attempt.clip,loser.player.name);
-    else globalThis.CopycatFinale?.clear();}
+    else globalThis.CopycatFinale?.clear();
+    const download=preview.finaleVideo||attempt?.clip;
+    if(download?.size) globalThis.CopycatFinale?.setDownload(download,loser.player.name);}
   if(preview.screen==='score' && preview.latest){const details=()=>{gameRoot.querySelector('#score-details').hidden=false};const reveal=()=>{gameRoot.querySelector('#evaluating').hidden=true;gameRoot.querySelector('#score-result').hidden=false;playCue('score')};if(matchMedia('(prefers-reduced-motion: reduce)').matches){reveal();details()}else scoreTimer=setTimeout(()=>{reveal();scoreTimer=setTimeout(details,180)},650)}
 }
 function enterPreview(crew,mode,solo=false,initialScreen='camera'){

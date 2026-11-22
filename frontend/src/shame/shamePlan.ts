@@ -151,3 +151,9 @@ export function placeCutout(box: Box, canvasAspect: number, place: LoserPlacemen
 export function placePip(place: LoserPlacement, aspect: number, video: { w: number; h: number }, screenW: number, screenH: number) {
   return placeCutout({ x0: 0, y0: 0, x1: 1, y1: 1 }, aspect, place, video, screenW, screenH);
 }
+
+/** The container/codec to record, webm first, mp4 where that's all the browser does (Safari). */
+export function pickMimeType(isSupported: (type: string) => boolean): string | null {
+  const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4;codecs=avc1,mp4a", "video/mp4"];
+  return types.find((type) => { try { return isSupported(type); } catch { return false; } }) ?? null;
+}
