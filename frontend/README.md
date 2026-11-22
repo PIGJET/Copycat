@@ -86,3 +86,9 @@ To enable the **Send replay** form, set the following server variables for the c
 | SMS download link | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (SMS-capable number), `REPLAY_PUBLIC_ORIGIN` (your public HTTPS origin) |
 
 Run the game on localhost. For SMS, configure your public HTTPS reverse proxy to forward only GET and HEAD requests under `/replays/` to the running game server. Text recipients can download their clip for one hour while that server remains running. Email attachments work from localhost without a public endpoint. Setup references: [Resend](https://resend.com/docs/api-reference/emails/send-email) and [Twilio](https://www.twilio.com/docs/messaging/api/message-resource).
+
+## GitHub Pages
+
+In the repository's **Settings → Pages**, choose **GitHub Actions** as the publishing source. The **Deploy Copycat to GitHub Pages** workflow builds and publishes the frontend on pushes to `main`. You can also run it manually from **Actions** on `main`.
+
+For scoring, dance imports, and roast results on the deployed site, set the repository Actions variable `VITE_API_URL` to the public HTTPS URL of a separately hosted Copycat backend. Keep server credentials on the backend. GitHub Pages serves the static frontend and bundled chiptune tracks. The Vite song-preview server and email/SMS replay delivery require separate server hosting. Players can download recorded replays from the browser.
