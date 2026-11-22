@@ -11,13 +11,12 @@ export const COUNTDOWN_SECONDS = 3;
 
 /** A landmark counts as seen at or above this MediaPipe visibility (was 0.5). */
 export const MIN_VISIBILITY = 0.4;
-/** Starting a take needs these in frame: both shoulders and both hips (same as CORE_POINTS). */
+/** Starting a take needs these in frame: both shoulders (same as CORE_POINTS). */
 export const CHECK_POINTS: Record<string, number[]> = {
   shoulders: [11, 12],
-  hips: [23, 24],
 };
-/** During a take only the core counts: both shoulders and both hips. Limbs may leave the frame. */
-export const CORE_POINTS = [11, 12, 23, 24];
+/** During a take only both shoulders count. Hips and limbs may leave the frame. */
+export const CORE_POINTS = [11, 12];
 /** No tracking checks for this long after the countdown while the player settles in. */
 export const TRACKING_GRACE_MS = 1000;
 /** Fail the take only if the core is missing this long in a row (not added up across the take). */
@@ -26,7 +25,7 @@ export const MAX_CORE_GAP_MS = 2000;
 const visible = (p: PoseLandmark | undefined) =>
   !!p && p.visibility >= MIN_VISIBILITY && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
 
-/** True when both shoulders and both hips are in frame (the in-take check). */
+/** True when both shoulders are in frame (the in-take check). */
 export function coreInFrame(landmarks: PoseLandmark[] | null | undefined): boolean {
   return !!landmarks && CORE_POINTS.every((i) => visible(landmarks[i]));
 }
@@ -42,7 +41,7 @@ export function missingBodyParts(landmarks: PoseLandmark[] | null | undefined): 
     .map(([name]) => name);
 }
 
-/** Ready to start a take: both shoulders and both hips in frame. */
+/** Ready to start a take: both shoulders in frame. */
 export function bodyInFrame(landmarks: PoseLandmark[] | null | undefined): boolean {
   return missingBodyParts(landmarks).length === 0;
 }
@@ -74,7 +73,7 @@ export function isMockMode(search: string): boolean {
 }
 
 export const TURN_MESSAGES = {
-  trackingLost: "We lost sight of you for too long. Keep your shoulders and hips in frame, then try again.",
+  trackingLost: "We lost sight of you for too long. Keep your shoulders in frame, then try again.",
   cameraStopped: "The camera stopped. Reconnect it, then try again.",
   cameraFailed: "Could not start your camera. Allow camera access and close other apps using it, then try again.",
   noRecording: "This browser can't record webcam video. Use Chrome or Edge.",

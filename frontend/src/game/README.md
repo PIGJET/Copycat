@@ -31,7 +31,7 @@ Only one `useGame()` should exist per game. Call it once near the top and pass `
 | `types.ts` | `Player`, `Recording`, `Attempt`, `Round`, `ScoreResult`, `RoastResult`, `GameMode`, `Phase`, … |
 | `rules.ts` | Pure rules: validation, rotation, rankings, tie-break, loser, roast request. |
 | `gameReducer.ts` | The state machine (pure). `useGame` adds the network calls. |
-| `teamTurn.ts` | Team recording helpers: 10 s turns, the camera-check body test (shoulders, hips, knees, ankles), `toGameRecording`, `isMockMode`. |
+| `teamTurn.ts` | Team recording helpers: 10 s turns, the start/in-take body check (both shoulders) and its thresholds, `toGameRecording`, `isMockMode`. |
 | `recordingSource.ts` | `getRecording()`: mock recordings for dev mode (`?mock=1`). Real turns record in `components/Game/TeamTurnDashboard.tsx`. |
 | `mockRecorder.ts` | `mockRecording()` makes a fake contract-format Recording, no camera needed. |
 | `DevHarness.tsx` | Unstyled click-through of a whole game against the real backend (not in `App.tsx`). |

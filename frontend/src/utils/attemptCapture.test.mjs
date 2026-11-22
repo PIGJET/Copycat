@@ -94,13 +94,13 @@ test('solo partial capture completes when no pose is visible', () => {
   assert.equal(attempt.finish()?.frames.length, 15)
 })
 
-// Team play's rule (teamTurn.ts TEAM_TRACKING): core only, 1 s grace, fail on a 2 s run without the core.
-const core = (lm) => !!lm && [11, 12, 23, 24].every(i => lm[i].visibility >= .4)
+// Team play's rule (teamTurn.ts TEAM_TRACKING): both shoulders only, 1 s grace, fail on a 2 s run without the core.
+const core = (lm) => !!lm && [11, 12].every(i => lm[i].visibility >= .4)
 const team = () => new AttemptCapture(10_000, { tracking: { usable: core, graceMs: 1000, maxGapMs: 2000 } })
-const armsOut = pose.map((p, i) => [13, 14, 15, 16, 25, 26, 27, 28].includes(i) ? { ...p, visibility: 0 } : p)
+const armsOut = pose.map((p, i) => [13, 14, 15, 16, 23, 24, 25, 26, 27, 28].includes(i) ? { ...p, visibility: 0 } : p)
 const slot = (i) => 1 + i * 1000 / 15
 
-test('team rule: limbs leaving the frame never count against the player', () => {
+test('team rule: hips and limbs leaving the frame never count against the player', () => {
   const attempt = team()
   attempt.start(0)
   for (let i = 0; i < 150; i++) {
