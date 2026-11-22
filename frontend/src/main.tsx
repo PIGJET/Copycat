@@ -1,32 +1,4 @@
-import { createRoot, type Root } from "react-dom/client";
-import { DashboardPage, type ArcadeTurn } from "./components/Game/ArcadeDashboardPage";
-import type { Player } from "./components/Game/uiTypes";
-import { scoreAttempt } from "./game/scoreAttempt";
-import type { PoseSequence } from "./types/pose";
-import Game from "./game/Game";
-
-type LiveTurn = {
-  stage: HTMLElement; controls: HTMLElement; player: Player; creator: Player;
-  reference?: PoseSequence; phaseChanged: ArcadeTurn["phaseChanged"];
-  onRecord: (sequence: PoseSequence, clip?: Blob) => void; onSkip?: () => void;
-};
-let root: Root | undefined;
-Object.assign(globalThis, { CopycatTracking: {
-  scoreAttempt,
-  mount(turn: LiveTurn) {
-    root = createRoot(turn.stage);
-    root.render(<DashboardPage arcade={turn} players={[]} round={1} rounds={1}
-      player={turn.player} creator={turn.creator} reference={turn.reference}
-      onRecord={turn.onRecord} onSkip={turn.onSkip} onMenu={() => {}} />);
-  },
-  unmount() { root?.unmount(); root = undefined; }
-}});
-
-let soloRoot: Root | undefined;
-Object.assign(globalThis, { CopycatSolo: {
-  mount(element: HTMLElement, onBack: () => void) {
-    soloRoot = createRoot(element);
-    soloRoot.render(<Game onBack={onBack} />);
-  },
-  unmount() { soloRoot?.unmount(); soloRoot = undefined; },
-}});
+// Entry for Liangray's arcade UI (served from src/game/ui-preview/dist by vite.config.ts).
+// His plain-JS screens call the engine through globalThis.CopycatTracking and
+// globalThis.CopycatSolo (see arcade/bridge.tsx).
+import "./arcade/bridge";

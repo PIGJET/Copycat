@@ -134,5 +134,5 @@ async function enableCameraCheck(){
 document.querySelector('#game-screen').addEventListener('click',e=>{
   const button=e.target.closest('[data-action]');if(!button||button.disabled)return;
   if(button.dataset.action==='camera-enable')enableCameraCheck();
-  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.live=button.dataset.action==='camera-continue';preview.screen='tempo';renderPreview()}
+  if(button.dataset.action==='camera-demo'||button.dataset.action==='camera-continue'&&checkReady&&checkStream?.active){preview.live=button.dataset.action==='camera-continue'||!!globalThis.CopycatTracking;preview.mock=button.dataset.action==='camera-demo';preview.screen='tempo';renderPreview()}
 });

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Offline song cache (real songs: never commit)
+.song-cache/

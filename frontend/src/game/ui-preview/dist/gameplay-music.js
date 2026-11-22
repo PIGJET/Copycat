@@ -94,6 +94,13 @@
       status(`Playing ${selected.title} at ${selected.bpm} BPM.`);
     } catch (error) {
       if (request !== epoch) return;
+      // A real song that fails mid-game falls back to the nearest-BPM bundled CC0 loop.
+      if (error.name !== 'NotAllowedError' && state?.song && state.song.provider === 'deezer') {
+        const loops = Object.values(globalThis.CopycatTracks || {});
+        const target = state.song.bpm > 0 ? state.song.bpm : 120;
+        const loop = loops.reduce((best, t) => !best || Math.abs(t.bpm - target) < Math.abs(best.bpm - target) ? t : best, null);
+        if (loop) { state = {...state, song: loop}; return void play(); }
+      }
       blocked = error.name === 'NotAllowedError';
       status(blocked ? 'Click or press a key to start gameplay music.' : 'Gameplay music is unavailable.');
     }

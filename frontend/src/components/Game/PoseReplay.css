@@ -27,3 +27,64 @@
   border-block: 0.32rem solid transparent;
   border-left: 0.5rem solid #73d9e9;
 }
+
+/* Copy-turn preview (John Tam, 7050fbd): the creator's dance as a picture-in-picture inset over
+   the copier's camera, so the camera stays big. */
+.pose-replay-inset {
+  position: absolute;
+  right: var(--camera-hud-inset, 0.75rem);
+  bottom: var(--camera-hud-inset, 0.75rem);
+  z-index: 2;
+  width: clamp(6.5rem, 25%, 12rem);
+  overflow: hidden;
+  border: 2px solid #73d9e9;
+  border-radius: 8px;
+  background: #171020;
+  box-shadow: 0 3px 12px #080611;
+  pointer-events: none;
+}
+
+.pose-replay-inset .pose-replay-caption {
+  position: static;
+  gap: 0.35rem;
+  max-width: none;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  border-radius: 0;
+  font-size: clamp(0.625rem, 1.45vw, 0.85rem);
+}
+
+.pose-replay-inset .pose-replay-icon {
+  border-block-width: 0.24rem;
+  border-left-width: 0.4rem;
+}
+
+/* Arcade copier turn: a bigger inset (it carries the creator's video), clear of the stage's corner marks. */
+.pose-replay-inset--large {
+  --camera-hud-inset: 1.75rem;
+  width: clamp(9rem, 32%, 22rem);
+}
+
+.pose-replay-inset video,
+.pose-replay-inset canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Arcade copier turn, before Start: the creator's skeleton dance plays once, big over the stage. */
+.pose-replay-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: #171020;
+}
+
+.pose-replay-stage canvas {
+  width: auto !important;
+  height: 100%;
+  max-width: 100% !important;
+  object-fit: contain;
+}

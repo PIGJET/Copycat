@@ -12,9 +12,26 @@ function landmarksOf(frame: ScoreFrame): NormalizedLandmark[] | null {
   return null;
 }
 
-/** Replays a recorded dance as a skeleton (used when the creator's take has no video). */
-export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame[]; durationMs: number; creator: string }) {
+/**
+ * Replays a recorded dance as a skeleton (used when the creator's take has no video).
+ * `startedAt` (John Tam's copy-turn preview, 7050fbd): a performance.now() time to sync to, so
+ * frame t=0 lines up with the copier's capture start. Before that time the first pose holds still.
+ */
+export function PoseReplay({ frames, durationMs, creator, startedAt, caption, onDone }: {
+  frames: ScoreFrame[];
+  durationMs: number;
+  creator: string;
+  startedAt?: number;
+  /** Caption text after "Watch" (default "<creator>'s move"). */
+  caption?: string;
+  /** Called once when the replay reaches durationMs. */
+  onDone?: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const done = useRef(onDone);
+  useEffect(() => {
+    done.current = onDone;
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -23,14 +40,16 @@ export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame
 
     const drawing = new DrawingUtils(context);
     const timed = frames.filter((f): f is NonNullable<ScoreFrame> => f !== null);
-    const start = performance.now();
+    const start = startedAt ?? performance.now();
+    const frameOrigin = startedAt === undefined ? timed[0]?.t ?? 0 : 0;
     let request = 0;
     let frameIndex = -1;
 
     const draw = (now: number) => {
-      const elapsed = now - start;
+      const elapsed = Math.min(Math.max(0, now - start), durationMs);
       const previousIndex = frameIndex;
-      while (timed[frameIndex + 1] && timed[frameIndex + 1].t - (timed[0]?.t ?? 0) <= elapsed) frameIndex++;
+      while (timed[frameIndex + 1] && timed[frameIndex + 1].t - frameOrigin <= elapsed) frameIndex++;
+      if (frameIndex < 0 && timed.length) frameIndex = 0; // hold the first pose until the start
 
       const landmarks = timed[frameIndex] ? landmarksOf(timed[frameIndex]) : null;
       if (frameIndex !== previousIndex) {
@@ -41,12 +60,13 @@ export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame
         }
       }
 
-      if (elapsed < durationMs) request = requestAnimationFrame(draw);
+      if (now - start < durationMs) request = requestAnimationFrame(draw);
+      else done.current?.();
     };
 
     request = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(request);
-  }, [frames, durationMs]);
+  }, [frames, durationMs, startedAt]);
 
   return (
     <>
@@ -58,10 +78,16 @@ export function PoseReplay({ frames, durationMs, creator }: { frames: ScoreFrame
         aria-label={`${creator}’s dance pose replay`}
         style={{ display: "block", width: "100%", maxWidth: 640, background: "#251b31", transform: "scaleX(-1)" }}
       />
-      <p className="pose-replay-caption" role="status">
-        <span aria-hidden="true" className="pose-replay-icon" />
-        <span>Watch <strong>{creator}’s move</strong></span>
-      </p>
+      <PoseReplayCaption creator={creator} caption={caption} />
     </>
+  );
+}
+
+export function PoseReplayCaption({ creator, caption }: { creator: string; caption?: string }) {
+  return (
+    <p className="pose-replay-caption" role="status">
+      <span aria-hidden="true" className="pose-replay-icon" />
+      <span>Watch <strong>{caption ?? `${creator}’s move`}</strong></span>
+    </p>
   );
 }

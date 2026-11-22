@@ -1,13 +1,51 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import installer from '@ffmpeg-installer/ffmpeg'
 import type { Connect, Plugin } from 'vite'
 
 const run = promisify(execFile)
 type Song = { bytes: Buffer; bpm: number }
+
+/**
+ * Offline cache for demos: prepared previews are kept in frontend/.song-cache/<id>.mp4 (+ .json
+ * with the BPM). The folder is gitignored; song files must never be committed. Fill it ahead of
+ * time with `npm run songs:cache` (see scripts/cache-songs.ts).
+ */
+export const SONG_CACHE_DIR = fileURLToPath(new URL('./.song-cache/', import.meta.url))
+
+async function readCached(id: string): Promise<Song | null> {
+  try {
+    const meta = JSON.parse(await readFile(join(SONG_CACHE_DIR, id + '.json'), 'utf8')) as { bpm?: unknown }
+    const bpm = Number(meta.bpm)
+    if (!(bpm >= 30 && bpm <= 300)) return null
+    return { bytes: await readFile(join(SONG_CACHE_DIR, id + '.mp4')), bpm }
+  } catch {
+    return null
+  }
+}
+
+async function writeCached(id: string, song: Song) {
+  try {
+    await mkdir(SONG_CACHE_DIR, { recursive: true })
+    await writeFile(join(SONG_CACHE_DIR, id + '.mp4'), song.bytes)
+    await writeFile(join(SONG_CACHE_DIR, id + '.json'), JSON.stringify({ bpm: song.bpm }))
+  } catch (error) {
+    console.warn('Copycat song cache', id, error instanceof Error ? error.message : 'write failed')
+  }
+}
+
+/** Disk cache first; otherwise download + convert from Deezer and save to the cache. */
+export async function loadSong(id: string): Promise<Song> {
+  const cached = await readCached(id)
+  if (cached) return cached
+  const song = await prepare(id)
+  await writeCached(id, song)
+  return song
+}
 
 function estimateTempo(pcm: Buffer) {
   // Compare repeated changes in frame energy over a 30-second preview.
@@ -72,7 +110,7 @@ export function songServer(ids: Set<string>): Plugin {
         let request = pending.get(id)
         if (!request) {
           if (pending.size >= 6) { res.statusCode = 503; res.end(); return }
-          request = prepare(id).then(result => {
+          request = loadSong(id).then(result => {
             if (cache.size >= 32) cache.delete(cache.keys().next().value!)
             cache.set(id, result)
             return result
