@@ -121,8 +121,8 @@ Response:
 
 ## Dance-video import: `POST /reference-video`
 
-Backend support for a local YouTube-reference workflow. The frontend game/reference processor
-is separate lane work; the current Camera screen does not call this endpoint yet.
+Backend support for solo mode's YouTube reference import. Solo mode (`frontend/src/game/Game.tsx`)
+calls this endpoint and extracts the reference poses from the returned clip.
 
 Install native tools on the Mac running uvicorn:
 

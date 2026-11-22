@@ -1,5 +1,10 @@
 # UI integration handoff
 
+> **Historical.** This handoff was written before the integration. The UI is now the app: it calls the
+> engine through `globalThis.CopycatTracking` and `CopycatSolo`, and `finale-video.js` defines
+> `CopycatFinale` for the finale's replay and download (see the repository's CONTRACT.md, "The bridge"). Scores come from the backend's `POST /score`, the finale plays the recorded
+> breaking-news video, and Download video saves it locally.
+
 This is the existing standalone Copycat preview, implemented with buildless HTML, CSS, and JavaScript. This preview was originally developed before the React repository, AGENTS.md, CONTRACT.md, recorder, scoring endpoint, or teammate-owned modules were supplied. This import now lives inside frontend/src/game/ui-preview; it intentionally remains standalone. Read the repository AGENTS.md and CONTRACT.md before a subsequent React integration. No assumed backend payload has been introduced. `demo-data.js` contains local presentation fixtures, explicitly identified as demo data.
 
 ## Presentation components

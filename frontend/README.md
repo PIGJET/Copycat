@@ -1,78 +1,23 @@
-# React + TypeScript + Vite
+# Copycat frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The browser side of Copycat: Liangray's arcade UI plus the engine behind it (team recorder, solo mode,
+breaking-news video). See the [root README](../README.md) for setup and how the pieces fit together,
+and [CONTRACT.md](../CONTRACT.md) for the interfaces.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev          # http://localhost:5173 (the backend should be running on port 8000)
+npm run build        # type-check and build into dist/
+npm run lint
+npm run songs:cache  # cache the demo songs in .song-cache/ for offline play
+node --test $(find src -name "*.test.mjs" -o -name "*.test.cjs")
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+`vite.config.ts` serves the arcade UI (`src/game/ui-preview/dist/`) as the page and loads the engine
+from `src/main.tsx`. It also serves the MediaPipe models (`public/models/`) and wasm (from
+`node_modules/@mediapipe/tasks-vision`), the reaction clips in `public/shame-clips/` with their
+`index.json` list, and the song preview server (`songServer.ts`). Add `?mock=1` to the URL to play
+without a camera.
 
 ## Finale video download
 

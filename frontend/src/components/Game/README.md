@@ -1,37 +1,27 @@
-# React game UI
+# frontend/src/components/Game
 
-These presentational React components adapt the screens from `frontend/src/game/ui-preview/dist`. They are exported from this folder's `index.ts`; `App.tsx` mounts `GameFlow`, which selects the active page and supplies state and callbacks.
+The team turn engine and its pieces. Liangray's arcade UI (`src/game/ui-preview/dist/`) draws the
+screens; `src/arcade/bridge.tsx` mounts these components into them (see
+[CONTRACT.md](../../../../CONTRACT.md#the-bridge)).
 
-`GameFlow.tsx` is the navigation shell mounted by `App.tsx`. Solo opens the working dance challenge in `frontend/src/game/Game.tsx`, including reference import, recording, scoring and replay. Team mode links Home → Lobby → Camera setup → BPM setup → turn dashboard → score reveal → leaderboard → finale. Full team games rotate the creator.
+## In use
 
-Team play is wired to the real game logic: `GameFlow` drives every team screen from `useGame()` (`frontend/src/game/README.md`): players and validation, rotation, real `/score` results, the 422 redo buttons, rankings, and the `/roast` headline in the finale. Team turns record from the real camera in `TeamTurnDashboard.tsx` (3-2-1 countdown, 10 s of pose frames and video; copiers see the creator's video beside their camera; in the arcade UI the copier first watches the creator's skeleton dance once, big over the stage (Start unlocks when it ends; Watch again replays it), then a small synced skeleton panel guides the take), built on the recorder lane's `usePoseDetection`, `AttemptCapture` and `recordCameraVideo`. `CameraCheckPage` shows the camera with a skeleton and only continues with both shoulders in frame (the same check used during a take); hips and limbs don't matter. A take fails only if the shoulders are missing for 2 s in a row, after a 1 s settle-in (thresholds at the top of `game/teamTurn.ts`). `?mock=1` in the URL skips the camera and uses mock recordings.
+- `TeamTurnDashboard.tsx`: one team turn. Starts the camera, runs MediaPipe pose tracking
+  (`hooks/usePoseDetection.ts`), checks that both shoulders are in frame before Start, runs the 3-2-1
+  countdown and records 10 s of pose frames plus webcam video (`utils/attemptCapture.ts` with
+  `TEAM_TRACKING` from `game/teamTurn.ts`). In the arcade UI it renders into the camera stage and puts
+  its buttons into the arcade's controls row.
+  - Copiers first watch the creator's dance once as a mirrored skeleton (`PoseReplay`) with Start
+    disabled, then see **Your turn: start copying** and **Watch again**. During the countdown and the
+    take a small synced skeleton guide plays in the corner of the camera.
+- `PoseReplay.tsx`: draws a Recording's poses as a mirrored skeleton, optionally synced to a start time.
+- `DanceFeedback.tsx`: John's live combo callouts during a take.
+- `DashboardPage.tsx`, `primitives.tsx`, `uiTypes.ts`, `Dashboard*.css`: the standalone dashboard
+  layout `TeamTurnDashboard` falls back to when it isn't mounted inside the arcade UI.
 
-```tsx
-import { HomePage, LobbyPage, DashboardPage } from "./components/Game";
+## Not used by the current app
 
-<HomePage onSolo={startSolo} onTeam={openLobby} />
-<LobbyPage onBack={goHome} onStart={(players, format) => startGame(players, format)} />
-<DashboardPage
-  player={activePlayer}
-  creator={creator}
-  players={rankings}
-  round={roundNumber}
-  rounds={roundCount}
-  onMenu={goHome}
-  onRecord={startRecording}
-  onSkip={skipTurn}
-/>
-```
-
-Available page components:
-
-- `HomePage`: solo/team mode selection and sound control.
-- `LobbyPage`: player entry, add/remove, avatar choice, quick/full format and validation.
-- `CameraCheckPage`: pre-game camera setup status and continue actions.
-- `TempoPage`: BPM selection and setup actions.
-- `DashboardPage`: creator or challenger turn, standings, tracking status, preview controls and beat guide.
-- `ScorePage`: a score and body-area breakdown.
-- `LeaderboardPage`: round or final rankings.
-- `FinalePage`: breaking-news result presentation.
-
-`styles.ts` imports the original preview styles so the React pages retain the established UI. Components do not own routing, recording, camera permissions, score calls, or game state; those remain in the game/recorder integrations. The UI demo's decorative pose and avatars are placeholders, not tracking output.
+These came from the React port of the UI and nothing imports them from `src/main.tsx` any more; they
+are listed for cleanup: `GameFlow.tsx`, `HomePage.tsx`, `LobbyPage.tsx`, `CameraCheckPage.tsx`,
+`TempoPage.tsx`, `ResultsPages.tsx`, `index.ts`, `styles.ts`, `playerColors.ts`, `ArcadeArena.css`,
+`WinnerPage.css`.

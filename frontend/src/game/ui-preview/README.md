@@ -2,9 +2,13 @@
 
 From `frontend/`, run `npm ci` followed by `npm run dev` and open the localhost address it prints (the backend must be running on port 8000). For the built app, run `npm run build` then `npm run preview`. This UI is the app: Vite serves `dist/` and loads the engine (`src/main.tsx` → `src/arcade/bridge.tsx`) on top, exposed to these scripts as `globalThis.CopycatTracking`. Songs: Liangray's real-song catalog (song-catalog.js holds Deezer IDs only; frontend/songServer.ts fetches each 30-second preview on demand and converts it with ffmpeg) plus the bundled CC0 hyperpixel loops. If a real song can't load (offline, not cached, server error), the closest-BPM CC0 loop plays instead. For offline demos, run `npm run songs:cache` in frontend/ to pre-download the songs in demo-songs.json into frontend/.song-cache/ (gitignored; never commit song files).
 
-Choose **Continue** after camera check to record with the webcam (the team recorder: 3-2-1 countdown, pose frames and video, full-body tracking, the creator's video beside each copier). Copies are scored by the backend `POST /score`; a 422 offers a redo for the right player. The finale starts with the shame video (`src/shame/ShameVideo.tsx`): a BREAKING NEWS intro, then the loser cut out of their worst take dancing over reaction clips from `frontend/public/shame-clips/` (gitignored), with the `POST /roast` headline and ticker. Then the finale screen shows. **Continue demo** (or `?mock=1`) uses fake recordings instead of the camera, still scored by the backend. **Solo play** opens Justin's solo mode.
+Choose **Continue** after camera check to record with the webcam (the team recorder: 3-2-1 countdown, pose frames and video, a shoulders-in-frame check, and the creator's dance replayed as a skeleton for each copier before and during their take). Copies are scored by the backend `POST /score`; a 422 offers a redo for the right player. The finale starts with the shame video (`src/shame/ShameVideo.tsx`): a BREAKING NEWS intro, then the loser cut out of their worst take dancing over reaction clips from `frontend/public/shame-clips/` (gitignored), with the `POST /roast` headline and ticker. Then the finale screen shows, with a **Download video** button for the recorded breaking-news video (saved locally, never uploaded). **Continue demo** (or `?mock=1`) uses fake recordings instead of the camera, still scored by the backend. **Solo play** opens Justin's solo mode.
 
-The material below describes the original standalone preview.
+## History: the original standalone preview
+
+Everything below was written for the standalone preview, before it became the app. Statements such as
+"not wired into the React app yet", "open dist/index.html directly" or "demo scores" describe that
+earlier stage. The current wiring is described above and in the repository's CONTRACT.md.
 
 # Copycat UI preview import
 

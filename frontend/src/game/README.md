@@ -1,158 +1,62 @@
-# Game lane: core logic
+# frontend/src/game
 
-Players, rounds, calling `/score`, running averages, picking the loser and calling `/roast`.
-Logic only, with no styled screens. Screens call `useGame()` and switch on `phase`.
+Game code that isn't a screen: the backend client, team turn rules, solo mode and live combos. The
+screens themselves are Liangray's arcade UI in `ui-preview/dist/`, which runs the game flow (players,
+rounds, rotation, leaderboard, End game, picking the loser) and calls into the engine through
+`../arcade/bridge.tsx`. See [CONTRACT.md](../../../CONTRACT.md#the-bridge).
 
-```tsx
-import { useGame } from "./game/useGame";
-
-function GameScreens() {
-  const game = useGame();
-  switch (game.phase) {
-    case "setup":            return <Lobby game={game} />;
-    case "creatorRecording": return <RecordScreen who={game.creator} onDone={game.submitRecording} />;
-    case "copying":          return <RecordScreen who={game.currentPlayer} onDone={game.submitRecording} />;
-    case "scoring":          return <Scoring game={game} />;
-    case "roundResults":     return <RoundResults game={game} />;
-    case "leaderboard":      return <Leaderboard game={game} />;
-    case "finale":           return <BreakingNews game={game} />;
-  }
-}
-```
-
-Only one `useGame()` should exist per game. Call it once near the top and pass `game` down.
-
-## Files
+## Files in use
 
 | File | What it is |
 |---|---|
-| `useGame.ts` | The hook. The only thing screens need. |
-| `api.ts` | Typed `checkHealth`, `scoreAttempt`, `fetchRoast` (CONTRACT.md). Base URL from `VITE_API_URL`, default `http://localhost:8000`. |
-| `types.ts` | `Player`, `Recording`, `Attempt`, `Round`, `ScoreResult`, `RoastResult`, `GameMode`, `Phase`, … |
-| `rules.ts` | Pure rules: validation, rotation, rankings, tie-break, loser, roast request. |
-| `gameReducer.ts` | The state machine (pure). `useGame` adds the network calls. |
-| `teamTurn.ts` | Team recording helpers: 10 s turns, the start/in-take body check (both shoulders) and its thresholds, `toGameRecording`, `isMockMode`. |
-| `recordingSource.ts` | `getRecording()`: mock recordings for dev mode (`?mock=1`). Real turns record in `components/Game/TeamTurnDashboard.tsx`. |
-| `mockRecorder.ts` | `mockRecording()` makes a fake contract-format Recording, no camera needed. |
-| `DevHarness.tsx` | Unstyled click-through of a whole game against the real backend (not in `App.tsx`). |
-| `game.test.mjs` | Rule tests. |
+| `api.ts` | Typed `checkHealth`, `scoreAttempt` (`POST /score`), `fetchRoast` (`POST /roast`) and the reference-video import. Base URL from `VITE_API_URL` (or `VITE_API_BASE_URL`), default `http://localhost:8000`. |
+| `types.ts` | `Recording`, `ScoreResult`, `RoastRequest`, `RoastResult`, `GameError` and friends. |
+| `teamTurn.ts` | Team turn rules: 10 s turns, the shoulders-only body check to start and keep a take going (`TEAM_TRACKING`), `toGameRecording`, `isMockMode` (`?mock=1`). |
+| `mockRecorder.ts` | `mockRecording()`: a fake contract-format Recording for mock mode. |
+| `danceCue.ts`, `danceMotion.ts` | John's live combo callouts during a take. |
+| `Game.tsx`, `solo.html` | Justin's solo mode. The arcade UI mounts it through `globalThis.CopycatSolo`; `solo.html` is a standalone dev page for it. |
+| `ReplayTimeline.tsx`, `ResultsReplay.tsx`, `replay*.ts`, `turn.ts` | Solo's correction replay and timeline. |
+| `ui-preview/` | Liangray's arcade UI (see its README). |
 
-## Phases
+## Not used by the current app
 
-| `phase` | What's happening | Screen should show | Move on with |
-|---|---|---|---|
-| `setup` | Adding players (2-4), picking quick/full | `players`, `mode`, `setupError`, `canStart` | `addPlayer(name)`, `removePlayer(id)`, `renamePlayer(id, name)`, `setMode("quick" \| "full")`, `startGame()` |
-| `creatorRecording` | `creator` records the dance | `creator`, `roundNumber` / `totalRounds` | `submitRecording(recording)` |
-| `copying` | `currentPlayer` copies `creator` (one at a time, player order, creator skipped) | `currentPlayer`, `creator`, `round.reference.videoUrl` to play back | `submitRecording(recording)` |
-| `scoring` | `/score` in flight for `currentAttempt` | spinner, or `error` if it failed | automatic; on error: `retryScore()`, `redoAttempt()`, `redoReference()` |
-| `roundResults` | Every copy this round is scored | `roundAttempts` (each has `.score`), `creator` (not scored) | `nextStep()` |
-| `leaderboard` | Standings so far | `rankings`, `rankChanges`, `isLastRound` | `nextStep()` → next round's `creatorRecording`, or `finale` |
-| `finale` | `/roast` for the loser | `loser`, `loserWorstAttempt`, `roast.status` / `roast.result`, `rankings` | `retryRoast()` on error, `restart()` |
-
-`restart()` returns to `setup` with the **same players and mode** (party-friendly). Remove players there if needed.
-
-## Rules (same as the ui-preview demo)
-
-- **Quick:** one round, player 1 creates. **Full:** every player creates once, in player order.
-- Everyone except the creator copies, one at a time, in player order.
-- The creator is **never scored** in their own round.
-- Ranking = **average `total`** of a player's scored attempts. Higher is better.
-  - Tie: **lower average timing ranks lower**. Still tied: later in the player list ranks lower.
-  - Players with no scored attempt yet are listed last with `average: null`. Show a dash, never 0.
-- Loser = the lowest-ranked player with a score.
-- `/roast` gets the loser's averages (total, arms, legs, torso, timing) plus `worst_part` from their worst attempt.
-
-## What you get from `useGame()`
-
-| Value | Type | Notes |
-|---|---|---|
-| `phase` | `Phase` | See above |
-| `players`, `mode` | `Player[]`, `GameMode` | |
-| `setupError`, `canStart` | `string \| null`, `boolean` | Show `setupError` under the name field |
-| `creator`, `currentPlayer` | `Player \| null` | `currentPlayer` = creator while recording, copier while copying/scoring |
-| `round`, `roundNumber`, `totalRounds`, `isLastRound` | | `round.reference` is the creator's Recording |
-| `currentAttempt` | `Attempt \| null` | The copy being scored (in `scoring`) |
-| `roundAttempts` | `Attempt[]` | This round's scored copies, for the results screen |
-| `rankings` | `RankingRow[]` | Best first: `{ player, average, timing, attempts }` |
-| `rankChanges` | `Map<playerId, RankChange>` | Movement this round: `{ previous, current, delta, isNew }` (`delta > 0` = moved up) |
-| `loser`, `loserWorstAttempt` | | Set in `finale`. `loserWorstAttempt.score.worst_moment` is for the Shame lane's screenshots |
-| `roast` | `{ status: "idle" \| "loading" \| "done" \| "error", result, error }` | `result` is `{ headline, roast_line, source }` |
-| `error` | `GameError \| null` | Error for the current screen (see below) |
+The original React flow was replaced by the arcade UI. These files are no longer reached from
+`src/main.tsx` and are listed for cleanup: `useGame.ts`, `gameReducer.ts`, `rules.ts`
+(still covered by `game.test.mjs`), `recordingSource.ts`, `DevHarness.tsx`, `useGameMusic.ts` and
+`music/` (an identical copy of the loops in `ui-preview/dist/audio/`, still checked by `extras.test.mjs`).
 
 ## Recordings
 
-Team play records from the camera: `TeamTurnDashboard` (in `components/Game/`) runs a 3-2-1 countdown, then 10 s of
-pose frames and webcam video, and hands the Recording to `submitRecording`. Copiers see the creator's video beside the
-camera, starting in sync with their countdown. The video starts before the countdown, so `videoOffsetMs` says where the
-dance begins in it. Add `?mock=1` to the URL to play without a camera (fake recordings, camera check skipped).
-
-The Recorder produces a `Recording`:
+The team recorder (`components/Game/TeamTurnDashboard.tsx`) runs a 3-2-1 countdown, then records
+10 s of pose frames and webcam video:
 
 ```ts
-{ frames: ScoreFrame[], videoBlob: Blob | null, videoUrl: string | null, durationMs: number }
+{ frames: ScoreFrame[], videoBlob: Blob | null, videoUrl: string | null, durationMs: number, videoOffsetMs?: number }
 ```
 
-`frames` can be contract frames (`{t, lm: [[x, y, visibility] × 33]}`) or the recorder's own
-`{t, landmarks}` frames from `src/types/pose.ts`. Both go straight to `/score`, while the video stays local.
-Pass `videoUrl` from `URL.createObjectURL(videoBlob)`. The game **revokes it** once the recording is
-discarded (a redo or a restart), so don't revoke it yourself.
+`frames` go to `/score` as is; the video stays in the browser. The video starts before the countdown,
+so `videoOffsetMs` says where the dance begins in it. The arcade UI revokes the object URLs when a game
+ends (`CopycatTracking.release`).
 
-## Errors never crash the game
+## Errors
 
-`error` is `{ message, recording, status }`:
+`score()` rejects with `{ message, recording, status }`. `message` is safe to show. After a `/score`
+422, `recording` says who should redo: `"attempt"` (the copier) or `"reference"` (the creator, whose
+round starts over). `null` means the server couldn't be reached, so the same recordings can be retried.
 
-- `message` is safe to show as is. For a `/score` 422 it's the backend's friendly text (for example
-  "Step back so your whole body is in frame…"). If the server is down, it says so.
-- `recording` says **who should redo** after a 422:
-  - `"attempt"`: offer `redoAttempt()`, so the copier records again.
-  - `"reference"`: offer `redoReference()`, so the creator re-records and this round's copies start over.
-  - `null` (offline, server error): offer `retryScore()`, which sends the same recordings again.
-- In `finale`, a failed `/roast` (only when the server can't be reached) sets `roast.status = "error"`. Offer `retryRoast()`.
+## Solo mode
 
-## Roast screenshots (optional)
-
-To send the worst-moment frames to `/roast`, pass a callback (it's wrapped in try/catch, so any failure falls back to stats only):
-
-```ts
-useGame({
-  getRoastImages: async ({ loser, worstAttempt, reference }) => {
-    const { reference_ms, attempt_ms } = worstAttempt.score!.worst_moment;
-    // grab JPEG frames from reference.videoUrl at reference_ms and worstAttempt.recording.videoUrl at attempt_ms
-    return { reference_image, attempt_image }; // or null
-  },
-});
-```
-
-## Trying it without a camera
-
-`DevHarness.tsx` runs a whole game with `mockRecording()` against the real backend. It isn't wired into
-`App.tsx`. Render `<DevHarness />` temporarily (or from a scratch entry) with the backend running on port 8000.
+Start the backend on port 8000 and `npm run dev`, open the app and choose **Solo play**. Choose
+**Use sample link** and **Prepare clip** for the verified 5 to 10 second section, or pick a permitted
+local MP4. Preview the clip, get ready and dance. Follow the live rating, then review the official
+score and the paired replay. **Retry score** reuses the captured poses after a request failure. The
+webcam video stays in the browser. YouTube imports need `yt-dlp` and FFmpeg on the backend machine
+(see `backend/README.md`).
 
 ## Tests
 
 From `frontend/`:
 
 ```bash
-node --test src/game/game.test.mjs
+node --test src/game/*.test.mjs
 ```
-
-This uses Node's built-in runner, like `src/utils/referenceFrames.test.mjs`, so there's no extra dependency.
-
-## Solo dance challenge
-
-
-
-Start the FastAPI backend on port 8000 from `backend/` and run `npm run dev`
-from `frontend/`. Open the Vite server's normal root URL to play Solo.
-To use a different backend URL, set `VITE_API_URL` before starting Vite. The previous solo setting `VITE_API_BASE_URL` remains supported.
-The default React entry point mounts `Game.tsx`. The development route
-`/src/game/solo.html` remains available for the isolated Game lane.
-
-Choose **Use sample link** and **Prepare clip** for the verified 5–10 second
-section, or choose a permitted local MP4. Preview the clip, get ready, and
-start your turn. Follow the live rating, then review the official score and
-paired replay. **Retry score** reuses the captured poses after a request failure.
-The webcam video stays local to the browser.
-
-From `frontend/`, run `node --test src/utils/*.test.mjs src/game/game.test.mjs
-src/game/ui-preview/tests/*.test.cjs`, `npm run lint`, and `npm run build`.

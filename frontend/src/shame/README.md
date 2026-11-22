@@ -1,4 +1,7 @@
-Shame lane: worst-moment screenshots, calling /roast and the breaking-news video (see CONTRACT.md).
+# frontend/src/shame
+
+The breaking-news video at the start of the team finale, and its recording for the finale's Download
+video (see CONTRACT.md).
 
 ## Shame video (`ShameVideo.tsx`)
 
@@ -61,29 +64,6 @@ Tests: `node --test src/shame/shamePlan.test.mjs src/shame/scene.test.mjs` (timi
 
 ## Old finale scene (`FinaleScene.tsx`)
 
-The old React `GameFlow` still uses this. It now shares `cutout.ts` with the shame video.
-
-At the team finale, before the headline, `GameFlow` shows `<FinaleScene>`:
-
-1. If `frontend/public/scenes/proposal.mp4` exists, it plays full screen (fills the window).
-2. The loser's clip (their worst attempt's `videoUrl`) is cut out frame by frame with MediaPipe's
-   selfie segmenter (`@mediapipe/tasks-vision`, GPU with a CPU fallback) and drawn dancing on the right,
-   about a third of the screen high, looping until the scene ends.
-3. When the scene ends (or the player presses SKIP), the breaking-news headline shows.
-
-It falls back to the plain finale (headline straight away) when:
-
-| Case | `onFinish` reason |
-|---|---|
-| No `proposal.mp4` | `no-scene` |
-| The loser has no clip (team play still uses mock recordings without video) | `no-clip` |
-| Segmentation runs under 15 fps (12-frame benchmark first, then checked while playing) | `too-slow` |
-| The model or clip fails to load, or the scene isn't playing within 20 s | `failed` |
-
-The reason is logged with `console.info("[finale scene] …")`. Adding the scene is just dropping the file in
-`frontend/public/scenes/`. Missing it is fine.
-
-The segmenter model (`public/models/selfie_segmenter.tflite`) and MediaPipe's wasm are served by this app itself
-(see `src/utils/mediapipeAssets.ts`), the same as pose detection, so the finale works offline.
-
-Tests: `node --test src/shame/scene.test.mjs` (fps threshold, alpha edge, sizing).
+Not used by the current app: only the old React `GameFlow` mounted it, and that flow was replaced by
+the arcade UI. It is listed for cleanup, together with the `/scenes/` support in `vite.config.ts`. It
+shares `cutout.ts` with the shame video. Tests: `node --test src/shame/*.test.mjs`.
