@@ -1,0 +1,208 @@
+.how-to-play-link {
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--cyan);
+  background: #171020;
+  color: var(--cyan);
+  font: 400 0.9rem/1.2 var(--display);
+}
+.how-to-play-link:hover {
+  background: var(--cyan);
+  color: #171020;
+}
+.title-screen .how-to-play-link { margin-top: 1.6rem; }
+
+.how-to-play {
+  position: relative;
+  z-index: 2;
+  width: min(60rem, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 0 0 3rem;
+}
+.how-to-play-heading {
+  margin: clamp(1.5rem, 4vw, 3rem) 0 1.5rem;
+}
+.how-to-play-heading h2 {
+  margin: 0;
+  color: #ffd246;
+  font: 400 clamp(2rem, 6vw, 4rem)/1.05 var(--display);
+  text-shadow: 4px 4px #673884;
+}
+.how-to-play-heading p,
+.how-to-play-steps p,
+.how-to-play-solo {
+  color: #e3d6ed;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.how-to-play-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: tutorial-step;
+}
+.how-to-play-steps li {
+  --step-color: #ffd246;
+  position: relative;
+  counter-increment: tutorial-step;
+  padding: 1rem 1rem 1rem 3.75rem;
+  border: 2px solid #674884;
+  border-left-color: var(--step-color);
+  background: #1b1329;
+  box-shadow: 4px 4px #0c0713;
+}
+.how-to-play-steps li:nth-child(2) { --step-color: #ff98e5; }
+.how-to-play-steps li:nth-child(3) { --step-color: #73d9e9; }
+.how-to-play-steps li:nth-child(4) { --step-color: #b6ff45; }
+.how-to-play-steps li::before {
+  content: counter(tutorial-step);
+  position: absolute;
+  top: 1rem;
+  left: 0.85rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: var(--step-color);
+  color: #171020;
+  font: 400 1rem/1 var(--display);
+}
+.how-to-play-steps h3 {
+  margin: 0 0 0.5rem;
+  color: var(--step-color);
+  font: 400 1rem/1.3 var(--display);
+}
+.how-to-play-steps p { margin: 0; }
+.how-to-play-solo { margin: 1.5rem 0 0; }
+.how-to-play-solo strong { color: #b6ff45; }
+
+@media (max-width: 620px) {
+  .how-to-play-steps { grid-template-columns: 1fr; }
+}
+
+.guide-scene {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: clamp(0.35rem, 2vw, 0.9rem);
+  height: 7rem;
+  margin: 0 0 0.85rem;
+  overflow: hidden;
+  border: 1px solid #573b70;
+  background: radial-gradient(ellipse at bottom, #352047, #100b1d 75%);
+  color: var(--step-color);
+}
+.guide-dancer {
+  width: 4.75rem;
+  transform-origin: center bottom;
+}
+.guide-dancer svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.guide-viewfinder {
+  position: absolute;
+  inset: 0.6rem 20%;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+}
+.guide-camera::after {
+  position: absolute;
+  inset: 0.65rem 20% auto;
+  height: 2px;
+  background: currentColor;
+  box-shadow: 0 0 0.65rem currentColor;
+  content: "";
+  animation: guide-scan 3s ease-in-out infinite alternate;
+}
+.guide-create .guide-dancer,
+.guide-copy .guide-dancer {
+  animation: guide-groove 1.2s steps(4, end) infinite alternate;
+}
+.guide-copy .guide-dancer:last-child { animation-delay: 180ms; }
+.guide-rec,
+.guide-note {
+  position: absolute;
+  top: 0.6rem;
+  font: 400 0.8rem/1 var(--display);
+}
+.guide-rec { left: 0.6rem; }
+.guide-rec i {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: #ff76be;
+  animation: guide-beat 1.2s ease-in-out infinite;
+}
+.guide-note {
+  right: 0.8rem;
+  font-size: 1.5rem;
+  animation: guide-beat 1.2s ease-in-out infinite alternate;
+}
+.guide-count {
+  align-self: center;
+  display: flex;
+  gap: 0.25rem;
+  font: 400 clamp(0.7rem, 2vw, 1rem)/1 var(--display);
+}
+.guide-count b {
+  padding: 0.25rem;
+  border: 1px solid #573b70;
+  color: #fff8e8;
+  animation: guide-count 3s steps(1, end) infinite;
+}
+.guide-count b:nth-child(2) { animation-delay: 1s; }
+.guide-count b:nth-child(3) { animation-delay: 2s; }
+.guide-podium {
+  display: flex;
+  align-items: end;
+  gap: 0.3rem;
+}
+.guide-podium i {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.25rem;
+  background: #553574;
+  color: #fff8e8;
+  font: 400 0.85rem/1 var(--display);
+  transform-origin: bottom;
+  animation: guide-podium-rise 550ms ease-out both;
+}
+.guide-podium i:nth-child(2) {
+  height: 3.65rem;
+  background: #b6ff45;
+  color: #171020;
+  animation-delay: 150ms;
+}
+.guide-podium i:nth-child(3) { height: 1.6rem; }
+.guide-star {
+  position: absolute;
+  bottom: 3.85rem;
+  font-size: 1.65rem;
+  animation: guide-beat 1.5s ease-in-out infinite alternate;
+}
+@keyframes guide-scan {
+  to { transform: translateY(5.5rem); }
+}
+@keyframes guide-groove {
+  from { transform: translateY(1px) rotate(-8deg); }
+  to { transform: translateY(-7px) rotate(8deg); }
+}
+@keyframes guide-beat {
+  50% { opacity: 0.65; transform: scale(0.85); }
+}
+@keyframes guide-count {
+  0% { background: #73d9e9; color: #171020; }
+  33.33%, 100% { background: transparent; color: #fff8e8; }
+}
+@keyframes guide-podium-rise {
+  from { transform: scaleY(0.15); }
+  to { transform: scaleY(1); }
+}

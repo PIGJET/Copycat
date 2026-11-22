@@ -12,13 +12,14 @@ import { AttemptCapture } from "../../utils/attemptCapture";
 import { REFERENCE_SAMPLE_MS } from "../../utils/referenceFrames";
 import { attemptToVideoMs } from "../../utils/replayTiming";
 import { cameraRecordingType, recordCameraVideo } from "../../utils/videoRecording";
-import { DanceCombo, HYPE_PER_MOVE, cueText } from "../../game/danceCombo";
-import type { DanceCue } from "../../game/danceCombo";
+import { DanceCueTracker } from "../../game/danceCue";
+import type { DanceCue } from "../../game/danceCue";
 import { COUNTDOWN_SECONDS, TEAM_TRACKING, TURN_MESSAGES, TURN_MS, bodyInFrame, framingHint, toGameRecording } from "../../game/teamTurn";
 import type { Recording } from "../../game/types";
 import { ArcadeButton } from "./primitives";
 import { DashboardPage } from "./DashboardPage";
 import type { DashboardPageProps } from "./DashboardPage";
+import { DanceFeedback } from "./DanceFeedback";
 import { PoseReplay } from "./PoseReplay";
 import "../Camera/ChallengeRecorder.css";
 
@@ -92,8 +93,8 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   const [message, setMessage] = useState("");
   /** performance.now() when the take started recording (syncs the copier's skeleton preview). */
   const [captureStartedAt, setCaptureStartedAt] = useState<number | null>(null);
-  // Live hype/combo feedback: visual only, the score comes from POST /score.
-  const combo = useRef(new DanceCombo());
+  // Live hype feedback (John's revamped combo): visual only, the score comes from POST /score.
+  const cueTracker = useRef(new DanceCueTracker());
   const [danceCue, setDanceCue] = useState<DanceCue | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
@@ -126,7 +127,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
       return;
     }
     turn.poses.sample(timestamp, landmarks);
-    const cue = combo.current.track(timestamp, landmarks);
+    const cue = cueTracker.current.track(timestamp, landmarks);
     if (cue) setDanceCue(cue);
   }
 
@@ -250,7 +251,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
     turn.startedAt = now();
     turn.poses.start(turn.startedAt);
     setCaptureStartedAt(turn.startedAt);
-    combo.current.reset();
+    cueTracker.current.reset();
     setDanceCue(null);
     turn.phase = "recording";
     setPhase("recording");
@@ -416,16 +417,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
         ? { ready: false, label: "Loading pose tracking…", hint: "This takes a few seconds the first time." }
         : { ready: bodyVisible, label: bodyVisible ? "In frame" : "Step back into frame", hint: framingHint(pose.landmarks) };
 
-  const danceOverlay = isRecording && <>
-    {danceCue && (
-      <div className="dashboard-dance-feedback" data-combo={danceCue.streak >= 3} data-frenzy={danceCue.streak >= 5} key={danceCue.at}>
-        <span className="dashboard-dance-hype">+{HYPE_PER_MOVE} Hype</span>
-        <strong>{cueText(danceCue)}</strong>
-        {danceCue.streak > 1 && <span className="dashboard-dance-combo">{danceCue.streak}× combo</span>}
-      </div>
-    )}
-    <div className="dashboard-hype-total"><span>Hype</span><strong key={danceCue?.hits}>{(danceCue?.hits ?? 0) * HYPE_PER_MOVE}</strong></div>
-  </>;
+  const danceOverlay = isRecording && <DanceFeedback cue={danceCue} role={role} />;
   const startLabel = phase === "failed" ? "Try again" : role === "creator" ? "Start recording" : hasReplay ? "Your turn: start copying" : "Start copying";
 
   if (arcade) {

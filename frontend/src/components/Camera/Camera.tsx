@@ -14,7 +14,7 @@ export type CameraHandle = {
 type CameraProps = {
   ref: Ref<CameraHandle>;
   onReadyChange: (ready: boolean) => void;
-  onPose?: (landmarks: PoseLandmark[] | null) => void;
+  onPose?: (timestamp: number, landmarks: PoseLandmark[] | null) => void;
 };
 
 function Camera({ ref, onReadyChange, onPose }: CameraProps) {
@@ -27,7 +27,7 @@ function Camera({ ref, onReadyChange, onPose }: CameraProps) {
     isReady,
     startRecording,
     stopRecording,
-  } = usePoseDetection(videoRef);
+  } = usePoseDetection(videoRef, { onSample: onPose });
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -97,10 +97,6 @@ function Camera({ ref, onReadyChange, onPose }: CameraProps) {
       });
     }
   }, [landmarks]);
-
-  useEffect(() => {
-    onPose?.(landmarks);
-  }, [landmarks, onPose]);
 
   const ready = isReady && isPlaying;
   useEffect(() => {
