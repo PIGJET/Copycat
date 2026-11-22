@@ -1,4 +1,5 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { FormEvent } from 'react';
 import { ChallengeRecorder } from '../components/Camera/ChallengeRecorder';
 import { SoloCameraPreview } from '../components/Camera/SoloCameraPreview';
@@ -7,6 +8,7 @@ import { prepareReference } from '../utils/referenceRecorder';
 import { checkBackend, importReference, scoreSoloAttempt, scoreRecovery } from './api';
 import { ResultsReplay } from './ResultsReplay';
 import { turnReducer } from './turn';
+import '../components/Game/DashboardDanceFeedback.css';
 import './game.css';
 
 const SAMPLE_URL = 'https://www.youtube.com/shorts/FILJpZiAFo0';
@@ -15,6 +17,10 @@ export default function Game({ onBack }: { onBack?: () => void }) {
   const [clip, setClip] = useState<ReferenceClip | null>(null);
   const [turn, dispatch] = useReducer(turnReducer, { stage: 'ready' });
   const [feedback, setFeedback] = useState<LiveFeedback | null>(null);
+  const [cameraOverlay, setCameraOverlay] = useState<HTMLElement | null>(null);
+  const attachCameraOverlay = useCallback((element: HTMLDivElement | null) => {
+    setCameraOverlay(element?.querySelector<HTMLElement>('.challenge-recorder__camera') ?? null);
+  }, []);
   const [preparing, setPreparing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('');
@@ -135,73 +141,71 @@ export default function Game({ onBack }: { onBack?: () => void }) {
   }
 
   return (
-    <main className="solo-game">
+    <main className={turn.stage === 'capture' && clip ? "solo-game solo-game--dancing" : "solo-game"}>
       <div className="solo-game__stage">
         <header className="solo-game__header">
-          <h1>Copycat</h1>
-          <span>Solo</span>
-          {onBack && <button type="button" onClick={onBack}>Back to menu</button>}
+          <div className="solo-game__brand">
+            {onBack && <button className="solo-game__menu" type="button" onClick={onBack}>← Menu</button>}
+            <h1>COPY<span>CAT</span></h1>
+          </div>
+          <span className="solo-game__mode">SOLO PLAY</span>
         </header>
 
-        {!clip ? (
-          <section aria-labelledby="solo-source-title">
-            <h2 id="solo-source-title">Choose a dance clip</h2>
-            <form onSubmit={submit} className="solo-source">
-              <label>
-                YouTube link
-                <input type="url" required value={link} onChange={event => setLink(event.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=…" disabled={preparing} />
+        {!clip || turn.stage === 'ready' ? (
+          <section className="solo-screen" aria-labelledby="solo-preview-title">
+            <div className="solo-screen__intro solo-screen__intro--compact"><span className="solo-eyebrow">SOLO PLAY</span><h2 id="solo-preview-title">Dance studio</h2></div>
+            <div className="solo-import">
+              <form onSubmit={submit} className="solo-source solo-source--top">
+                <label>YouTube link
+                  <input type="url" required value={link} onChange={event => setLink(event.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=…" disabled={preparing || checking} />
+                </label>
+                <div className="solo-actions">
+                  <button type="submit" className="solo-primary" disabled={preparing || checking}>Prepare clip</button>
+                  <button type="button" disabled={preparing || checking} onClick={() => setLink(SAMPLE_URL)}>Use sample link</button>
+                </div>
+              </form>
+              <label className="solo-file">Or choose a local MP4
+                <input type="file" accept="video/mp4,.mp4" disabled={preparing || checking} onChange={event => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = '';
+                  if (file) void loadClip(async () => file);
+                }} />
               </label>
-              <p>Choose a video between 5 and 60 seconds long.</p>
-              <div className="solo-actions">
-                <button type="submit" className="solo-primary" disabled={preparing}>Prepare clip</button>
-                <button type="button" disabled={preparing} onClick={() => {
-                  setLink(SAMPLE_URL);
-                }}>Use sample link</button>
-              </div>
-            </form>
-            <label className="solo-file">Or choose a local MP4
-              <input type="file" accept="video/mp4,.mp4" disabled={preparing} onChange={event => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = '';
-                if (file) void loadClip(async () => file);
-              }} />
-            </label>
-            {preparing && <div className="solo-actions">
-              <p role="status">Preparing dance…</p>
-              <button type="button" onClick={() => prepareOp.current?.abort()}>Cancel</button>
-            </div>}
-            {message && <p role="alert">{message}</p>}
-          </section>
-        ) : turn.stage === 'ready' ? (
-          <section aria-labelledby="solo-preview-title">
-            <h2 id="solo-preview-title">Preview your dance</h2>
-            <div className="challenge-recorder__videos">
-              <div>
-                <span>Reference</span>
-                <video className="challenge-recorder__reference" src={clip.videoUrl} controls playsInline />
-              </div>
-              <SoloCameraPreview />
+              <p className="solo-source__hint">Choose a video between 5 and 60 seconds long.</p>
+              {preparing && <div className="solo-actions"><button type="button" onClick={() => prepareOp.current?.abort()}>Cancel preparation</button></div>}
+              {checking && <p role="status">Checking backend…</p>}
+              {message && <p role="alert">{message}</p>}
             </div>
-            {checking && <p role="status">Checking backend…</p>}
-            {message && <p role="alert">{message}</p>}
+            <div className="solo-arena"><div className="solo-arena__stage"><div className="challenge-recorder__videos">
+              <div><span>Reference</span><div className="solo-reference-frame" aria-busy={preparing}>
+                {clip ? <video className="challenge-recorder__reference" src={clip.videoUrl} controls playsInline />
+                  : <div className="solo-reference-placeholder">Choose a video to preview your dance</div>}
+                {preparing && <div className="solo-reference-loading" role="status">
+                  <strong>Preparing your dance</strong><span>Getting the video ready…</span>
+                  <div className="solo-loading-track" aria-hidden="true"><div /></div>
+                </div>}
+              </div></div>
+              <SoloCameraPreview />
+            </div></div></div>
             <div className="solo-actions">
-              <button type="button" className="solo-primary" disabled={checking} onClick={() => void startTurn()}>Get ready</button>
-              <button type="button" onClick={chooseAnother}>Change clip</button>
+              <button type="button" className="solo-primary" disabled={!clip || preparing || checking} onClick={() => void startTurn()}>Get ready</button>
             </div>
           </section>
         ) : turn.stage === 'capture' ? (
-          <section aria-labelledby="solo-turn-title">
-            <h2 id="solo-turn-title">Your turn</h2>
-            <div className="solo-rating" role="status" aria-atomic="true">{feedback?.label}</div>
-            <ChallengeRecorder key={turn.key} reference={clip} playerId="solo"
+          <section className="solo-screen" aria-labelledby="solo-turn-title">
+            <div className="solo-screen__intro"><span className="solo-eyebrow">SOLO PLAY</span><h2 id="solo-turn-title">Dance along</h2><p>Follow the dancer and make the moves your own.</p></div>
+            <div className="solo-arena"><div ref={attachCameraOverlay} className="solo-arena__stage solo-arena__stage--capture" data-live-rating={feedback?.score == null ? 'unavailable' : feedback.label.toLowerCase()}><ChallengeRecorder key={turn.key} reference={clip} playerId="solo"
               onFeedback={value => { setMessage(''); setFeedback(value); }}
               onComplete={attempt => dispatch({ type: 'captured', key: turn.key, attempt })}
               onError={() => setFeedback(null)} />
+              {cameraOverlay && feedback && createPortal(
+                <div className="solo-live-overlay" role="status" aria-label={feedback.score === null ? feedback.label : `${feedback.label}, ${feedback.score} out of 100, provisional`}>
+                  <div className="dashboard-dance-feedback" key={feedback.t} aria-hidden="true"><strong>{feedback.label}</strong></div>
+                  <div className="dashboard-hype-total solo-live-score" aria-hidden="true"><span>Live score</span><strong>{feedback.score === null ? '—' : Math.round(feedback.score)}</strong><span>Provisional</span></div>
+                </div>, cameraOverlay)}
+            </div></div>
             {message && <p role="alert">{message}</p>}
-            <div className="solo-actions">
-              <button type="button" onClick={chooseAnother}>Change clip</button>
-            </div>
           </section>
         ) : turn.stage === 'scoring' ? (
           <section>
@@ -219,16 +223,16 @@ export default function Game({ onBack }: { onBack?: () => void }) {
             </div>
           </section>
         ) : (
-          <section aria-labelledby="solo-score-title">
-            <h2 id="solo-score-title">Official score</h2>
-            <div className="solo-score"><strong>{turn.score.total}</strong><span> / 100</span></div>
+          <section className="solo-screen solo-results" aria-labelledby="solo-score-title">
+            <div className="solo-screen__intro"><span className="solo-eyebrow">TURN COMPLETE</span><h2 id="solo-score-title">Your score</h2><p>See how you did, then review your dance.</p></div>
+            <div className="solo-result-card"><div className="solo-score"><span>OFFICIAL SCORE</span><strong>{turn.score.total}</strong><span> / 100</span></div>
             <dl className="solo-breakdown">
               {([['Arms', turn.score.arms], ['Legs', turn.score.legs], ['Torso', turn.score.torso],
                 ['Timing', turn.score.timing]] as const).map(([label, value]) => (
                 <div key={label}><dt>{label}</dt><dd>{value ?? 'Not scored'}</dd></div>
               ))}
             </dl>
-            {turn.score.worst_part && <p>Weakest part overall: <strong>{turn.score.worst_part}</strong></p>}
+            {turn.score.worst_part && <p>Weakest part overall: <strong>{turn.score.worst_part}</strong></p>}</div>
             <ResultsReplay key={turn.key} reference={clip} attempt={turn.attempt} score={turn.score} />
             {checking && <p role="status">Checking backend…</p>}
             {message && <p role="alert">{message}</p>}

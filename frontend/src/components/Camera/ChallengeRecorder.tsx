@@ -319,6 +319,11 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
           <div className="challenge-recorder__camera">
             <video ref={camera} muted autoPlay playsInline />
             <canvas ref={overlay} aria-hidden="true" />
+            {cuePhase === 'countdown' && ['3', '2', '1'].includes(status) && (
+              <div className="challenge-recorder__countdown" aria-hidden="true">
+                <span key={status} data-count={status}>{status}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

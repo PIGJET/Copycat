@@ -43,3 +43,52 @@
 .challenge-recorder__camera canvas {
   pointer-events: none;
 }
+
+/* The preview is mirrored; flip the countdown back so numerals read normally. */
+.challenge-recorder__countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgb(15 9 27 / 82%), rgb(15 9 27 / 32%) 75%);
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+.challenge-recorder__countdown span {
+  --countdown-color: #ffd246;
+  position: relative;
+  isolation: isolate;
+  color: var(--countdown-color);
+  font: 400 clamp(5rem, 12vw, 11rem)/1 Silkscreen, monospace;
+  -webkit-text-stroke: 2px #170d25;
+  text-shadow: 0 5px #170d25, 0 9px #170d25, 0 0 .32em var(--countdown-color);
+  animation: solo-countdown-hit 360ms cubic-bezier(.2, .85, .3, 1) both;
+}
+.challenge-recorder__countdown span[data-count='3'] { --countdown-color: #73d9e9; }
+.challenge-recorder__countdown span[data-count='2'] { --countdown-color: #ff98e5; }
+.challenge-recorder__countdown span::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 50% auto auto 50%;
+  width: 1.65em;
+  aspect-ratio: 1;
+  border: 2px solid var(--countdown-color);
+  border-radius: 50%;
+  box-shadow: 0 0 .15em var(--countdown-color);
+  animation: solo-countdown-ring 540ms ease-out both;
+}
+@keyframes solo-countdown-hit {
+  from { transform: scale(.72) rotate(-8deg); }
+  60% { transform: scale(1.11) rotate(2deg); }
+  to { transform: scale(1); }
+}
+@keyframes solo-countdown-ring {
+  from { opacity: .9; transform: translate(-50%, -50%) scale(.65); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .challenge-recorder__countdown span { animation: none; }
+  .challenge-recorder__countdown span::before { display: none; }
+}
