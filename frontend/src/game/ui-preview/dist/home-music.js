@@ -3,15 +3,17 @@
   const game = document.querySelector('#game-screen');
   const lobby = document.querySelector('.lobby-screen');
   const idle = document.querySelector('#idle-music');
-  let music = idle; // CC0 loop only: the home screen stays silent
+  const menu = document.querySelector('#home-music');
+  let music = menu;
   const status = document.querySelector('#home-music-status');
   let blocked = false;
   let request = 0;
+  menu.volume = 0.25;
   if (idle) idle.volume = 0.16;
   function backgroundTrack() {
-    if (game.hidden) return lobby && !lobby.hidden ? idle : null;
+    if (game.hidden) return lobby && !lobby.hidden ? idle : menu;
     if (game.classList.contains('results-leaderboard')) return idle;
-    if (game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen')) return idle;
+    if (game.classList.contains('camera-check-screen') || game.classList.contains('tempo-setup-screen')) return menu;
     return null;
   }
   const shouldPlay = () => soundOn && !document.hidden && backgroundTrack() === music;

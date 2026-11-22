@@ -14,7 +14,7 @@ import { attemptToVideoMs } from "../../utils/replayTiming";
 import { cameraRecordingType, recordCameraVideo } from "../../utils/videoRecording";
 import { DanceCombo, HYPE_PER_MOVE, cueText } from "../../game/danceCombo";
 import type { DanceCue } from "../../game/danceCombo";
-import { COUNTDOWN_SECONDS, TURN_MESSAGES, TURN_MS, bodyInFrame, framingHint, toGameRecording } from "../../game/teamTurn";
+import { COUNTDOWN_SECONDS, TEAM_TRACKING, TURN_MESSAGES, TURN_MS, bodyInFrame, framingHint, toGameRecording } from "../../game/teamTurn";
 import type { Recording } from "../../game/types";
 import { ArcadeButton } from "./primitives";
 import { DashboardPage } from "./DashboardPage";
@@ -280,7 +280,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   async function startTurn() {
     const media = stream.current;
     if (!media?.active || turnRef.current) return;
-    const turn: Turn = { controller: new AbortController(), poses: new AttemptCapture(TURN_MS), phase: "arming" };
+    const turn: Turn = { controller: new AbortController(), poses: new AttemptCapture(TURN_MS, { tracking: TEAM_TRACKING }), phase: "arming" };
     turnRef.current = turn;
     setPhase("arming");
     setMessage("Getting the camera ready…");
@@ -340,7 +340,8 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   const issue = cameraError || pose.error || (!recordingSupported ? TURN_MESSAGES.noRecording : "");
   const ready = cameraReady && pose.isReady && !issue;
   const bodyVisible = bodyInFrame(pose.landmarks);
-  const canStart = ready && !busy && (!referenceUrl || referenceReady);
+  // Start needs both shoulders and both hips in frame (teamTurn.ts CHECK_POINTS); limbs don't matter.
+  const canStart = ready && bodyVisible && !busy && (!referenceUrl || referenceReady);
   const creatorName = page.creator.name;
 
   const cameraBox = (
@@ -408,7 +409,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
       ? { ready: false, label: "Starting camera…", hint: "Allow camera access if your browser asks." }
       : !pose.isReady
         ? { ready: false, label: "Loading pose tracking…", hint: "This takes a few seconds the first time." }
-        : { ready: bodyVisible, label: bodyVisible ? "Full body in frame" : "Step back into frame", hint: framingHint(pose.landmarks) };
+        : { ready: bodyVisible, label: bodyVisible ? "In frame" : "Step back into frame", hint: framingHint(pose.landmarks) };
 
   const danceOverlay = isRecording && <>
     {danceCue && (

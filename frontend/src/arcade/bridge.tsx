@@ -143,13 +143,21 @@ async function openSolo(onExit: () => void) {
   host.id = "solo-root";
   document.body.append(host);
   if (arcade) arcade.hidden = true;
+  // His menu music (home-music.js) would keep playing under solo's own music: hold it paused.
+  const menu = document.querySelector<HTMLAudioElement>("#home-music");
+  const hush = () => menu?.pause();
+  menu?.addEventListener("play", hush);
+  hush();
   soloRoot = createRoot(host);
   soloRoot.render(<Game onBack={() => {
     soloRoot?.unmount();
     soloRoot = null;
     host.remove();
+    menu?.removeEventListener("play", hush);
     if (arcade) arcade.hidden = false;
     onExit();
+    // Let home-music.js pick the menu track back up (it resyncs on visibilitychange).
+    document.dispatchEvent(new Event("visibilitychange"));
   }} />);
 }
 

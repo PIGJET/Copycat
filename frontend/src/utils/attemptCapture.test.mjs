@@ -93,3 +93,55 @@ test('solo partial capture completes when no pose is visible', () => {
   assert.equal(attempt.trackingLost(999), false)
   assert.equal(attempt.finish()?.frames.length, 15)
 })
+
+// Team play's rule (teamTurn.ts TEAM_TRACKING): core only, 1 s grace, fail on a 2 s run without the core.
+const core = (lm) => !!lm && [11, 12, 23, 24].every(i => lm[i].visibility >= .4)
+const team = () => new AttemptCapture(10_000, { tracking: { usable: core, graceMs: 1000, maxGapMs: 2000 } })
+const armsOut = pose.map((p, i) => [13, 14, 15, 16, 25, 26, 27, 28].includes(i) ? { ...p, visibility: 0 } : p)
+const slot = (i) => 1 + i * 1000 / 15
+
+test('team rule: limbs leaving the frame never count against the player', () => {
+  const attempt = team()
+  attempt.start(0)
+  for (let i = 0; i < 150; i++) {
+    attempt.sample(slot(i), armsOut)
+    assert.equal(attempt.trackingLost(slot(i)), false)
+  }
+  assert.equal(attempt.finish().frames.length, 150)
+})
+
+test('team rule: the first second is a grace period, then 2 s in a row without the core fails', () => {
+  const attempt = team()
+  attempt.start(0)
+  assert.equal(attempt.trackingLost(2999), false) // nobody seen yet: grace (1 s) + 2 s
+  assert.equal(attempt.trackingLost(3001), true)
+})
+
+test('team rule: short core losses do not add up across the take', () => {
+  const attempt = team()
+  attempt.start(0)
+  // Core lost for ~1.5 s, five times over (7.5 s total), back in between each time.
+  for (let i = 0; i < 150; i++) {
+    const t = slot(i)
+    attempt.sample(t, (i % 30) < 22 && i > 10 ? null : pose)
+    assert.equal(attempt.trackingLost(t), false, `failed at ${Math.round(t)} ms`)
+  }
+  assert.ok(attempt.finish(), 'missing frames are kept; the backend skips them')
+})
+
+test('team rule: a 2 s run without the core after the grace period fails', () => {
+  const attempt = team()
+  attempt.start(0)
+  for (let i = 0; i < 30; i++) attempt.sample(slot(i), pose) // seen until ~1.93 s
+  const lastSeen = slot(29)
+  for (let i = 30; i < 90; i++) attempt.sample(slot(i), null)
+  assert.equal(attempt.trackingLost(lastSeen + 1999), false)
+  assert.equal(attempt.trackingLost(lastSeen + 2001), true)
+})
+
+test('team rule: a take with no core frames at all is not emitted', () => {
+  const attempt = team()
+  attempt.start(0)
+  for (let i = 0; i < 20; i++) attempt.sample(slot(i), null)
+  assert.equal(attempt.finish(), null)
+})
