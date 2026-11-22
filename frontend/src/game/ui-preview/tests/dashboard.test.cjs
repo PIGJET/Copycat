@@ -120,11 +120,11 @@ test('live handoffs show the current player, next challenger, and next round cre
   h.ui.preview.live = true;
   h.ui.renderPreview();
   assert.match(h.root.innerHTML, /Alex’s turn/);
-  assert.match(h.root.innerHTML, /Create a dance for everyone to copy/);
+  assert.doesNotMatch(h.root.innerHTML, /class="dashboard-current-turn"/);
   turn.onRecord({ frames: [1] });
   assert.match(h.root.innerHTML, /Jamie’s turn/);
   assert.match(h.root.innerHTML, /class="dashboard-current-badge">Up now/);
-  assert.match(h.root.innerHTML, /Watch Alex’s dance/);
+  assert.deepEqual(turn.reference.frames, [1]);
   turn.onRecord({ frames: [2] });
   await settle();
   assert.match(h.root.innerHTML, /Next turn · Riley/);
@@ -137,7 +137,7 @@ test('live handoffs show the current player, next challenger, and next round cre
   h.click('score-next');
   h.click('round-next');
   assert.match(h.root.innerHTML, /Jamie’s turn/);
-  assert.match(h.root.innerHTML, /Create a dance for everyone to copy/);
+  assert.doesNotMatch(h.root.innerHTML, /class="dashboard-current-turn"/);
   assert.equal(turn.player.id, crew[1].id);
   assert.equal(turn.creator.id, crew[1].id);
   assert.equal(turn.reference, undefined);
