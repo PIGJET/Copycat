@@ -5,20 +5,24 @@ const path=require('node:path');
 const vm=require('node:vm');
 function setup({fetchImpl}={}){
   const handlers={};const styles={};const cameraCalls={count:0};const soloCalls={count:0};
-  const elements={'#song-list':{value:'884025'},'#song-status':{isConnected:true},'[data-action="tempo-start"]':{}};
+  const elements={
+    '.dashboard-primary-actions':{replaceChildren(){},after(){}},
+    '.dashboard-camera-scene':{replaceChildren(){}},
+    '.dashboard-review-settings':{remove(){}},
+    '#song-list':{value:'884025'},'#song-status':{isConnected:true},'[data-action="tempo-start"]':{}};
   const root={hidden:true,innerHTML:'',classList:{toggle(){},remove(){}},replaceChildren(){},
     addEventListener:(type,fn)=>(handlers[type]??=[]).push(fn),querySelector:selector=>elements[selector]||null};
-  const context=vm.createContext({CopycatSolo:{mount:(element,onBack)=>{soloCalls.count++;soloCalls.element=element;soloCalls.onBack=onBack},unmount:()=>{soloCalls.unmounted=true}},document:{hidden:false,addEventListener(){},querySelector:selector=>selector==='#game-screen'?root:selector==='.arcade'?{classList:{add(){},remove(){},toggle(){}}}:selector==='#sound'?{addEventListener(){}}:null},
+  const context=vm.createContext({CopycatTracking:{mount(){},unmount(){}},CopycatSolo:{mount:(element,onBack)=>{soloCalls.count++;soloCalls.element=element;soloCalls.onBack=onBack},unmount:()=>{soloCalls.unmounted=true}},document:{createElement:()=>({setAttribute(){}}),hidden:false,addEventListener(){},querySelector:selector=>selector==='#game-screen'?root:selector==='.arcade'?{classList:{add(){},remove(){},toggle(){}}}:selector==='#sound'?{addEventListener(){}}:null},
     homeScreen:{hidden:false},lobby:{hidden:true},window:{scrollTo(){}},location:{search:''},soundOn:false,
     fetch:fetchImpl||(async()=>({ok:true,headers:{get:key=>key==='X-Song-BPM'?'100.3':'audio/mp4'}})),cameraCalls,crewColors:['#b6ff00','#ff2ea6'],portrait:()=>'',URLSearchParams,clearInterval,clearTimeout,setTimeout,setInterval,cancelAnimationFrame(){},matchMedia:()=>({matches:true}),goHome(){}});
   const read=file=>fs.readFileSync(path.join(__dirname,'../dist',file),'utf8');
-  vm.runInContext(read('gameplay-tracks.js')+'\n'+read('song-catalog.js')+'\n'+read('demo-data.js')+'\n'+read('round-ui.js')+'\nenableCameraCheck=()=>{cameraCalls.count++};\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,searchSongs,enterDanceFloor,openDemoScreen,startSoloPreview};',context);
+  vm.runInContext(read('gameplay-tracks.js')+'\n'+read('song-catalog.js')+'\n'+read('demo-data.js')+'\n'+read('round-ui.js')+'\nenableCameraCheck=()=>{cameraCalls.count++};\n'+read('game-ui.js')+'\nglobalThis.ui={preview,enterPreview,searchSongs,enterDanceFloor,openDemoScreen,startSoloPreview,readyCamera(){checkReady=true;checkStream={active:true,getTracks:()=>[],getVideoTracks:()=>[{readyState:"live",enabled:true}]}}};',context);
   const click=action=>{const button={disabled:false,dataset:{action}};for(const fn of handlers.click||[])fn({target:{closest:()=>button}});};
   return {ui:context.ui,root,elements,click,cameraCalls,soloCalls,homeScreen:context.homeScreen};
 }
 const crew=[{id:1,name:'Alex',avatar:'cat'},{id:2,name:'Jamie',avatar:'rabbit'}];
 for(const solo of [true,false]) test('song tempo reaches '+(solo?'solo':'team')+' gameplay without rounding',async()=>{
-  const h=setup();h.ui.enterPreview(crew,'full',solo);h.click('camera-demo');
+  const h=setup();h.ui.enterPreview(crew,'full',solo);h.ui.readyCamera();h.click('camera-continue');
   assert.match(h.root.innerHTML,/SELECT SONG/);
   assert.equal(h.ui.searchSongs('dancing queen abba')[0].artist,'ABBA');
   await h.ui.enterDanceFloor();
@@ -34,7 +38,7 @@ test('real songs and the CC0 loops are both in the picker',()=>{
 });
 for(const [why,fetchImpl] of [['offline',async()=>{throw new TypeError('Failed to fetch')}],['server error',async()=>({ok:false,status:502,headers:{get:()=>null}})]])
   test('a real song that cannot load falls back to the closest-BPM CC0 loop ('+why+')',async()=>{
-    const h=setup({fetchImpl});h.ui.enterPreview(crew,'full',false);h.click('camera-demo');
+    const h=setup({fetchImpl});h.ui.enterPreview(crew,'full',false);h.ui.readyCamera();h.click('camera-continue');
     await h.ui.enterDanceFloor();
     assert.equal(h.ui.preview.screen,'creator');
     assert.equal(h.ui.preview.song.artist,'hyperpixel');
@@ -43,9 +47,17 @@ for(const [why,fetchImpl] of [['offline',async()=>{throw new TypeError('Failed t
     assert.doesNotMatch(h.elements['#song-status'].textContent||'',/unavailable/i);
   });
 
+test('camera check has no demo bypass and rejects Continue before the camera is ready',()=>{
+  const h=setup();h.ui.enterPreview(crew,'quick');
+  assert.doesNotMatch(h.root.innerHTML,/CONTINUE DEMO/);
+  h.click('camera-demo');
+  h.click('camera-continue');
+  assert.equal(h.ui.preview.screen,'camera');
+});
+
 test('camera check automatically requests access on entry and re-entry only',()=>{
   const h=setup();h.ui.enterPreview(crew,'quick');assert.equal(h.cameraCalls.count,1);
-  h.click('camera-demo');assert.equal(h.cameraCalls.count,1);
+  h.ui.readyCamera();h.click('camera-continue');assert.equal(h.cameraCalls.count,1);
   h.click('tempo-camera');assert.equal(h.cameraCalls.count,2);
 });
 test('direct tempo and creator reviews do not request camera access',()=>{

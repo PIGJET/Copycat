@@ -37,7 +37,7 @@ export function MockTurn({ arcade, role, onComplete }: { arcade: ArcadeHost; rol
     <p className="dashboard-camera-note">Mock recorder: no camera, fake dance data</p>
     {createPortal(
       <button className="ui-primary" disabled={step !== null} onClick={() => setStep(0)}>
-        {step === null ? (role === "creator" ? "Start recording" : "Start copying") : "Get ready…"}
+        {step === null ? (role === "creator" ? "Start recording" : "Your turn: start copying") : "Get ready…"}
       </button>,
       arcade.controls,
     )}

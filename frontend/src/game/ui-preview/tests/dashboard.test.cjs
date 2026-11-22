@@ -72,6 +72,16 @@ test('camera turns replay the creator recording and score the actual challenger 
   h.ui.enterPreview(crew,'full',false,'creator');
   h.ui.preview.live=true;h.ui.renderPreview();
   assert.equal(turn.player.id,crew[0].id);
+  assert.match(h.root.innerHTML, /id="stage-timer"[^>]+ hidden/);
+  turn.phaseChanged('countdown',3,null);
+  assert.equal(h.element('#stage-timer').hidden,true);
+  turn.phaseChanged('recording',null,10);
+  assert.equal(h.element('#stage-timer').hidden,false);
+  turn.phaseChanged('recording',null,6);
+  assert.equal(h.element('#stage-time').textContent,'6s');
+  assert.equal(h.element('#stage-time').textContent,h.element('#capture-time').textContent);
+  turn.phaseChanged('idle',null,null);
+  assert.equal(h.element('#stage-timer').hidden,true);
   turn.onRecord(reference);
   assert.equal(turn.reference,reference);
   assert.equal(turn.player.id,crew[1].id);
@@ -98,4 +108,41 @@ test('a /score 422 offers the right redo and never records a result',async()=>{
   assert.match(h.ui.scoreScreen(),/RECORD AGAIN/);
   failure.recording='reference';
   assert.match(h.ui.scoreScreen(),/Alex RE-RECORDS/);
+});
+
+test('live handoffs show the current player, next challenger, and next round creator', async () => {
+  let turn;
+  const score = { total: 90, arms: 90, legs: 90, torso: 90, timing: 90 };
+  // Scores come from the backend through the bridge (async), never from the browser.
+  const h = setup({ mount: props => { turn = props; }, unmount() {}, release() {}, score: async () => score });
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+  h.ui.enterPreview(crew.slice(0, 3), 'full', false, 'creator');
+  h.ui.preview.live = true;
+  h.ui.renderPreview();
+  assert.match(h.root.innerHTML, /Alex’s turn/);
+  assert.match(h.root.innerHTML, /Create a dance for everyone to copy/);
+  turn.onRecord({ frames: [1] });
+  assert.match(h.root.innerHTML, /Jamie’s turn/);
+  assert.match(h.root.innerHTML, /class="dashboard-current-badge">Up now/);
+  assert.match(h.root.innerHTML, /Watch Alex’s dance/);
+  turn.onRecord({ frames: [2] });
+  await settle();
+  assert.match(h.root.innerHTML, /Next turn · Riley/);
+  h.click('score-next');
+  assert.match(h.root.innerHTML, /Riley’s turn/);
+  assert.match(h.root.innerHTML, /class="turn-callout".*<strong>Riley<\/strong>/);
+  turn.onRecord({ frames: [3] });
+  await settle();
+  assert.match(h.root.innerHTML, /See leaderboard/);
+  h.click('score-next');
+  h.click('round-next');
+  assert.match(h.root.innerHTML, /Jamie’s turn/);
+  assert.match(h.root.innerHTML, /Create a dance for everyone to copy/);
+  assert.equal(turn.player.id, crew[1].id);
+  assert.equal(turn.creator.id, crew[1].id);
+  assert.equal(turn.reference, undefined);
+  const secondReference = { frames: [4] };
+  turn.onRecord(secondReference);
+  assert.equal(turn.player.id, crew[0].id);
+  assert.equal(turn.reference, secondReference);
 });
