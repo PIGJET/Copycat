@@ -1,10 +1,8 @@
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { ReferenceClip } from '../types/challenge';
 import type { RecordingFrame } from '../types/pose';
+import { POSE_MODEL_URL as MODEL_URL, VISION_WASM_URL as WASM_URL } from './mediapipeAssets';
 import { collectReferenceFrames, referenceQuality, hasVisibleSegment } from './referenceFrames';
-
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm';
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
 export class ReferenceVisibilityError extends Error {
   readonly quality: ReturnType<typeof referenceQuality>;

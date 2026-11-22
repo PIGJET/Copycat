@@ -11,7 +11,7 @@
     "songs:cache": "node scripts/cache-songs.ts"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^1.2.3",
+    "@mediapipe/tasks-vision": "1.2.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
