@@ -1,6 +1,6 @@
 # Copycat
 
-**Copy the dance. Don't make the news.**
+**Copy your friends. Get judged. Get exposed.**
 
 Copycat is a one-laptop dance party game. One player makes up a 10-second dance, everyone else
 tries to copy it in front of the same webcam, and a pose-tracking scorer decides who copied best.

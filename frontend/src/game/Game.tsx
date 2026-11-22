@@ -139,7 +139,7 @@ export default function Game({ onBack }: { onBack?: () => void }) {
   }
 
   return (
-    <main className={turn.stage === 'capture' && clip ? "solo-game solo-game--dancing" : "solo-game"}>
+    <main className={turn.stage === 'capture' && clip ? "solo-game solo-game--dancing" : !clip || turn.stage === 'ready' ? "solo-game solo-game--setup" : "solo-game"}>
       <div className="solo-game__stage">
         <header className="solo-game__header">
           <div className="solo-game__brand">
