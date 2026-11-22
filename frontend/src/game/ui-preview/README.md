@@ -43,7 +43,7 @@ This is the existing buildless UI preview, not a React application. This preview
 Team gameplay uses a top player strip and a bottom visual metronome. BPM is selected before gameplay in fixed 5 BPM intervals from 60 to 180, with play/pause and optional sound through the existing mute button. The guide is not synchronized to music until the media integration supplies a playback clock.
 
 
-Leaderboard updates retain the previous order while averages count to their new values, then slide into the new order with up/down arrows. Rank sounds follow the existing mute setting. Reduced-motion skips counting/sliding. Unranked players get NEW instead of an invented previous rank. Averages may rise or fall; scoring rules are unchanged.
+Leaderboard updates retain the previous order while averages count to their new values, then slide into the new order with up/down arrows. Rank sounds follow the existing mute setting. Reduced-motion skips counting/sliding. Unranked players get NEW instead of an invented previous rank. Averages may rise or fall; scoring rules are unchanged. In Full mode, while rounds are left, the leaderboard offers **Next round** and **End game**. End game skips the remaining rounds and runs the finale on the standings so far: the loser is the lowest average among players with at least one scored attempt (timing breaks ties), and if nobody is scored yet it returns to the menu.
 
 
 The visual finish uses bundled Silkscreen and Barlow font files in dist/fonts, with licenses included. art-direction.css refines typography, flat player surfaces, empty slots, button depth, and secondary hierarchy while preserving the existing composition and all JavaScript behavior.

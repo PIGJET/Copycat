@@ -146,3 +146,25 @@ test('live handoffs show the current player, next challenger, and next round cre
   assert.equal(turn.player.id, crew[0].id);
   assert.equal(turn.reference, secondReference);
 });
+
+test('End game after round 1 skips the remaining rounds and crowns the lowest scored average the loser',()=>{
+  const h=setup();const three=crew.slice(0,3);h.ui.enterPreview(three,'full',false,'creator');
+  h.click('skip');for(let turn=0;turn<2;turn++){h.click('skip');h.click('score-next')}
+  assert.equal(h.ui.preview.screen,'leaderboard');
+  assert.match(h.root.innerHTML,/data-action="round-next"[^>]*>NEXT ROUND</);
+  assert.match(h.root.innerHTML,/class="ui-secondary" data-action="end-game"[^>]*>END GAME</);
+  // Alex created round 1 and has no score, so Jamie or Riley must take the fall: tie on average, timing decides.
+  h.ui.preview.results=[{playerId:2,creatorId:1,score:{total:70,arms:70,legs:70,torso:70,timing:60}},{playerId:3,creatorId:1,score:{total:70,arms:70,legs:70,torso:70,timing:80}}];
+  h.click('end-game');
+  assert.equal(h.ui.preview.screen,'finale');assert.equal(h.ui.preview.round,0);
+  assert.match(h.root.innerHTML,/Jamie made the news/);
+});
+test('End game with nobody scored goes back to the menu, and the last round keeps only VIEW FINALE',()=>{
+  const h=setup();h.ui.enterPreview(crew.slice(0,3),'full',false,'creator');
+  h.ui.preview.screen='leaderboard';h.ui.renderPreview();h.click('end-game');
+  assert.equal(h.root.hidden,true);
+  h.ui.enterPreview(crew.slice(0,3),'full',false,'creator');Object.assign(h.ui.preview,{screen:'leaderboard',round:2});h.ui.renderPreview();
+  assert.doesNotMatch(h.root.innerHTML,/end-game/);assert.match(h.root.innerHTML,/VIEW FINALE/);
+  h.ui.enterPreview(crew.slice(0,3),'quick',false,'creator');h.ui.preview.screen='leaderboard';h.ui.renderPreview();
+  assert.doesNotMatch(h.root.innerHTML,/end-game/);
+});
