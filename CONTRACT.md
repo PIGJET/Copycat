@@ -69,6 +69,12 @@ Request: `{"reference": <creator's Recording>, "attempt": <copier's Recording>}`
   `t` you sent. Shame uses `worst_moment` to grab screenshots.
 - **The Game lane averages `total`** across a player's rounds. The lowest average loses.
 
+### Optional Solo replay analysis
+
+A successful `solo_partial` response may include `replay_analysis: {"version": 1, "samples": [...]}`. Legacy Team responses do not include it. Each sample represents an official 15 Hz comparison and contains `reference_ms`, `attempt_ms`, `severity` (motion-weighted error from 0–100), and a `parts` object keyed by the scorer's part names. Timestamps use each recording's elapsed timeline; the camera replay adds its recorded pose-zero offset. A reference of up to 60 seconds produces at most 901 samples.
+
+Each part is `{ "status": "measured", "error_degrees": 0 }` (finite angle from 0–180), `{ "status": "not_tracked" }` (reference visible, attempt unsupported), or `{ "status": "not_in_reference" }` (excluded from scoring). Missing or malformed analysis does not invalidate the score; clients should keep playback usable and show that mistake details are unavailable.
+
 422 response. Every 422 is safe to show on screen as is:
 
 ```json
@@ -135,7 +141,8 @@ Request:
 - `url` is required. HTTPS YouTube watch, Shorts and youtu.be video links are accepted;
   playlists and live/former-live sources are excluded. Use content authorized for processing.
 - `start_seconds` defaults to 0; `duration_seconds` defaults to 10 and must be 5–60.
-  Both must be finite numbers and the section must fit inside the source.
+  Both must be finite numbers and the section must fit inside the source. Send
+  `duration_seconds: null` with start 0 to import the entire source, which must be 5–60 seconds.
 - Success: `200`, `Content-Type: video/mp4`, containing the completed clip's bytes.
   Game fetches a Blob and owns its object URL. No server filesystem path or persistent URL is returned.
 - The MP4 is normalized to H.264/yuv420p with optional AAC, at 30 fps, within 1280×720.

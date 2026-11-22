@@ -232,7 +232,17 @@ function enterPreview(crew,mode,solo=false,initialScreen='camera'){
   homeScreen.hidden=true;lobby.hidden=true;gameRoot.hidden=false;document.querySelector('.arcade').classList.add('in-game');document.querySelector('.arcade').classList.remove('in-lobby');renderPreview();
 }
 function startTeamPreview(){enterPreview(players,'full')}
-function startSoloPreview(){enterPreview([{id:'solo',name:'You',avatar:'cat'}],'quick',true)}
+function startSoloPreview(){
+  if (!globalThis.CopycatSolo) return;
+  homeScreen.hidden=true; lobby.hidden=true; gameRoot.hidden=false;
+  document.querySelector('.arcade').classList.add('in-game');
+  globalThis.CopycatSolo.mount(gameRoot,()=>{
+    globalThis.CopycatSolo.unmount();
+    gameRoot.hidden=true;
+    document.querySelector('.arcade').classList.remove('in-game');
+    goHome();
+  });
+}
 function leavePreview(){for(const turn of preview.results) delete turn.clip;globalThis.CopycatTracking?.unmount();releaseLive();globalThis.CopycatGameplayMusic?.stop();clearPreviewTimers();globalThis.CopycatFinale?.clear();beatClock=null;preview.run++;gameRoot.hidden=true;gameRoot.replaceChildren();document.querySelector('.arcade').classList.remove('in-game','news-active','team-capture-active','dashboard-active');goHome()}
 function finishCapture(){
   clearPreviewTimers();preview.run++;preview.phase='idle';

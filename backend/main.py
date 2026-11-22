@@ -41,7 +41,7 @@ class ScoreRequest(BaseModel):
 class ReferenceVideoRequest(BaseModel):
     url: str
     start_seconds: float = Field(default=0, ge=0, allow_inf_nan=False)
-    duration_seconds: float = Field(default=10, ge=5, le=60, allow_inf_nan=False)
+    duration_seconds: float | None = Field(default=10, ge=5, le=60, allow_inf_nan=False)
 
 
 class RoastRequest(BaseModel):

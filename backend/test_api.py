@@ -144,3 +144,35 @@ def test_solo_late_first_sample_does_not_shift_away_missing_opening():
     assert result.status_code == 200
     assert result.json()['total'] < 85
     assert result.json()['worst_moment']['reference_ms'] < 3000
+
+
+def test_solo_replay_analysis_uses_official_comparisons():
+    ref = recording()
+    missing = {'frames': [{'t': f['t'], 'landmarks': None} for f in ref['frames']]}
+    body = client.post('/score', json={'reference': ref, 'attempt': missing, 'mode': 'solo_partial'}).json()
+    analysis = body['replay_analysis']
+    assert analysis['version'] == 1
+    assert len(analysis['samples']) <= 901
+    assert analysis['samples'][0]['parts']['left forearm']['status'] == 'not_tracked'
+    assert analysis['samples'][0]['severity'] > 0
+    matched = client.post('/score', json={'reference': ref, 'attempt': ref, 'mode': 'solo_partial'}).json()
+    assert matched['replay_analysis']['samples'][0]['parts']['left forearm']['error_degrees'] == 0
+    assert 'replay_analysis' not in client.post('/score', json={'reference': ref, 'attempt': ref}).json()
+
+
+def test_replay_analysis_distinguishes_reference_occlusion_from_missing_player():
+    reference = recording()
+    attempt = recording()
+    for frame in reference['frames']:
+        frame['landmarks'][27][3] = 0
+    for frame in attempt['frames']:
+        if 2000 <= frame['t'] <= 8000:
+            frame['landmarks'] = None
+    response = client.post('/score', json={'reference': reference, 'attempt': attempt, 'mode': 'solo_partial'})
+    assert response.status_code == 200
+    samples = response.json()['replay_analysis']['samples']
+    middle = min(samples, key=lambda s: abs(s['reference_ms'] - 5000))
+    assert middle['parts']['left shin']['status'] == 'not_in_reference'
+    assert middle['parts']['left forearm']['status'] == 'not_tracked'
+    assert middle['reference_ms'] == middle['attempt_ms']
+    assert all(0 <= s['severity'] <= 100 for s in samples)

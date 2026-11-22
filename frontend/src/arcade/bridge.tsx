@@ -135,30 +135,29 @@ async function finaleScene(loser: ArcadeRanking): Promise<string> {
   });
 }
 
-/** Justin's solo mode (game/Game.tsx), shown in place of the arcade until Back to menu. */
-async function openSolo(onExit: () => void) {
+// Justin's solo mode (game/Game.tsx). His startSoloPreview (game-ui.js) mounts it into the game
+// screen through globalThis.CopycatSolo and unmounts it on Back to menu.
+// The menu music (home-music.js) would keep playing under solo's own music: hold it paused.
+const menuMusic = () => document.querySelector<HTMLAudioElement>("#home-music");
+const hushMenu = () => menuMusic()?.pause();
+
+async function mountSolo(element: HTMLElement, onBack: () => void) {
+  unmountSolo();
+  menuMusic()?.addEventListener("play", hushMenu);
+  hushMenu();
+  const root = createRoot(element);
+  soloRoot = root;
   const { default: Game } = await import("../game/Game");
-  const arcade = document.querySelector<HTMLElement>(".arcade");
-  const host = document.createElement("div");
-  host.id = "solo-root";
-  document.body.append(host);
-  if (arcade) arcade.hidden = true;
-  // His menu music (home-music.js) would keep playing under solo's own music: hold it paused.
-  const menu = document.querySelector<HTMLAudioElement>("#home-music");
-  const hush = () => menu?.pause();
-  menu?.addEventListener("play", hush);
-  hush();
-  soloRoot = createRoot(host);
-  soloRoot.render(<Game onBack={() => {
-    soloRoot?.unmount();
-    soloRoot = null;
-    host.remove();
-    menu?.removeEventListener("play", hush);
-    if (arcade) arcade.hidden = false;
-    onExit();
-    // Let home-music.js pick the menu track back up (it resyncs on visibilitychange).
-    document.dispatchEvent(new Event("visibilitychange"));
-  }} />);
+  if (soloRoot === root) root.render(<Game onBack={onBack} />);
+}
+
+function unmountSolo() {
+  if (!soloRoot) return;
+  soloRoot.unmount();
+  soloRoot = null;
+  menuMusic()?.removeEventListener("play", hushMenu);
+  // Let home-music.js pick the menu track back up (it resyncs on visibilitychange).
+  setTimeout(() => document.dispatchEvent(new Event("visibilitychange")), 0);
 }
 
 /** Free a finished game's recordings (video object URLs). */
@@ -167,5 +166,6 @@ function release(results: ArcadeResult[], extra: (Recording | null | undefined)[
 }
 
 Object.assign(globalThis, {
-  CopycatTracking: Object.freeze({ mock: MOCK, mount, unmount, score, roast, finaleScene, openSolo, release, checkHealth }),
+  CopycatTracking: Object.freeze({ mock: MOCK, mount, unmount, score, roast, finaleScene, release, checkHealth }),
+  CopycatSolo: Object.freeze({ mount: (element: HTMLElement, onBack: () => void) => void mountSolo(element, onBack), unmount: unmountSolo }),
 });

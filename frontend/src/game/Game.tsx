@@ -19,8 +19,6 @@ export default function Game({ onBack }: { onBack?: () => void }) {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
-  const [start, setStart] = useState('0');
-  const [duration, setDuration] = useState('10');
   const prepareOp = useRef<AbortController | null>(null);
   const clipUrl = useRef<string | null>(null);
   const turnId = useRef(0);
@@ -97,7 +95,7 @@ export default function Game({ onBack }: { onBack?: () => void }) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    void loadClip(signal => importReference(link, Number(start), Number(duration), signal));
+    void loadClip(signal => importReference(link, signal));
   }
 
   function chooseAnother() {
@@ -154,18 +152,11 @@ export default function Game({ onBack }: { onBack?: () => void }) {
                 <input type="url" required value={link} onChange={event => setLink(event.target.value)}
                   placeholder="https://www.youtube.com/watch?v=…" disabled={preparing} />
               </label>
-              <div className="solo-source__range">
-                <label>Start (seconds)<input type="number" min="0" step="any" required value={start}
-                  onChange={event => setStart(event.target.value)} disabled={preparing} /></label>
-                <label>Length (seconds)<input type="number" min="5" max="60" step="any" required value={duration}
-                  onChange={event => setDuration(event.target.value)} disabled={preparing} /></label>
-              </div>
+              <p>Choose a video between 5 and 60 seconds long.</p>
               <div className="solo-actions">
                 <button type="submit" className="solo-primary" disabled={preparing}>Prepare clip</button>
                 <button type="button" disabled={preparing} onClick={() => {
                   setLink(SAMPLE_URL);
-                  setStart('0');
-                  setDuration('15');
                 }}>Use sample link</button>
               </div>
             </form>

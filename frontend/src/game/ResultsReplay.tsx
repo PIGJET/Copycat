@@ -1,10 +1,14 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { DrawingUtils, PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { AttemptResult, ReferenceClip } from '../types/challenge';
 import type { PoseRecording } from '../types/pose';
 import type { ScoreResult } from './api';
-import { findReplayPose, getReplayTargets } from './replay';
+import { findReplayPose } from './replay';
+import { readAnalysis, analysisAt, mistakeSections, errorColor, REPLAY_SEGMENTS, worstPart, describeMistake } from './replayAnalysis';
+import type { ErrorSample } from './replayAnalysis';
+import { ReplayTimeline } from './ReplayTimeline';
+import { formatReplayTime } from './replayTimelineData';
 
 function seekFrame(video: HTMLVideoElement, seconds: number, signal: AbortSignal) {
   signal.throwIfAborted();
@@ -49,7 +53,9 @@ function seekFrame(video: HTMLVideoElement, seconds: number, signal: AbortSignal
   });
 }
 
-function ReplayPane({ label, url, videoRef, recording, offsetMs, mirrored, onStop, onError }: {
+function ReplayPane({ label, url, videoRef, recording, offsetMs, mirrored, onStop, onError, samples, showMistakes }: {
+  samples: ErrorSample[];
+  showMistakes: boolean;
   label: string;
   url?: string;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -78,7 +84,24 @@ function ReplayPane({ label, url, videoRef, recording, offsetMs, mirrored, onSto
       if (canvas!.height !== video!.videoHeight) canvas!.height = video!.videoHeight;
       clear();
       const landmarks = findReplayPose(recording, t * 1000 - offsetMs)?.landmarks;
-      if (landmarks) drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#b6ff00', lineWidth: 3 });
+      if (!showMistakes || !landmarks) return;
+      if (!mirrored) {
+        drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#00f0ff', lineWidth: 3 });
+        return;
+      }
+      const sample = analysisAt(samples, t * 1000 - offsetMs);
+      if (!sample) return;
+      const points = [...landmarks];
+      for (const [a,b] of [[23,24],[11,12]]) {
+        points.push({x:(landmarks[a].x+landmarks[b].x)/2,y:(landmarks[a].y+landmarks[b].y)/2,z:0,visibility:Math.min(landmarks[a].visibility,landmarks[b].visibility)});
+      }
+      const worst = worstPart(sample)?.[0];
+      for (const [name,[a,b]] of Object.entries(REPLAY_SEGMENTS)) {
+        const color=errorColor(sample.parts[name]);
+        if(!color || ![points[a],points[b]].every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.visibility>=.5&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1))continue;
+        ctx!.strokeStyle=color;ctx!.lineWidth=name===worst?7:3;ctx!.lineCap='round';
+        ctx!.beginPath();ctx!.moveTo(points[a].x*canvas!.width,points[a].y*canvas!.height);ctx!.lineTo(points[b].x*canvas!.width,points[b].y*canvas!.height);ctx!.stroke();
+      }
     }
     const drawCurrent = () => draw(video.currentTime);
     let callback = video.requestVideoFrameCallback(frame);
@@ -97,7 +120,7 @@ function ReplayPane({ label, url, videoRef, recording, offsetMs, mirrored, onSto
       video.removeEventListener('seeking', clear);
       drawing.close();
     };
-  }, [url, videoRef, recording, offsetMs]);
+  }, [url, videoRef, recording, offsetMs, samples, showMistakes, mirrored]);
 
   return (
     <figure className="solo-replay__pane">
@@ -124,7 +147,18 @@ export function ResultsReplay({ reference, attempt, score }: {
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState('');
   const offset = attempt.video.attemptPoseZeroInVideoMs;
-  const { referenceSeconds, attemptSeconds } = getReplayTargets(score, offset);
+  const samples = useMemo(() => readAnalysis(score.replay_analysis, reference.durationMs) ?? [], [score.replay_analysis, reference.durationMs]);
+  const cameraSamples = useMemo(() => samples.map(s => ({...s, reference_ms:s.attempt_ms})), [samples]);
+  const sections = useMemo(() => mistakeSections(samples, reference.durationMs), [samples, reference.durationMs]);
+  const worst = [...sections].sort((a,b)=>b.peak.severity-a.peak.severity)[0];
+  const initialMs = worst ? Math.max(0,worst.peak.reference_ms-1000) : 0;
+  const referenceSeconds = initialMs / 1000;
+  const attemptSeconds = ((analysisAt(samples,initialMs)?.attempt_ms ?? initialMs) + offset)/1000;
+  const [position, setPosition] = useState(initialMs);
+  const [rate, setRate] = useState(1);
+  const [showMistakes, setShowMistakes] = useState(true);
+  const [selected, setSelected] = useState<number | null>(worst?.peak.reference_ms ?? null);
+  const formatTime = formatReplayTime;
 
   function pauseBoth() {
     playbackRequest.current.generation++;
@@ -143,6 +177,7 @@ export function ResultsReplay({ reference, attempt, score }: {
     const ref = referenceVideo.current;
     const camera = attemptVideo.current;
     if (!ref || !camera) return false;
+    setPosition(refSeconds * 1000);
     seeking.current?.abort();
     const controller = new AbortController();
     seeking.current = controller;
@@ -172,6 +207,15 @@ export function ResultsReplay({ reference, attempt, score }: {
     void move(referenceSeconds, attemptSeconds, true);
   });
 
+  const updateClock = useEffectEvent(() => {
+    const ref=referenceVideo.current,camera=attemptVideo.current;
+    if (!ref || !camera || seeking.current || ref.paused) return;
+    const ms=ref.currentTime*1000;
+    setPosition(ms);
+    const target=((analysisAt(samples,ms)?.attempt_ms ?? ms)+offset)/1000;
+    if (!camera.paused && !camera.seeking && Number.isFinite(camera.duration) && Math.abs(camera.currentTime-target)>.1) camera.currentTime=Math.min(camera.duration,target);
+  });
+
   useEffect(() => {
     const camera = attemptVideo.current;
     const ref = referenceVideo.current;
@@ -180,7 +224,9 @@ export function ResultsReplay({ reference, attempt, score }: {
     const playback = playbackRequest.current;
     camera.src = url;
     initializeReplay();
+    const clock = window.setInterval(() => updateClock(),100);
     return () => {
+      window.clearInterval(clock);
       playback.generation++;
       ref?.pause();
       camera.pause();
@@ -212,21 +258,40 @@ export function ResultsReplay({ reference, attempt, score }: {
     }
   }
 
+  function seekTo(ms:number) {
+    void move(ms/1000, ((analysisAt(samples,ms)?.attempt_ms ?? ms)+offset)/1000);
+  }
+
   return (
     <section aria-labelledby="solo-replay-title">
       <h2 id="solo-replay-title">Correction replay</h2>
       <div className="solo-replay__grid">
         <ReplayPane label="Reference" url={reference.videoUrl} videoRef={referenceVideo}
-          recording={reference.recording} offsetMs={0} onStop={pauseBoth} onError={showPlaybackError} />
+          recording={reference.recording} offsetMs={0} samples={samples} showMistakes={showMistakes && samples.length>0} onStop={pauseBoth} onError={showPlaybackError} />
         <ReplayPane label="Your attempt" videoRef={attemptVideo}
-          recording={attempt.recording} offsetMs={offset} mirrored onStop={pauseBoth} onError={showPlaybackError} />
+          recording={attempt.recording} offsetMs={offset} samples={cameraSamples} showMistakes={showMistakes && samples.length>0} mirrored onStop={pauseBoth} onError={showPlaybackError} />
       </div>
+      <ReplayTimeline videoUrl={reference.videoUrl} durationMs={reference.durationMs} position={position}
+        samples={samples} playing={isPlaying} disabled={isSeeking || Boolean(error)}
+        onToggle={() => void playBoth()} onSeek={seekTo} onSeekStart={pauseBoth} />
+      <div className="replay-mistakes" aria-label="Mistake sections">
+        {sections.map((section,i)=><button key={section.peak.reference_ms} type="button"
+          className={selected===section.peak.reference_ms ? 'is-selected' : ''}
+          aria-label={`Mistake ${i+1}, ${formatTime(section.peak.reference_ms)}, ${describeMistake(section.peak)}`}
+          aria-pressed={selected===section.peak.reference_ms}
+          onClick={()=>{setSelected(section.peak.reference_ms);seekTo(Math.max(0,section.peak.reference_ms-1000));}}>
+          Mistake {i+1} · {formatTime(section.peak.reference_ms)}
+        </button>)}
+      </div>
+      {samples.length===0 && <p role="status">Mistake details unavailable</p>}
+      {showMistakes && samples.length>0 &&
+        <p className="replay-legend">Green: close · Amber: moderate mismatch · Red: large mismatch</p>}
       <div className="solo-actions">
-        <button type="button" disabled={isSeeking || Boolean(error)} onClick={() => void playBoth()}>
-          {isPlaying ? 'Pause both' : 'Play both'}
-        </button>
+        <label>Speed <select value={rate} onChange={e=>{const value=Number(e.target.value);setRate(value);for(const video of [referenceVideo.current,attemptVideo.current])if(video)video.playbackRate=value;}}>
+          <option value={.25}>0.25×</option><option value={.5}>0.5×</option><option value={1}>1×</option></select></label>
+        <label><input type="checkbox" checked={showMistakes} onChange={e=>setShowMistakes(e.target.checked)}/> Show mistakes</label>
         <button type="button" disabled={isSeeking} onClick={() => void move(0, offset / 1000)}>Replay from start</button>
-        <button type="button" disabled={isSeeking} onClick={() => void move(referenceSeconds, attemptSeconds)}>Worst moment</button>
+        <button type="button" disabled={isSeeking} onClick={() => {setSelected(worst?.peak.reference_ms ?? null);seekTo(initialMs);}}>Worst mistake</button>
       </div>
       {isSeeking && <p role="status">Finding replay frames…</p>}
       {error && <p role="alert">{error}</p>}

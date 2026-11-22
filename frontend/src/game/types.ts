@@ -59,6 +59,7 @@ export interface ScoreResult {
   worst_moment: Moment;
   best_moment: Moment;
   parts: Record<string, number>;
+  replay_analysis?: unknown;
 }
 
 /** POST /roast request body. */

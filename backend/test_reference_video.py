@@ -332,3 +332,52 @@ def test_audio_overhang_cannot_hide_short_video(monkeypatch, tmp_path):
     with pytest.raises(rv.ImportFailure) as exc:
         asyncio.run(rv.prepare_reference(URL, 0, 6, tmp_path))
     assert exc.value.reason == 'invalid_output'
+
+
+def test_whole_video_request_passes_unspecified_duration_to_importer(monkeypatch):
+    received = []
+    async def fake(url, start_seconds, duration_seconds, work_dir, disconnected):
+        received.append((start_seconds, duration_seconds))
+        output = work_dir / 'clip.mp4'
+        output.write_bytes(b'clip')
+        return output
+    monkeypatch.setattr(rv, 'prepare_reference', fake)
+    with TestClient(app) as client:
+        response = client.post('/reference-video', json={'url': URL, 'duration_seconds': None})
+    assert response.status_code == 200
+    assert received == [(0, None)]
+
+
+@pytest.mark.parametrize('duration', [4.9, 60.1])
+def test_whole_video_outside_supported_duration_is_rejected_before_download(monkeypatch, tmp_path, duration):
+    monkeypatch.setattr(rv.shutil, 'which', lambda name: '/tools/' + name)
+    calls = []
+    async def fake(args, *a, **kw):
+        calls.append(args)
+        return json.dumps({'duration': duration}).encode()
+    monkeypatch.setattr(rv, 'run_process', fake)
+    with pytest.raises(rv.ImportFailure) as exc:
+        asyncio.run(rv.prepare_reference(URL, 0, None, tmp_path))
+    assert exc.value.status == 400
+    assert len(calls) == 1
+
+
+def test_whole_video_uses_metadata_duration(monkeypatch, tmp_path):
+    monkeypatch.setattr(rv.shutil, 'which', lambda name: '/tools/' + name)
+    calls = []
+    async def fake(args, *a, **kw):
+        calls.append(args)
+        if '--dump-single-json' in args:
+            return b'{"duration": 12.5}'
+        if args[0].endswith('yt-dlp'):
+            (tmp_path / 'source.webm').write_bytes(b'source')
+        elif args[0].endswith('ffmpeg'):
+            (tmp_path / 'clip.mp4').write_bytes(b'clip')
+        else:
+            return json.dumps({'format': {'duration': '12.5', 'start_time': '0'}, 'streams': [{'codec_type': 'video', 'codec_name': 'h264', 'pix_fmt': 'yuv420p', 'width': 640, 'height': 480, 'duration': '12.5', 'start_time': '0'}]}).encode()
+        return b''
+    monkeypatch.setattr(rv, 'run_process', fake)
+    asyncio.run(rv.prepare_reference(URL, 0, None, tmp_path))
+    transcode = next(c for c in calls if c[0].endswith('ffmpeg'))
+    assert transcode[transcode.index('-ss') + 1] == '0'
+    assert transcode[transcode.index('-t') + 1] == '12.5'
