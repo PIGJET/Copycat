@@ -346,7 +346,7 @@ export function TeamTurnDashboard({ role, reference, onComplete, onRecordingChan
   const issue = cameraError || pose.error || (!recordingSupported ? TURN_MESSAGES.noRecording : "");
   const ready = cameraReady && pose.isReady && !issue;
   const bodyVisible = bodyInFrame(pose.landmarks);
-  // Start needs both shoulders and both hips in frame (teamTurn.ts CHECK_POINTS); limbs don't matter.
+  // Start needs both shoulders in frame (teamTurn.ts CHECK_POINTS); limbs don't matter.
   const canStart = ready && bodyVisible && !busy && !watching && (!referenceUrl || referenceReady);
   const creatorName = page.creator.name;
 
