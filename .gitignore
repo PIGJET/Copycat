@@ -7,5 +7,7 @@ __pycache__/
 .venv/
 /docs/
 
-# Reaction clips for the finale shame video: local only, never commit them.
-frontend/public/shame-clips/
+# Reaction clips for the finale shame video: local only, never commit them. Their per-clip
+# settings (clips.json) are committed.
+frontend/public/shame-clips/*
+!frontend/public/shame-clips/clips.json

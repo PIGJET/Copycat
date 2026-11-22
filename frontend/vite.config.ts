@@ -22,7 +22,7 @@ const shameClips = () => {
   const dir = join(extraPublic, 'shame-clips')
   return existsSync(dir) ? readdirSync(dir).filter(name => /\.mp4$/i.test(name) && statSync(join(dir, name)).isFile()).sort() : []
 }
-const TYPES: Record<string, string> = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg' }
+const TYPES: Record<string, string> = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json' }
 
 function extraPublicDir(): Plugin {
   let outDir = 'dist'
@@ -66,6 +66,8 @@ function extraPublicDir(): Plugin {
       mkdirSync(join(outDir, 'shame-clips'), { recursive: true })
       for (const name of clips) cpSync(join(extraPublic, 'shame-clips', name), join(outDir, 'shame-clips', name))
       writeFileSync(join(outDir, 'shame-clips', 'index.json'), JSON.stringify(clips))
+      const settings = join(extraPublic, 'shame-clips', 'clips.json')
+      if (existsSync(settings)) cpSync(settings, join(outDir, 'shame-clips', 'clips.json'))
     },
   }
 }

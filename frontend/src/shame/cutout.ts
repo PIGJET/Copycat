@@ -3,6 +3,7 @@
 import { FilesetResolver, ImageSegmenter } from "@mediapipe/tasks-vision";
 
 import { confidenceToAlpha, scaledWidth } from "./sceneMath";
+import type { Box } from "./shamePlan";
 
 const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
 const MODEL_URL =
@@ -16,6 +17,10 @@ const WARMUP_FRAMES = 2;
 export interface Cutout {
   /** Segment the clip's current frame and draw it. Returns the processing time in ms. */
   step(): number;
+  /** Where the person was in the last frame (fractions of the canvas), null if nobody. */
+  box(): Box | null;
+  /** Canvas width / height. */
+  aspect: number;
   close(): void;
 }
 
@@ -78,7 +83,10 @@ export async function createCutout(clip: HTMLVideoElement, canvas: HTMLCanvasEle
   }
 
   let lastTs = 0;
+  let box: Box | null = null;
   return {
+    aspect: w / h,
+    box: () => box,
     step() {
       if (!segmenter) return 0;
       const t0 = performance.now();
@@ -92,7 +100,18 @@ export async function createCutout(clip: HTMLVideoElement, canvas: HTMLCanvasEle
         if (!mask) throw new Error("no confidence mask");
         const conf = mask.getAsFloat32Array();
         const img = fctx.getImageData(0, 0, w, h);
-        for (let i = 0, p = 3; i < conf.length; i++, p += 4) img.data[p] = confidenceToAlpha(conf[i]);
+        let x0 = w, y0 = h, x1 = -1, y1 = -1;
+        for (let i = 0, p = 3; i < conf.length; i++, p += 4) {
+          img.data[p] = confidenceToAlpha(conf[i]);
+          if (conf[i] > 0.6) {
+            const x = i % w, y = (i - x) / w;
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+          }
+        }
+        box = x1 >= 0 ? { x0: x0 / w, y0: y0 / h, x1: (x1 + 1) / w, y1: (y1 + 1) / h } : null;
         octx.clearRect(0, 0, w, h);
         octx.putImageData(img, 0, 0);
       } finally {

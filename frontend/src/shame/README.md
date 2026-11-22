@@ -4,7 +4,7 @@ Shame lane: worst-moment screenshots, calling /roast and the breaking-news video
 
 When the team finale starts (the last round's VIEW FINALE, or End game), the arcade bridge
 (`arcade/bridge.tsx` → `finaleScene`) plays `<ShameVideo>` full screen, then Liangray's finale screen shows as before.
-It lasts 14 s (10 s with no clip) and has a SKIP button.
+It lasts 14 s (10 s with no clip), or longer when a clip in `clips.json` sets its own range, and has a SKIP button.
 
 1. **Intro**: a BREAKING NEWS bar with a news sting generated in Web Audio (`sting.ts`, no sound file).
    It lasts 2.5 s, or up to 6 s while the clips and segmenter get ready.
@@ -29,7 +29,26 @@ Why it fell back is logged with `console.info("[shame video] …")`.
 
 Drop any `.mp4` files into `frontend/public/shame-clips/`. The folder is **gitignored**: never commit clips, since
 the repo is public. The dev server lists them at `/shame-clips/index.json`. `vite build` copies them into `dist/` and
-writes that list, an empty one in CI, where there are no clips. Reaction clips play with sound when SOUND is on.
+writes that list, an empty one in CI, where there are no clips. Reaction clips play with their own sound at 75% volume when SOUND is on.
+
+Per-clip settings go in `frontend/public/shame-clips/clips.json`. This one file is committed (the videos never are):
+
+```json
+[
+  { "file": "shamevid1.mp4", "start": 0, "insertAt": 19, "end": 28.3,
+    "loser": { "x": 0.43, "feetY": 0.74, "height": 0.5 } }
+]
+```
+
+- `start` / `end`: the part of the clip that plays, in seconds. It plays normally from `start` and moves on when its own
+  playback reaches `end`.
+- `insertAt`: when the cut-out loser appears. They're hidden before that, then dance from their first beat until `end`.
+- `loser`: where they stand, as fractions of the clip's frame. `x` is their horizontal centre, `feetY` is where their
+  feet touch the floor, and `height` is their height. Keep `feetY` above about 0.75, or the lower-third banner covers
+  their feet. The cut-out is scaled by the dancer's outline, not the camera frame, and follows the screen's crop of
+  the clip.
+- Clips without an entry use the default lower-right spot and loop to fill their time. Bad entries are ignored.
+- The console logs when each clip shows, when the loser appears and when the clip ends (`[shame video] …`).
 
 The segmenter model loads from `storage.googleapis.com` and the wasm from jsDelivr (same as pose detection),
 so the first finale needs internet.
