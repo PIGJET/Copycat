@@ -4,10 +4,7 @@ import { FilesetResolver, ImageSegmenter } from "@mediapipe/tasks-vision";
 
 import { confidenceToAlpha, scaledWidth } from "./sceneMath";
 import type { Box } from "./shamePlan";
-
-const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite";
+import { SEGMENTER_MODEL_URL as MODEL_URL, VISION_WASM_URL as WASM_URL } from "../utils/mediapipeAssets";
 
 /** Segment at this height; smaller is faster, and the dancer is only ~1/3 of the screen. */
 const SEG_HEIGHT = 256;

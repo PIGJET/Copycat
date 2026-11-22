@@ -50,8 +50,8 @@ Per-clip settings go in `frontend/public/shame-clips/clips.json`. This one file 
 - Clips without an entry use the default lower-right spot and loop to fill their time. Bad entries are ignored.
 - The console logs when each clip shows, when the loser appears and when the clip ends (`[shame video] …`).
 
-The segmenter model loads from `storage.googleapis.com` and the wasm from jsDelivr (same as pose detection),
-so the first finale needs internet.
+The segmenter model (`public/models/selfie_segmenter.tflite`) and MediaPipe's wasm are served by this app itself
+(see `src/utils/mediapipeAssets.ts`), the same as pose detection, so the finale works offline.
 
 Tests: `node --test src/shame/shamePlan.test.mjs src/shame/scene.test.mjs` (timing, clip picking, fps threshold, alpha edge).
 
@@ -79,7 +79,7 @@ It falls back to the plain finale (headline straight away) when:
 The reason is logged with `console.info("[finale scene] …")`. Adding the scene is just dropping the file in
 `frontend/public/scenes/`. Missing it is fine.
 
-The segmenter model loads from `storage.googleapis.com` and the wasm from jsDelivr (same as pose detection),
-so the first finale needs internet.
+The segmenter model (`public/models/selfie_segmenter.tflite`) and MediaPipe's wasm are served by this app itself
+(see `src/utils/mediapipeAssets.ts`), the same as pose detection, so the finale works offline.
 
 Tests: `node --test src/shame/scene.test.mjs` (fps threshold, alpha edge, sizing).

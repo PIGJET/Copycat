@@ -6,6 +6,7 @@ import {
 } from "@mediapipe/tasks-vision";
 
 import type { PoseLandmark, PoseSequence } from "../types/pose";
+import { POSE_MODEL_URL, VISION_WASM_URL } from "../utils/mediapipeAssets";
 import { PoseRecorder } from "../utils/poseRecorder";
 
 interface PoseOptions {
@@ -36,16 +37,14 @@ export function usePoseDetection(
     let lastSlot = -1;
 
     async function initialize() {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
-      );
+      // Served locally (see utils/mediapipeAssets.ts), so it works offline.
+      const vision = await FilesetResolver.forVisionTasks(VISION_WASM_URL);
 
       if (!active) return;
 
       const landmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+          modelAssetPath: POSE_MODEL_URL,
           delegate: "GPU",
         },
         runningMode: "VIDEO",
