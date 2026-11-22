@@ -71,14 +71,14 @@
 .solo-actions input[type=checkbox] { accent-color: #b6ff00; }
 
 /* The replay strip follows the reference clock; it is a seek control, not an editor. */
-.filmstrip-timeline { --replay-progress: 0%; margin: 2rem 0 1rem; padding: clamp(14px, 2.5vw, 26px); border: 1px solid #55446d; border-radius: 18px; background: #15101f; }
+.filmstrip-timeline { --replay-progress: 0%; margin: .5rem 0 1rem; padding: clamp(14px, 2.5vw, 26px); border: 1px solid #55446d; border-radius: 18px; background: #15101f; }
 .filmstrip-heading { display: flex; justify-content: space-between; gap: 1rem; color: #fff; font-family: Silkscreen, monospace; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
 .filmstrip-heading span:last-child { color: #b7a9cd; font-family: Barlow, sans-serif; letter-spacing: 0; }
 .filmstrip-ticks { display: flex; justify-content: space-between; gap: .2rem; margin: 1.6rem 0 .35rem; color: #dcd5eb; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .filmstrip-track { position: relative; overflow: visible; border: 1px solid #62477c; border-radius: 9px; background: #29203a; }
 .filmstrip-frames { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); overflow: hidden; height: clamp(58px, 10vw, 112px); border-radius: 8px; }
 .filmstrip-frames > div { min-width: 0; border-right: 1px solid #110c19; background: linear-gradient(135deg, #332640, #21192e); }
-.filmstrip-frames img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.filmstrip-frames img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .filmstrip-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #e1d9ed; font-size: .85rem; pointer-events: none; }
 .filmstrip-dim { position: absolute; inset: 0 0 0 var(--replay-progress); background: #100b1d66; pointer-events: none; border-radius: 0 8px 8px 0; }
 .filmstrip-playhead { position: absolute; z-index: 2; top: -7px; bottom: -9px; left: var(--replay-progress); width: 3px; transform: translateX(-50%); background: #b6ff00; border-radius: 4px; pointer-events: none; }
@@ -202,7 +202,7 @@
 @media (max-width: 600px) { .solo-source--top .solo-actions > button { flex: 1 1 100%; } }
 
 /* The source controls and both video frames share the Solo stage. */
-.solo-import { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, .48fr); align-items: end; gap: 8px 24px; margin-bottom: 24px; }
+.solo-import { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, .48fr); align-items: start; gap: 8px 24px; margin-bottom: 24px; }
 .solo-import .solo-source { max-width: none; gap: 8px; }
 .solo-import .solo-source .solo-actions { margin: 4px 0 0; }
 .solo-game .solo-import .solo-file { max-width: none; padding: 0; margin: 0; border: 0; }
@@ -312,3 +312,91 @@
 @media (min-height: 560px) and (max-width: 600px) {
   .solo-game--dancing .pose-cue-track canvas { height: clamp(110px, 23dvh, 190px); }
 }
+
+/* Solo has no global sound control; reclaim its header space. */
+.arcade:has(.solo-game) > .topbar { display: none; }
+.solo-game__header { padding-right: 0; }
+@media (max-width: 600px) {
+  .solo-game__header, .solo-game--dancing .solo-game__header { padding-top: 0; }
+}
+
+/* Keep the turn action easy to find above the dance surfaces. */
+.solo-game--dancing .challenge-recorder > button {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 4;
+  transform: translateX(-50%);
+}
+
+/* Compact replay controls share a row and wrap on smaller screens. */
+.replay-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.solo-game .replay-controls button { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.solo-game .replay-controls .solo-primary { min-height: 40px; }
+.solo-game .replay-controls button.is-selected { border-color: #ffd246; color: #ffd246; }
+.replay-controls__speed, .replay-controls__toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; color: #eee8f7; font-size: 14px; }
+.replay-controls__speed select { min-height: 40px; padding: 6px 28px 6px 10px; border: 1px solid #777297; border-radius: 0; color: #fff8e8; background: #18182b; font: inherit; cursor: pointer; }
+.replay-controls__speed select:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.replay-controls__toggle input { width: 18px; height: 18px; margin: 0; accent-color: #ffd246; }
+@media (max-width: 600px) { .replay-controls { gap: 6px; } .replay-controls__speed, .replay-controls__toggle { padding-inline: 4px; } }
+
+.replay-speed-options { display: inline-flex; border: 1px solid #777297; }
+.solo-game .replay-speed-options button { min-width: 46px; min-height: 38px; padding: 6px 9px; border: 0; border-right: 1px solid #777297; background: #18182b; color: #eee8f7; }
+.solo-game .replay-speed-options button:last-child { border-right: 0; }
+.solo-game .replay-speed-options button[aria-pressed='true'] { background: #ffd246; color: #241a08; }
+.replay-controls__toggle { position: relative; cursor: pointer; user-select: none; }
+.replay-controls__toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.replay-toggle-track { position: relative; width: 40px; height: 22px; flex: 0 0 auto; border: 1px solid #777297; border-radius: 999px; background: #393342; transition: background-color .15s; }
+.replay-toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff8e8; transition: transform .15s; }
+.replay-controls__toggle input:checked + .replay-toggle-track { background: #ffd246; border-color: #ffd246; }
+.replay-controls__toggle input:checked + .replay-toggle-track::after { transform: translateX(18px); background: #241a08; }
+.replay-controls__toggle input:focus-visible + .replay-toggle-track { outline: 2px solid #fff; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .replay-toggle-track, .replay-toggle-track::after { transition: none; } }
+
+/* Shared Solo typography for video labels, controls, status and replay details. */
+.solo-game .solo-replay__pane figcaption {
+  margin: 0 0 10px;
+  color: #ded8ed;
+  font: 400 11px/1.4 Silkscreen, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.solo-game .replay-controls__speed > span,
+.solo-game .filmstrip-heading > span:first-child {
+  color: #ffd246;
+  font: 400 11px/1.4 Silkscreen, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.solo-game .filmstrip-heading > span:last-child,
+.solo-game .filmstrip-ticks,
+.solo-game .filmstrip-placeholder,
+.solo-game .filmstrip-no-score,
+.solo-game .filmstrip-legend,
+.solo-game .replay-legend,
+.solo-game .replay-controls__toggle,
+.solo-game .solo-source__hint,
+.solo-game [role='status'] {
+  color: #ded8ed;
+  font-family: Barlow, system-ui, sans-serif;
+}
+.solo-game .filmstrip-time { color: #fff8e8; font-family: Barlow, system-ui, sans-serif; }
+.solo-game .solo-file input::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 12px;
+  border: 1px solid #777297;
+  background: #18182b;
+  color: #fff8e8;
+  font: 700 14px/1.2 Barlow, system-ui, sans-serif;
+  cursor: pointer;
+}
+.solo-game .solo-file input::file-selector-button:hover { background: #2b2844; }
+
+.attempt-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; color: #eee8f7; font: 600 14px/1.35 Barlow, system-ui, sans-serif; }
+.attempt-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.attempt-legend .attempt-legend__title { color: #ffd246; font: 400 10px/1.4 Silkscreen, monospace; text-transform: uppercase; letter-spacing: .04em; }
+.attempt-legend small { color: #bcb7cc; font-size: 12px; }
+.attempt-legend__swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.attempt-legend__swatch--close { background: #33e88e; }
+.attempt-legend__swatch--moderate { background: #ffcb65; }
+.attempt-legend__swatch--large { background: #ff5c74; }

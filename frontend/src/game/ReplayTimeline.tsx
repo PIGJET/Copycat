@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { ErrorSample } from './replayAnalysis';
-import { formatReplayTime, timelineSections, timelineTicks } from './replayTimelineData';
+import { formatReplayTime, thumbnailSize, timelineSections, timelineTicks } from './replayTimelineData';
 
 const FRAME_COUNT = 8;
 
@@ -27,8 +27,6 @@ function useThumbnails(url: string, durationMs: number) {
     video.muted = true;
     video.preload = 'auto';
     video.src = url;
-    canvas.width = 200;
-    canvas.height = 112;
     const wait = (event: string) => new Promise<void>((resolve, reject) => {
       const timer = window.setTimeout(() => finish(false), 5000);
       function finish(success: boolean) {
@@ -48,7 +46,10 @@ function useThumbnails(url: string, durationMs: number) {
       try {
         if (video.readyState < 1) await wait('loadedmetadata');
         const context = canvas.getContext('2d');
-        if (!context || !Number.isFinite(video.duration) || video.duration <= 0) return;
+        const size = thumbnailSize(video.videoWidth, video.videoHeight);
+        if (!context || !size || !Number.isFinite(video.duration) || video.duration <= 0) return;
+        canvas.width = size.width;
+        canvas.height = size.height;
         const frames: string[] = [];
         for (let i = 0; i < FRAME_COUNT; i++) {
           if (controller.signal.aborted) return;
@@ -56,7 +57,7 @@ function useThumbnails(url: string, durationMs: number) {
           video.currentTime = Math.min(video.duration - .001, durationMs / 1000 * (i + .5) / FRAME_COUNT);
           await pending;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          frames.push(canvas.toDataURL('image/jpeg', .65));
+          frames.push(canvas.toDataURL('image/jpeg', .85));
         }
         if (!cancelled) setResult({ url, durationMs, images: frames });
       } catch {

@@ -11,8 +11,6 @@ import { turnReducer } from './turn';
 import '../components/Game/DashboardDanceFeedback.css';
 import './game.css';
 
-const SAMPLE_URL = 'https://www.youtube.com/shorts/FILJpZiAFo0';
-
 export default function Game({ onBack }: { onBack?: () => void }) {
   const [clip, setClip] = useState<ReferenceClip | null>(null);
   const [turn, dispatch] = useReducer(turnReducer, { stage: 'ready' });
@@ -146,14 +144,11 @@ export default function Game({ onBack }: { onBack?: () => void }) {
         <header className="solo-game__header">
           <div className="solo-game__brand">
             {onBack && <button className="solo-game__menu" type="button" onClick={onBack}>← Menu</button>}
-            <h1>COPY<span>CAT</span></h1>
           </div>
-          <span className="solo-game__mode">SOLO PLAY</span>
         </header>
 
         {!clip || turn.stage === 'ready' ? (
-          <section className="solo-screen" aria-labelledby="solo-preview-title">
-            <div className="solo-screen__intro solo-screen__intro--compact"><span className="solo-eyebrow">SOLO PLAY</span><h2 id="solo-preview-title">Dance studio</h2></div>
+          <section className="solo-screen" aria-label="Dance studio">
             <div className="solo-import">
               <form onSubmit={submit} className="solo-source solo-source--top">
                 <label>YouTube link
@@ -162,7 +157,6 @@ export default function Game({ onBack }: { onBack?: () => void }) {
                 </label>
                 <div className="solo-actions">
                   <button type="submit" className="solo-primary" disabled={preparing || checking}>Prepare clip</button>
-                  <button type="button" disabled={preparing || checking} onClick={() => setLink(SAMPLE_URL)}>Use sample link</button>
                 </div>
               </form>
               <label className="solo-file">Or choose a local MP4
@@ -180,7 +174,7 @@ export default function Game({ onBack }: { onBack?: () => void }) {
             <div className="solo-arena"><div className="solo-arena__stage"><div className="challenge-recorder__videos">
               <div><span>Reference</span><div className="solo-reference-frame" aria-busy={preparing}>
                 {clip ? <video className="challenge-recorder__reference" src={clip.videoUrl} controls playsInline />
-                  : <div className="solo-reference-placeholder">Choose a video to preview your dance</div>}
+                  : <div className="solo-reference-placeholder">{!preparing && "Choose a video to preview your dance"}</div>}
                 {preparing && <div className="solo-reference-loading" role="status">
                   <strong>Preparing your dance</strong><span>Getting the video ready…</span>
                   <div className="solo-loading-track" aria-hidden="true"><div /></div>
@@ -233,13 +227,10 @@ export default function Game({ onBack }: { onBack?: () => void }) {
               ))}
             </dl>
             {turn.score.worst_part && <p>Weakest part overall: <strong>{turn.score.worst_part}</strong></p>}</div>
-            <ResultsReplay key={turn.key} reference={clip} attempt={turn.attempt} score={turn.score} />
+            <ResultsReplay key={turn.key} reference={clip} attempt={turn.attempt} score={turn.score}
+              onChangeClip={chooseAnother} />
             {checking && <p role="status">Checking backend…</p>}
             {message && <p role="alert">{message}</p>}
-            <div className="solo-actions">
-              <button type="button" className="solo-primary" disabled={checking} onClick={() => void startTurn()}>Dance again</button>
-              <button type="button" onClick={chooseAnother}>Change clip</button>
-            </div>
           </section>
         )}
       </div>

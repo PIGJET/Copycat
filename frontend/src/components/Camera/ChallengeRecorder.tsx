@@ -328,7 +328,7 @@ export function ChallengeRecorder({ reference, playerId, onComplete, onFeedback,
         </div>
       </div>
       <PoseCueTrack reference={reference} source={sourceSize} videoRef={referenceVideo} phase={cuePhase} />
-      <p role="status">{issue || status || (cameraReady && pose.isReady && referenceReady ? 'Ready to dance' : 'Getting ready…')}</p>
+      <p role="status">{issue || status || (cameraReady && pose.isReady && referenceReady ? '' : 'Getting ready…')}</p>
       <button
         type="button"
         disabled={Boolean(issue) || busy || completed || !cameraReady || !pose.isReady || !referenceReady}
