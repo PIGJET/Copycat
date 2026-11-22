@@ -153,15 +153,10 @@ async function finaleScene(loser: ArcadeRanking, roasting?: Promise<RoastResult>
 }
 
 // Justin's solo mode (game/Game.tsx). His startSoloPreview (game-ui.js) mounts it into the game
-// screen through globalThis.CopycatSolo and unmounts it on Back to menu.
-// The menu music (home-music.js) would keep playing under solo's own music: hold it paused.
-const menuMusic = () => document.querySelector<HTMLAudioElement>("#home-music");
-const hushMenu = () => menuMusic()?.pause();
-
+// screen through globalThis.CopycatSolo and unmounts it on Back to menu. The menu music
+// (home-music.js) keeps playing through solo's setup screen and fades out when the dance starts.
 async function mountSolo(element: HTMLElement, onBack: () => void) {
   unmountSolo();
-  menuMusic()?.addEventListener("play", hushMenu);
-  hushMenu();
   const root = createRoot(element);
   soloRoot = root;
   const { default: Game } = await import("../game/Game");
@@ -172,7 +167,6 @@ function unmountSolo() {
   if (!soloRoot) return;
   soloRoot.unmount();
   soloRoot = null;
-  menuMusic()?.removeEventListener("play", hushMenu);
   // Let home-music.js pick the menu track back up (it resyncs on visibilitychange).
   setTimeout(() => document.dispatchEvent(new Event("visibilitychange")), 0);
 }
