@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/copycat-cover.svg" alt="Copycat — a webcam-powered dance party game built at Hack Western 13" width="100%">
+  <a href="https://www.youtube.com/watch?v=rx7CTy5sJz8"><img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/005/983/320/datas/original.png" alt="Actual Copycat gameplay: a player dancing with live pose tracking, a round timer, and the leaderboard" width="100%"></a>
 </p>
 
 # Copycat
@@ -10,7 +10,7 @@ Create a dance. Challenge your friends to copy it. Let computer vision settle th
 
 Built by a four-person team in **36 hours at Hack Western 13**, November 20–22, 2026. This is **Liangray Li's portfolio fork** of [jtam-western/Copycat](https://github.com/jtam-western/Copycat), preserving the original project and its contributor history.
 
-[Explore my contribution](#my-contribution--liangray-li) · [Under the hood](#engineering-highlights) · [Run locally](#running-it-locally) · [Meet the team](#team)
+[Watch the demo](https://www.youtube.com/watch?v=rx7CTy5sJz8) · [Devpost submission](https://devpost.com/software/copycat-68dxit) · [Explore my contribution](#my-contribution--liangray-li) · [Under the hood](#engineering-highlights) · [Run locally](#running-it-locally) · [Meet the team](#team)
 
 ## The experience
 
@@ -47,7 +47,7 @@ The original team documentation records these responsibilities in [AGENTS.md](AG
 - **Resilient demo behavior.** Cached song previews, bundled music, local vision models, and canned roast headlines keep core gameplay usable without internet when both app servers run locally.
 - **A recorded finale.** Canvas compositing, MediaRecorder, and Web Audio turn the end-of-game reveal into a downloadable video.
 
-> The images above are a project-cover illustration and an implementation diagram, not gameplay screenshots. This is a hackathon prototype; local setup provides the complete experience. See [known limitations](#known-limitations) for deployment and tracking constraints.
+> The cover shows actual gameplay from our [Devpost gallery](https://devpost.com/software/copycat-68dxit); the scoring pipeline is an implementation diagram. This is a hackathon prototype; local setup provides the complete experience. See [known limitations](#known-limitations) for deployment and tracking constraints.
 
 ---
 
