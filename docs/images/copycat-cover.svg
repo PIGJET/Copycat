@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="540" viewBox="0 0 1280 540" role="img" aria-labelledby="title desc">
+<title id="title">Copycat — Copy your friends. Get judged. Get exposed.</title><desc id="desc">Illustrated project cover with two pose-tracking skeletons. A webcam dance party game built at Hack Western 13.</desc>
+<rect width="1280" height="540" fill="#100b1d"/><path d="M0 490H1280M0 510H1280M0 530H1280" stroke="#33213e"/>
+<g fill="#bd9ccd"><rect x="64" y="58" width="6" height="6"/><rect x="1198" y="72" width="6" height="6"/><rect x="770" y="68" width="4" height="4"/></g>
+<text x="64" y="110" fill="#b4df77" font-family="monospace" font-size="18" letter-spacing="3">HACK WESTERN 13 / TEAM PROJECT</text>
+<text x="58" y="228" fill="#f4e9ff" font-family="monospace" font-weight="bold" font-size="100" letter-spacing="-6">COPYCAT</text>
+<text x="64" y="286" fill="#f4e9ff" font-family="sans-serif" font-size="27">Copy your friends. Get judged. Get exposed.</text>
+<text x="64" y="340" fill="#b9a5c9" font-family="sans-serif" font-size="21">One laptop. One webcam. A dance battle worth replaying.</text>
+<rect x="64" y="389" width="202" height="43" fill="#b4df77"/><text x="83" y="417" fill="#100b1d" font-family="monospace" font-size="17" font-weight="bold">COMPUTER VISION</text>
+<text x="291" y="417" fill="#d4bded" font-family="monospace" font-size="17">REACT / TYPESCRIPT / PYTHON</text>
+<g stroke-width="10" stroke-linecap="square" fill="none">
+<g stroke="#b4df77"><path d="M866 232L843 300L874 351L849 426M843 300L804 359L785 412M852 271L814 252L785 206M852 271L899 264L928 219"/><circle cx="877" cy="198" r="22"/></g>
+<g stroke="#d6a4ed"><path d="M1090 239L1065 305L1094 356L1073 430M1065 305L1024 357L1008 414M1075 275L1037 256L1012 209M1075 275L1121 269L1150 223"/><circle cx="1101" cy="205" r="22"/></g></g>
+<g fill="#f4e9ff"><circle cx="843" cy="300" r="6"/><circle cx="852" cy="271" r="6"/><circle cx="1065" cy="305" r="6"/><circle cx="1075" cy="275" r="6"/></g>
+<text x="800" y="470" fill="#b4df77" font-family="monospace" font-size="16">CREATE</text><text x="1033" y="470" fill="#d6a4ed" font-family="monospace" font-size="16">COPY</text>
+<path d="M945 296H985M975 286L985 296L975 306" stroke="#897497" stroke-width="3" fill="none"/>
+</svg>
