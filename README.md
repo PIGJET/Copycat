@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=rx7CTy5sJz8"><img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_photos/005/983/320/datas/original.png" alt="Actual Copycat gameplay: a player dancing with live pose tracking, a round timer, and the leaderboard" width="100%"></a>
+  <img src="https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/005/983/157/datas/medium.png" alt="Copycat title artwork from Devpost: two pixel-art dancers beneath the Copycat logo" width="500">
 </p>
 
 # Copycat
@@ -10,7 +10,7 @@ Create a dance. Challenge your friends to copy it. Let computer vision settle th
 
 Built by a four-person team in **36 hours at Hack Western 13**, November 20–22, 2026. This is **Liangray Li's portfolio fork** of [jtam-western/Copycat](https://github.com/jtam-western/Copycat), preserving the original project and its contributor history.
 
-[Watch the demo](https://www.youtube.com/watch?v=rx7CTy5sJz8) · [Devpost submission](https://devpost.com/software/copycat-68dxit) · [Explore my contribution](#my-contribution--liangray-li) · [Under the hood](#engineering-highlights) · [Run locally](#running-it-locally) · [Meet the team](#team)
+[Watch the demo](https://www.youtube.com/watch?v=rx7CTy5sJz8) · [Devpost submission](https://devpost.com/software/copycat-68dxit) · [Under the hood](#engineering-highlights) · [Run locally](#running-it-locally) · [Meet the team](#team)
 
 ## The experience
 
@@ -21,20 +21,6 @@ Built by a four-person team in **36 hours at Hack Western 13**, November 20–22
 | **Get a meaningful score** | Body-segment comparison and dynamic time warping produce scores for arms, legs, torso, and timing. |
 | **Practice solo** | Import a local video or a section of a YouTube dance, then review a synchronized replay with pose-error highlights. |
 | **Finish with a story** | The lowest-scoring player gets a breaking-news finale with a generated headline, composited dance footage, and a video download. |
-
-## My contribution — Liangray Li
-
-I worked on the **arcade experience and music discovery layer**, translating the team's pose-tracking game into an interface people could pick up and play.
-
-- **Arcade UI and visual direction:** designed the game screens in HTML, CSS, and JavaScript, including the lobby, gameplay presentation, and finale design.
-- **Lobby and character customization:** built the player setup experience and avatar selection.
-- **Tempo picker and beat guide:** created controls and visual timing cues to help players choose a pace and follow the beat.
-- **Song catalog and preview server:** worked on the song selection experience and the server that fetches previews, detects tempo, and caches audio locally.
-- **Chiptune and menu music integration:** integrated the audio presentation, with source artists credited below.
-
-The original team documentation records these responsibilities in [AGENTS.md](AGENTS.md#who-owns-what) and the [team credits](#team). The pose-scoring backend, engine bridge, solo replay system, and video compositor were collaborative project features owned by other teammates, as detailed below.
-
-**Selected implementation:** [Arcade screens](frontend/src/game/ui-preview/dist/) · [Player lobby](frontend/src/game/ui-preview/dist/lobby.js) · [Beat guide](frontend/src/game/ui-preview/dist/team.css) · [Song server](frontend/songServer.ts)
 
 ## Engineering highlights
 
@@ -47,7 +33,7 @@ The original team documentation records these responsibilities in [AGENTS.md](AG
 - **Resilient demo behavior.** Cached song previews, bundled music, local vision models, and canned roast headlines keep core gameplay usable without internet when both app servers run locally.
 - **A recorded finale.** Canvas compositing, MediaRecorder, and Web Audio turn the end-of-game reveal into a downloadable video.
 
-> The cover shows actual gameplay from our [Devpost gallery](https://devpost.com/software/copycat-68dxit); the scoring pipeline is an implementation diagram. This is a hackathon prototype; local setup provides the complete experience. See [known limitations](#known-limitations) for deployment and tracking constraints.
+> The cover uses our [Devpost title artwork](https://devpost.com/software/copycat-68dxit); the scoring pipeline is an implementation diagram. This is a hackathon prototype; local setup provides the complete experience. See [known limitations](#known-limitations) for deployment and tracking constraints.
 
 ---
 
