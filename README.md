@@ -1,16 +1,55 @@
+<p align="center">
+  <img src="docs/images/copycat-cover.svg" alt="Copycat — a webcam-powered dance party game built at Hack Western 13" width="100%">
+</p>
+
 # Copycat
 
-**Copy your friends. Get judged. Get exposed.**
+**Turn your living room into a motion-tracked dance arcade.**
 
-Copycat is a one-laptop dance party game. One player makes up a 10-second dance, everyone else
-tries to copy it in front of the same webcam, and a pose-tracking scorer decides who copied best.
-The lowest scorer ends up in a breaking-news segment about their dancing.
+Create a dance. Challenge your friends to copy it. Let computer vision settle the score—and turn the final standings into a downloadable, AI-written breaking-news finale.
 
-Built at Hack Western 13 (November 20 to 22, 2026).
+Built by a four-person team in **36 hours at Hack Western 13**, November 20–22, 2026. This is **Liangray Li's portfolio fork** of [jtam-western/Copycat](https://github.com/jtam-western/Copycat), preserving the original project and its contributor history.
 
-<!-- Demo GIF or screenshot goes here: ![Copycat demo](docs/demo.gif) -->
-**Demo:** _GIF or screenshot coming soon_
-**Devpost:** _link coming soon_
+[Explore my contribution](#my-contribution--liangray-li) · [Under the hood](#engineering-highlights) · [Run locally](#running-it-locally) · [Meet the team](#team)
+
+## The experience
+
+| Play | What happens |
+| --- | --- |
+| **Create and compete** | 2–4 players share a laptop and webcam. Record a 10-second dance, rotate the creator role, and compete on how closely you reproduce each other's moves. |
+| **See the movement** | A mirrored skeleton replay and synchronized guide help players learn and follow the reference dance. |
+| **Get a meaningful score** | Body-segment comparison and dynamic time warping produce scores for arms, legs, torso, and timing. |
+| **Practice solo** | Import a local video or a section of a YouTube dance, then review a synchronized replay with pose-error highlights. |
+| **Finish with a story** | The lowest-scoring player gets a breaking-news finale with a generated headline, composited dance footage, and a video download. |
+
+## My contribution — Liangray Li
+
+I worked on the **arcade experience and music discovery layer**, translating the team's pose-tracking game into an interface people could pick up and play.
+
+- **Arcade UI and visual direction:** designed the game screens in HTML, CSS, and JavaScript, including the lobby, gameplay presentation, and finale design.
+- **Lobby and character customization:** built the player setup experience and avatar selection.
+- **Tempo picker and beat guide:** created controls and visual timing cues to help players choose a pace and follow the beat.
+- **Song catalog and preview server:** worked on the song selection experience and the server that fetches previews, detects tempo, and caches audio locally.
+- **Chiptune and menu music integration:** integrated the audio presentation, with source artists credited below.
+
+The original team documentation records these responsibilities in [AGENTS.md](AGENTS.md#who-owns-what) and the [team credits](#team). The pose-scoring backend, engine bridge, solo replay system, and video compositor were collaborative project features owned by other teammates, as detailed below.
+
+**Selected implementation:** [Arcade screens](frontend/src/game/ui-preview/dist/) · [Player lobby](frontend/src/game/ui-preview/dist/lobby.js) · [Beat guide](frontend/src/game/ui-preview/dist/team.css) · [Song server](frontend/songServer.ts)
+
+## Engineering highlights
+
+<img src="docs/images/scoring-pipeline.svg" alt="Scoring pipeline: capture 33 body landmarks, normalize 11 segment directions at 15 FPS, align with dynamic time warping, and compute motion-weighted body-part scores" width="100%">
+
+- **Movement comparison across players.** The scorer compares limb directions instead of raw screen positions, reducing sensitivity to where a player stands and their apparent size.
+- **Timing-aware alignment.** Bounded dynamic time warping accommodates small delays while a separate timing score rewards staying in sync.
+- **Browser-based computer vision.** MediaPipe extracts poses and segments the player for the finale. Models and WebAssembly assets are served locally.
+- **A bridge between custom UI and React.** Plain JavaScript arcade screens communicate with the React recording and gameplay engine through explicit shared interfaces.
+- **Resilient demo behavior.** Cached song previews, bundled music, local vision models, and canned roast headlines keep core gameplay usable without internet when both app servers run locally.
+- **A recorded finale.** Canvas compositing, MediaRecorder, and Web Audio turn the end-of-game reveal into a downloadable video.
+
+> The images above are a project-cover illustration and an implementation diagram, not gameplay screenshots. This is a hackathon prototype; local setup provides the complete experience. See [known limitations](#known-limitations) for deployment and tracking constraints.
+
+---
 
 ## How a game works
 
